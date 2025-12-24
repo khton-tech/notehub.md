@@ -18,6 +18,7 @@
         "@notehub/state-manager": "workspace:*",
         "@notehub/config-manager": "workspace:*",
         "@notehub/theme-manager": "workspace:*",
+        "@notehub/icon-manager": "workspace:*",
         "@notehub/layout-manager": "workspace:*",
         "@tauri-apps/api": "^2.0.0",
         "react": "^18.2.0",

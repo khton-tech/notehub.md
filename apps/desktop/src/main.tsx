@@ -11,6 +11,7 @@ import { ConfigManagerPlugin } from '@notehub/config-manager';
 
 // UI Plugins
 import { ThemeManagerPlugin } from '@notehub/theme-manager';
+import { IconManagerPlugin } from '@notehub/icon-manager';
 import { LayoutManagerPlugin, LayoutRenderer } from '@notehub/layout-manager';
 
 /**
@@ -52,7 +53,8 @@ async function initApp(): Promise<NotehubCore> {
 
     // Layer 3: UI Foundation
     core.registerPlugin(new ThemeManagerPlugin());    // Depends on: Logger, ConfigManager
-    core.registerPlugin(new LayoutManagerPlugin());   // Depends on: Logger, ThemeManager
+    core.registerPlugin(new IconManagerPlugin());     // Depends on: Logger
+    core.registerPlugin(new LayoutManagerPlugin());   // Depends on: Logger, ThemeManager, IconManager
 
     // ===== INITIALIZATION =====
     // This will load plugins in registration order

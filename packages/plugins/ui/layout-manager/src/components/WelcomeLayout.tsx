@@ -1,4 +1,6 @@
 import { type FC, type CSSProperties } from 'react';
+import { Controller } from '@notehub/controllers-manager';
+import { Icon } from '@notehub/icon-manager';
 
 /**
  * WelcomeLayout - Initial welcome screen layout
@@ -10,35 +12,89 @@ import { type FC, type CSSProperties } from 'react';
  *   - Bottom (70%) - Actions/quick start
  *
  * All colors use CSS variables from theme-manager.
+ * Uses Controller components from controllers-manager.
  */
 export const WelcomeLayout: FC = () => {
     return (
         <div style={styles.container}>
             {/* Sidebar - Left Column */}
             <div style={styles.sidebar}>
-                <div style={styles.slotContent}>
-                    <span style={styles.slotLabel}>📁</span>
-                    <span style={styles.slotTitle}>Recent Vaults</span>
-                    <span style={styles.slotPlaceholder}>Placeholder</span>
-                </div>
+                <Controller type="card" className="w-full h-full flex flex-col">
+                    <div style={styles.cardHeader}>
+                        <Icon name="folder-open" size={32} className="text-yellow-400" />
+                        <Controller type="label" variant="h2">
+                            Recent Vaults
+                        </Controller>
+                    </div>
+                    <div style={styles.cardContent}>
+                        <Controller type="label" variant="caption">
+                            No recent vaults
+                        </Controller>
+                    </div>
+                    <div style={styles.cardFooter}>
+                        <Controller
+                            type="button"
+                            variant="primary"
+                            icon="folder-open"
+                            className="w-full"
+                        >
+                            Open Vault
+                        </Controller>
+                    </div>
+                </Controller>
             </div>
 
             {/* Header - Top Right */}
             <div style={styles.header}>
-                <div style={styles.slotContent}>
-                    <span style={styles.slotLabel}>ℹ️</span>
-                    <span style={styles.slotTitle}>App Info</span>
-                    <span style={styles.slotPlaceholder}>Placeholder</span>
-                </div>
+                <Controller type="card" className="w-full h-full flex flex-col items-center justify-center">
+                    <div style={styles.brandingWrapper}>
+                        <Icon name="zap" size={64} className="text-blue-400" />
+                        <Controller type="label" variant="h1">
+                            Notehub.md
+                        </Controller>
+                        <Controller type="label" variant="caption">
+                            Your modular note-taking system
+                        </Controller>
+                    </div>
+                </Controller>
             </div>
 
             {/* Content - Bottom Right */}
             <div style={styles.content}>
-                <div style={styles.slotContent}>
-                    <span style={styles.slotLabel}>⚡</span>
-                    <span style={styles.slotTitle}>Actions</span>
-                    <span style={styles.slotPlaceholder}>Placeholder</span>
-                </div>
+                <Controller type="card" className="w-full h-full flex flex-col">
+                    <div style={styles.cardHeader}>
+                        <Icon name="zap" size={32} className="text-orange-400" />
+                        <Controller type="label" variant="h2">
+                            Quick Actions
+                        </Controller>
+                    </div>
+                    <div style={styles.actionsGrid}>
+                        <Controller
+                            type="button"
+                            variant="primary"
+                            icon="plus"
+                            size="lg"
+                        >
+                            New Vault
+                        </Controller>
+                        <Controller
+                            type="button"
+                            variant="ghost"
+                            icon="settings"
+                            size="lg"
+                        >
+                            Settings
+                        </Controller>
+                        <Controller
+                            type="button"
+                            variant="ghost"
+                            icon="info"
+                            size="lg"
+                        >
+                            About
+                        </Controller>
+                    </div>
+                </Controller>
             </div>
         </div>
     );
@@ -62,56 +118,57 @@ const styles: Record<string, CSSProperties> = {
         color: 'var(--nh-text-primary, #C1E8FF)',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         overflow: 'hidden',
+        gap: '1px',
     },
     sidebar: {
         gridArea: 'sidebar',
-        backgroundColor: 'var(--nh-bg-surface, #052659)',
-        borderRight: '1px solid var(--nh-border-secondary, #7DA0CA)',
+        backgroundColor: 'var(--nh-bg-main, #021024)',
+        padding: '16px',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px',
     },
     header: {
         gridArea: 'header',
-        borderBottom: '1px solid var(--nh-border-secondary, #7DA0CA)',
+        backgroundColor: 'var(--nh-bg-main, #021024)',
+        padding: '16px',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px',
     },
     content: {
         gridArea: 'content',
+        backgroundColor: 'var(--nh-bg-main, #021024)',
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+    },
+    cardHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        marginBottom: '16px',
+    },
+    cardContent: {
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px',
     },
-    slotContent: {
+    cardFooter: {
+        marginTop: 'auto',
+        paddingTop: '16px',
+    },
+    brandingWrapper: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: '8px',
-        padding: '32px',
-        border: '2px dashed var(--nh-border-accent, #5483B3)',
-        borderRadius: '12px',
-        backgroundColor: 'rgba(84, 131, 179, 0.1)',
     },
-    slotLabel: {
-        fontSize: '32px',
-    },
-    slotTitle: {
-        fontSize: '18px',
-        fontWeight: 600,
-        color: 'var(--nh-text-primary, #C1E8FF)',
-    },
-    slotPlaceholder: {
-        fontSize: '14px',
-        color: 'var(--nh-text-secondary, #7DA0CA)',
-        opacity: 0.7,
+    actionsGrid: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        flex: 1,
     },
 };
 

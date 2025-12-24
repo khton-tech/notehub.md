@@ -1,0 +1,12 @@
+{
+    "id": "nh.ui.ck-standard",
+    "name": "CKStandard",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+        "nh.system.logger",
+        "nh.ui.controllers-manager",
+        "nh.ui.icon-manager",
+        "nh.ui.theme-manager"
+    ]
+}
