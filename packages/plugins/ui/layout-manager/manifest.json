@@ -5,6 +5,9 @@
     "type": "ui",
     "dependencies": [
         "nh.system.logger",
-        "nh.ui.theme-manager"
+        "nh.ui.theme-manager",
+        "nh.ui.icon-manager",
+        "nh.ui.controllers-manager",
+        "nh.ui.ck-standard"
     ]
 }

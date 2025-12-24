@@ -1,6 +1,6 @@
 {
-    "name": "@notehub/layout-manager",
-    "version": "0.0.0",
+    "name": "@notehub/ck-standard",
+    "version": "1.0.0",
     "type": "module",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -20,8 +20,8 @@
     },
     "dependencies": {
         "@notehub/core": "workspace:*",
-        "@notehub/icon-manager": "workspace:*",
-        "@notehub/controllers-manager": "workspace:*"
+        "@notehub/controllers-manager": "workspace:*",
+        "@notehub/icon-manager": "workspace:*"
     },
     "peerDependencies": {
         "react": "^18.0.0"
