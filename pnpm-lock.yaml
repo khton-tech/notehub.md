@@ -92,6 +92,19 @@ importers:
         specifier: ^5.3.0
         version: 5.9.3
 
+  packages/plugins/system/config-manager:
+    dependencies:
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+    devDependencies:
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
   packages/plugins/system/fs-driver-tauri:
     dependencies:
       '@notehub/core':

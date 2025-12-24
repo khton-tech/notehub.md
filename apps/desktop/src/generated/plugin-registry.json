@@ -7,11 +7,13 @@
     "dependencies": []
   },
   {
-    "id": "nh.system.fs-manager",
-    "name": "FsManager",
+    "id": "nh.system.config-manager",
+    "name": "ConfigManager",
     "version": "0.0.0",
     "type": "system",
-    "dependencies": []
+    "dependencies": {
+      "nh.system.fs-manager": "^1.0.0"
+    }
   },
   {
     "id": "nh.system.fs-driver-tauri",
@@ -21,5 +23,12 @@
     "dependencies": [
       "nh.system.fs-manager"
     ]
+  },
+  {
+    "id": "nh.system.fs-manager",
+    "name": "FsManager",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": []
   }
 ]
