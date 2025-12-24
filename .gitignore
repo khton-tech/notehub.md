@@ -6,6 +6,15 @@ dist/
 build/
 *.tsbuildinfo
 
+# Tauri / Rust
+target/
+src-tauri/target/
+Cargo.lock
+
+# Generated files
+apps/desktop/src/generated/
+*.generated.*
+
 # IDE / Editor
 .vscode/
 .idea/
@@ -35,3 +44,7 @@ coverage/
 tmp/
 temp/
 .cache/
+
+# Lock files (pnpm generates its own)
+package-lock.json
+yarn.lock

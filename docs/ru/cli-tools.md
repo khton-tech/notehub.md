@@ -60,8 +60,23 @@ Next steps:
 | `pnpm install` | Установка/обновление зависимостей всех пакетов |
 | `pnpm build` | Сборка всех пакетов в монорепозитории |
 | `pnpm dev` | Запуск watch-режима для всех пакетов |
+| `pnpm dev:desktop` | **Запуск Tauri Desktop приложения** |
+| `pnpm predev` | Сканирование плагинов и генерация реестра |
 | `pnpm clean` | Очистка dist-папок во всех пакетах |
 | `pnpm --filter <pkg> build` | Сборка конкретного пакета |
+
+### pnpm dev:desktop
+
+Запускает Desktop приложение на Tauri:
+
+1. Выполняет `pnpm predev` (сканирование плагинов)
+2. Запускает `tauri dev` в `apps/desktop`
+
+```bash
+pnpm dev:desktop
+```
+
+**Требования:** Rust toolchain (для компиляции Tauri)
 
 ---
 

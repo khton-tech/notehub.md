@@ -5,5 +5,21 @@
     "version": "0.0.0",
     "type": "system",
     "dependencies": []
+  },
+  {
+    "id": "nh.system.fs-manager",
+    "name": "FsManager",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": []
+  },
+  {
+    "id": "nh.system.fs-driver-tauri",
+    "name": "FsDriverTauri",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": [
+      "nh.system.fs-manager"
+    ]
   }
 ]

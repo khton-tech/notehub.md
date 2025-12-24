@@ -52,18 +52,24 @@ function safeParseJson(filePath: string): PluginManifest | null {
  */
 async function scanManifests(): Promise<PluginManifest[]> {
     const pattern = path.join(PLUGINS_DIR, '**', 'manifest.json').replace(/\\/g, '/');
-    const files = await fg(pattern, { absolute: true });
+    const files = await fg(pattern, {
+        absolute: true,
+        ignore: ['**/node_modules/**', '**/dist/**']
+    });
 
-    const manifests: PluginManifest[] = [];
+    const manifestMap = new Map<string, PluginManifest>();
 
     for (const file of files) {
         const manifest = safeParseJson(file);
         if (manifest && manifest.id) {
-            manifests.push(manifest);
+            // Deduplicate by ID - first one wins
+            if (!manifestMap.has(manifest.id)) {
+                manifestMap.set(manifest.id, manifest);
+            }
         }
     }
 
-    return manifests;
+    return Array.from(manifestMap.values());
 }
 
 /**

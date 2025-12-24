@@ -1,0 +1,7 @@
+{
+    "id": "nh.system.fs-manager",
+    "name": "FsManager",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": []
+}
