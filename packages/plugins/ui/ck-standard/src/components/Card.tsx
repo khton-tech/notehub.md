@@ -1,25 +1,29 @@
-import type { FC, ReactNode } from 'react';
+import type { FC, ReactNode, MouseEventHandler, CSSProperties } from 'react';
 
 /**
  * Card component props
  */
 export interface CardProps {
+    /** Card variant style */
+    variant?: 'default' | 'interactive';
     /** Card content */
     children?: ReactNode;
     /** Additional CSS class names */
     className?: string;
     /** Padding size */
     padding?: 'none' | 'sm' | 'md' | 'lg';
+    /** Click handler (for interactive variant) */
+    onClick?: MouseEventHandler<HTMLDivElement>;
 }
 
 /**
- * Padding size mappings
+ * Padding size values
  */
-const paddingStyles: Record<string, string> = {
-    none: 'p-0',
-    sm: 'p-2',
-    md: 'p-4',
-    lg: 'p-6',
+const paddingValues: Record<string, string> = {
+    none: '0',
+    sm: '8px',
+    md: '16px',
+    lg: '24px',
 };
 
 /**
@@ -27,36 +31,51 @@ const paddingStyles: Record<string, string> = {
  *
  * Container component with themed background and border.
  * Uses CSS variables for theme-aware styling.
- *
- * @example
- * ```tsx
- * <Card padding="md">
- *   <Label variant="h2">Card Title</Label>
- *   <Label variant="body">Card content goes here...</Label>
- * </Card>
- * ```
  */
 export const Card: FC<CardProps> = ({
+    variant = 'default',
     children,
     className = '',
     padding = 'md',
+    onClick,
 }) => {
-    const baseStyles = `
-        bg-[color:var(--nh-bg-surface,#052659)]
-        border border-[color:var(--nh-border-secondary,#7DA0CA)]
-        rounded-lg
-    `;
+    const isInteractive = variant === 'interactive';
 
-    const combinedStyles = [
-        baseStyles,
-        paddingStyles[padding] || paddingStyles.md,
-        className,
-    ]
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+    const baseStyle: CSSProperties = {
+        backgroundColor: 'var(--nh-bg-surface, #2a2a2a)',
+        border: '1px solid var(--nh-border-secondary, #3a3a3a)',
+        borderRadius: '8px',
+        padding: paddingValues[padding] || paddingValues.md,
+        cursor: isInteractive ? 'pointer' : 'default',
+        transition: 'all 0.15s ease',
+    };
 
-    return <div className={combinedStyles}>{children}</div>;
+    const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (isInteractive) {
+            e.currentTarget.style.filter = 'brightness(1.1)';
+            e.currentTarget.style.borderColor = 'var(--nh-accent-primary, #6b5ce7)';
+        }
+    };
+
+    const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (isInteractive) {
+            e.currentTarget.style.filter = 'none';
+            e.currentTarget.style.borderColor = 'var(--nh-border-secondary, #3a3a3a)';
+        }
+    };
+
+    return (
+        <div
+            style={baseStyle}
+            className={className}
+            onClick={onClick}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+        >
+            {children}
+        </div>
+    );
 };
 
 export default Card;
+

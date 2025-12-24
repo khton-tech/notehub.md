@@ -105,9 +105,15 @@ importers:
 
   packages/plugins/features/vault-picker:
     dependencies:
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../../ui/ck-standard
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core
+      '@notehub/icon-manager':
+        specifier: workspace:*
+        version: link:../../ui/icon-manager
       react:
         specifier: ^18.2.0
         version: 18.3.1

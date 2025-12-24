@@ -5,32 +5,51 @@ import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
  * Maps semantic color names to CSS values
  */
 export interface ThemePalette {
-    /** Main background color */
+    /** Main background color (darkest) */
     'bg-main': string;
+    /** Sidebar background color (slightly lighter) */
+    'bg-sidebar': string;
     /** Surface/card background color */
     'bg-surface': string;
+    /** Primary accent color (purple for main actions) */
+    'accent-primary': string;
+    /** Secondary accent color (gray for secondary actions) */
+    'accent-secondary': string;
     /** Primary border/accent color */
     'border-accent': string;
     /** Secondary border color */
     'border-secondary': string;
+    /** Subtle border for dividers */
+    'border-subtle': string;
     /** Primary text color */
     'text-primary': string;
-    /** Secondary text color (optional) */
+    /** Secondary text color */
     'text-secondary'?: string;
+    /** Muted text color for paths and descriptions */
+    'text-muted': string;
     /** Additional custom properties */
     [key: string]: string | undefined;
 }
 
 /**
- * Deep Space theme - Default dark theme based on design reference
+ * Deep Space theme - VS Code-like dark theme with purple accents
  */
 const DEEP_SPACE_THEME: ThemePalette = {
-    'bg-main': '#021024',
-    'bg-surface': '#052659',
-    'border-accent': '#5483B3',
-    'border-secondary': '#7DA0CA',
-    'text-primary': '#C1E8FF',
-    'text-secondary': '#7DA0CA',
+    // Backgrounds - Deep dark palette
+    'bg-main': '#1a1a1a',
+    'bg-sidebar': '#232323',
+    'bg-surface': '#2a2a2a',
+    // Accents - Purple primary, gray secondary
+    'accent-primary': '#6b5ce7',
+    'accent-secondary': '#3a3a3a',
+    // Borders
+    'border-accent': '#6b5ce7',
+    'border-secondary': '#3a3a3a',
+    'border-subtle': '#333333',
+    // Text
+    'text-primary': '#e0e0e0',
+    'text-secondary': '#a0a0a0',
+    'text-muted': '#888888',
 };
 
 /**
