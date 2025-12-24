@@ -1,0 +1,9 @@
+[
+  {
+    "id": "nh.system.bootloader",
+    "name": "Bootloader",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": []
+  }
+]

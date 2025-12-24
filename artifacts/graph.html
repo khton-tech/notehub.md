@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugin Dependency Graph - Notehub.md</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+            background: linear-gradient(90deg, #ff6b6b, #4dabf7, #51cf66);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 2rem;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .legend-color.system { background: #ff6b6b; }
+        .legend-color.ui { background: #4dabf7; }
+        .legend-color.feature { background: #51cf66; }
+        .graph-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        #graph {
+            display: flex;
+            justify-content: center;
+        }
+        .mermaid {
+            background: transparent !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Plugin Dependency Graph</h1>
+        <p class="subtitle">Notehub.md Plugin Architecture</p>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color system"></div>
+                <span>System</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color ui"></div>
+                <span>UI</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color feature"></div>
+                <span>Feature</span>
+            </div>
+        </div>
+        
+        <div class="graph-container">
+            <div id="graph">
+                <pre class="mermaid">
+flowchart LR
+    nh_system_bootloader["Bootloader"]
+
+    %% Styles
+    classDef system fill:#ff6b6b,stroke:#c92a2a,color:#fff
+    classDef ui fill:#4dabf7,stroke:#1971c2,color:#fff
+    classDef feature fill:#51cf66,stroke:#2f9e44,color:#fff
+    class nh_system_bootloader system
+                </pre>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
