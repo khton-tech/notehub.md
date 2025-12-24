@@ -68,33 +68,33 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
 
             {/* Actions Section */}
             <div style={styles.actionsSection}>
-                {/* Add Vault Button */}
+                {/* Open Vault Button (primary action - open existing folder) */}
                 <div style={styles.actionGroup}>
                     <Button
                         variant="purple"
                         size="xl"
-                        icon="plus-circle"
+                        icon="folder-open"
                         onClick={handleAddVault}
-                    >
-                        Add Vault
-                    </Button>
-                    <Label variant="muted" className="mt-2 text-center">
-                        Select a storage folder
-                    </Label>
-                </div>
-
-                {/* Open Vault Button */}
-                <div style={styles.actionGroup}>
-                    <Button
-                        variant="secondary"
-                        size="xl"
-                        icon="box"
-                        onClick={handleOpenVault}
                     >
                         Open Vault
                     </Button>
                     <Label variant="muted" className="mt-2 text-center">
-                        Select a path to create the storage location
+                        Select an existing folder
+                    </Label>
+                </div>
+
+                {/* Create Vault Button (secondary action - create new) */}
+                <div style={styles.actionGroup}>
+                    <Button
+                        variant="secondary"
+                        size="xl"
+                        icon="plus-circle"
+                        onClick={handleOpenVault}
+                    >
+                        Create Vault
+                    </Button>
+                    <Label variant="muted" className="mt-2 text-center">
+                        Create a new storage location
                     </Label>
                 </div>
             </div>

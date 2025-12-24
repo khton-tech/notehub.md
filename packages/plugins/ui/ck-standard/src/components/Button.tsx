@@ -47,12 +47,12 @@ const iconSizes: Record<string, number> = {
 const variantStyles: Record<string, CSSProperties> = {
     primary: {
         backgroundColor: 'var(--nh-accent-primary, #6b5ce7)',
-        color: '#ffffff',
+        color: 'var(--nh-button-text, #ffffff)',
         border: 'none',
     },
     purple: {
         backgroundColor: 'var(--nh-accent-primary, #6b5ce7)',
-        color: '#ffffff',
+        color: 'var(--nh-button-text, #ffffff)',
         border: 'none',
     },
     secondary: {
@@ -66,8 +66,8 @@ const variantStyles: Record<string, CSSProperties> = {
         border: 'none',
     },
     danger: {
-        backgroundColor: '#dc2626',
-        color: '#ffffff',
+        backgroundColor: 'var(--nh-danger, #dc2626)',
+        color: 'var(--nh-button-text, #ffffff)',
         border: 'none',
     },
 };
@@ -94,7 +94,7 @@ export const Button: FC<ButtonProps> = ({
         fontWeight: 500,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
-        transition: 'all 0.15s ease',
+        transition: 'filter 0.15s ease, background-color 0.15s ease',
         fontFamily: 'inherit',
         ...sizeStyles[size],
         ...variantStyles[variant],

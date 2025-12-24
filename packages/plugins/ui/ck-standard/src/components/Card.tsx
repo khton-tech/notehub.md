@@ -47,7 +47,7 @@ export const Card: FC<CardProps> = ({
         borderRadius: '8px',
         padding: paddingValues[padding] || paddingValues.md,
         cursor: isInteractive ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
+        transition: 'filter 0.15s ease, border-color 0.15s ease',
     };
 
     const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {

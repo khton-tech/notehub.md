@@ -130,7 +130,7 @@ const styles: Record<string, React.CSSProperties> = {
         background: 'transparent',
         color: 'var(--nh-text-muted, #888888)',
         cursor: 'pointer',
-        transition: 'all 0.15s ease',
+        transition: 'color 0.15s ease, opacity 0.15s ease',
         flexShrink: 0,
     },
 };

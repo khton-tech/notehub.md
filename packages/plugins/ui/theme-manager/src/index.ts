@@ -27,6 +27,12 @@ export interface ThemePalette {
     'text-secondary'?: string;
     /** Muted text color for paths and descriptions */
     'text-muted': string;
+    /** Error text color */
+    'text-error'?: string;
+    /** Button text color (contrast for accent buttons) */
+    'button-text'?: string;
+    /** Danger/destructive action color */
+    'danger'?: string;
     /** Additional custom properties */
     [key: string]: string | undefined;
 }
@@ -50,6 +56,11 @@ const DEEP_SPACE_THEME: ThemePalette = {
     'text-primary': '#e0e0e0',
     'text-secondary': '#a0a0a0',
     'text-muted': '#888888',
+    'text-error': '#ff6b6b',
+    // Button
+    'button-text': '#ffffff',
+    // Danger
+    'danger': '#dc2626',
 };
 
 /**
@@ -103,6 +114,37 @@ export class ThemeManagerPlugin implements IPlugin {
         }
     }
 
+    /** Style element for global CSS */
+    private styleElement: HTMLStyleElement | null = null;
+
+    /**
+     * Inject global styles for html and body to prevent resize flash
+     */
+    private injectGlobalStyles(): void {
+        // Remove existing style element if present
+        if (this.styleElement) {
+            this.styleElement.remove();
+        }
+
+        // Create and inject global styles
+        this.styleElement = document.createElement('style');
+        this.styleElement.id = 'nh-theme-global-styles';
+        this.styleElement.textContent = `
+            html, body {
+                background-color: var(--nh-bg-main, #1a1a1a);
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
+            #root {
+                height: 100%;
+                overflow: hidden;
+            }
+        `;
+        document.head.appendChild(this.styleElement);
+    }
+
     /**
      * Apply theme CSS variables to document root
      */
@@ -114,6 +156,9 @@ export class ThemeManagerPlugin implements IPlugin {
                 root.style.setProperty(`${CSS_VAR_PREFIX}${key}`, value);
             }
         }
+
+        // Apply global styles to ensure background sync
+        this.injectGlobalStyles();
     }
 
     /**
