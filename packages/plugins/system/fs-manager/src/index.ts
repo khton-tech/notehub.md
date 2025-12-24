@@ -20,6 +20,7 @@ export * from './types.js';
  * - `fs:create-dir` - Create directory
  * - `fs:read-dir` - List directory contents
  * - `fs:exists` - Check if path exists
+ * - `fs:pick-directory` - Open native directory picker dialog
  */
 export class FsManagerPlugin implements IPlugin {
     readonly manifest: PluginManifest = {
@@ -60,6 +61,7 @@ export class FsManagerPlugin implements IPlugin {
         app.api.register('fs:create-dir', this.createDir.bind(this));
         app.api.register('fs:read-dir', this.readDir.bind(this));
         app.api.register('fs:exists', this.exists.bind(this));
+        app.api.register('fs:pick-directory', this.pickDirectory.bind(this));
 
         this.log('info', 'Loaded - awaiting driver registration');
     }
@@ -79,6 +81,7 @@ export class FsManagerPlugin implements IPlugin {
         app.api.unregister('fs:create-dir');
         app.api.unregister('fs:read-dir');
         app.api.unregister('fs:exists');
+        app.api.unregister('fs:pick-directory');
 
         this.driver = null;
         this.driverName = '';
@@ -142,6 +145,10 @@ export class FsManagerPlugin implements IPlugin {
 
     private async exists(path: string): Promise<boolean> {
         return this.ensureDriver().exists(path);
+    }
+
+    private async pickDirectory(): Promise<string | null> {
+        return this.ensureDriver().pickDirectory();
     }
 }
 

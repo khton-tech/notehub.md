@@ -29,9 +29,15 @@ importers:
       '@notehub/bootloader':
         specifier: workspace:*
         version: link:../../packages/plugins/system/bootloader
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../../packages/plugins/ui/ck-standard
       '@notehub/config-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/system/config-manager
+      '@notehub/controllers-manager':
+        specifier: workspace:*
+        version: link:../../packages/plugins/ui/controllers-manager
       '@notehub/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -56,6 +62,9 @@ importers:
       '@notehub/theme-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/ui/theme-manager
+      '@notehub/vault-picker':
+        specifier: workspace:*
+        version: link:../../packages/plugins/features/vault-picker
       '@tauri-apps/api':
         specifier: ^2.0.0
         version: 2.9.1
@@ -87,6 +96,25 @@ importers:
 
   packages/core:
     devDependencies:
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/plugins/features/vault-picker:
+    dependencies:
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.27
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10
@@ -131,6 +159,9 @@ importers:
       '@notehub/fs-manager':
         specifier: workspace:*
         version: link:../fs-manager
+      '@tauri-apps/plugin-dialog':
+        specifier: ^2.0.0
+        version: 2.4.2
       '@tauri-apps/plugin-fs':
         specifier: ^2.0.0
         version: 2.4.4
@@ -886,6 +917,9 @@ packages:
     resolution: {integrity: sha512-3xDdXL5omQ3sPfBfdC8fCtDKcnyV7OqyzQgfyT5P3+zY6lcPqIYKQBvUasNvppi21RSdfhy44ttvJmftb0PCDw==}
     engines: {node: '>= 10'}
     hasBin: true
+
+  '@tauri-apps/plugin-dialog@2.4.2':
+    resolution: {integrity: sha512-lNIn5CZuw8WZOn8zHzmFmDSzg5zfohWoa3mdULP0YFh/VogVdMVWZPcWSHlydsiJhRQYaTNSYKN7RmZKE2lCYQ==}
 
   '@tauri-apps/plugin-fs@2.4.4':
     resolution: {integrity: sha512-MTorXxIRmOnOPT1jZ3w96vjSuScER38ryXY88vl5F0uiKdnvTKKTtaEjTEo8uPbl4e3gnUtfsDVwC7h77GQLvQ==}
@@ -1730,6 +1764,10 @@ snapshots:
       '@tauri-apps/cli-win32-arm64-msvc': 2.9.6
       '@tauri-apps/cli-win32-ia32-msvc': 2.9.6
       '@tauri-apps/cli-win32-x64-msvc': 2.9.6
+
+  '@tauri-apps/plugin-dialog@2.4.2':
+    dependencies:
+      '@tauri-apps/api': 2.9.1
 
   '@tauri-apps/plugin-fs@2.4.4':
     dependencies:

@@ -12,7 +12,12 @@ import { ConfigManagerPlugin } from '@notehub/config-manager';
 // UI Plugins
 import { ThemeManagerPlugin } from '@notehub/theme-manager';
 import { IconManagerPlugin } from '@notehub/icon-manager';
+import { ControllersManagerPlugin } from '@notehub/controllers-manager';
+import { CKStandardPlugin } from '@notehub/ck-standard';
 import { LayoutManagerPlugin, LayoutRenderer } from '@notehub/layout-manager';
+
+// Feature Plugins
+import { VaultPickerPlugin } from '@notehub/vault-picker';
 
 /**
  * Global core instance for the application
@@ -52,16 +57,20 @@ async function initApp(): Promise<NotehubCore> {
     core.registerPlugin(new ConfigManagerPlugin());   // Depends on: Logger, FsManager
 
     // Layer 3: UI Foundation
-    core.registerPlugin(new ThemeManagerPlugin());    // Depends on: Logger, ConfigManager
-    core.registerPlugin(new IconManagerPlugin());     // Depends on: Logger
-    core.registerPlugin(new LayoutManagerPlugin());   // Depends on: Logger, ThemeManager, IconManager
+    core.registerPlugin(new ThemeManagerPlugin());       // Depends on: Logger, ConfigManager
+    core.registerPlugin(new IconManagerPlugin());        // Depends on: Logger
+    core.registerPlugin(new ControllersManagerPlugin()); // Depends on: Logger
+    core.registerPlugin(new CKStandardPlugin());         // Depends on: ControllersManager, IconManager
+    core.registerPlugin(new LayoutManagerPlugin());      // Depends on: Logger, ControllersManager
+
+    // Layer 4: Feature Plugins
+    core.registerPlugin(new VaultPickerPlugin());        // Depends on: FsManager, StateManager, LayoutManager
 
     // ===== INITIALIZATION =====
     // This will load plugins in registration order
     await core.init();
 
-    // ===== POST-INIT: Activate Welcome Layout =====
-    core.api.invoke('layout:set-active', 'welcome');
+    // Note: VaultPickerPlugin handles layout activation on load
 
     console.log('[Desktop] Notehub.md started successfully');
 

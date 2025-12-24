@@ -1,0 +1,14 @@
+{
+    "id": "nh.features.vault-picker",
+    "name": "VaultPicker",
+    "version": "0.0.0",
+    "type": "feature",
+    "dependencies": [
+        "nh.system.fs-manager",
+        "nh.system.config-manager",
+        "nh.system.state-manager",
+        "nh.system.logger",
+        "nh.ui.controllers-manager",
+        "nh.ui.layout-manager"
+    ]
+}
