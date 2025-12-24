@@ -1,4 +1,7 @@
 import { useState, useEffect, type FC } from 'react';
+import { Icon } from '@notehub/icon-manager';
+import { Card } from '@notehub/ck-standard';
+import { Label } from '@notehub/ck-standard';
 import type { VaultService, VaultHistoryEntry } from '../logic/VaultService.js';
 
 /**
@@ -9,90 +12,10 @@ interface VaultListProps {
 }
 
 /**
- * Styles for the vault list component
- */
-const styles = {
-    container: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        height: '100%',
-    },
-    header: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginBottom: '16px',
-    },
-    headerIcon: {
-        width: '32px',
-        height: '32px',
-        color: 'var(--nh-accent-warning, #EAB308)',
-    },
-    headerTitle: {
-        fontSize: '1.25rem',
-        fontWeight: 600,
-        color: 'var(--nh-text-primary, #C1E8FF)',
-        margin: 0,
-    },
-    list: {
-        flex: 1,
-        overflowY: 'auto' as const,
-        display: 'flex',
-        flexDirection: 'column' as const,
-        gap: '8px',
-    },
-    emptyState: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column' as const,
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--nh-text-muted, #64748B)',
-    },
-    vaultItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '12px',
-        backgroundColor: 'var(--nh-bg-tertiary, #0C1929)',
-        borderRadius: '8px',
-        border: '1px solid var(--nh-border, #1E3A5F)',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-    },
-    vaultIcon: {
-        width: '24px',
-        height: '24px',
-        color: 'var(--nh-accent-primary, #3B82F6)',
-    },
-    vaultInfo: {
-        flex: 1,
-        minWidth: 0,
-    },
-    vaultName: {
-        fontSize: '0.95rem',
-        fontWeight: 500,
-        color: 'var(--nh-text-primary, #C1E8FF)',
-        margin: 0,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap' as const,
-    },
-    vaultPath: {
-        fontSize: '0.75rem',
-        color: 'var(--nh-text-muted, #64748B)',
-        margin: 0,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap' as const,
-    },
-};
-
-/**
  * VaultList - Displays list of recently opened vaults
  *
- * Shows vault history with names and paths.
- * Clicking a vault item opens it via VaultService.
+ * Shows vault history with interactive cards.
+ * Each card has: Cube icon, Name, Path, and Delete action.
  */
 export const VaultList: FC<VaultListProps> = ({ service }) => {
     const [vaults, setVaults] = useState<VaultHistoryEntry[]>([]);
@@ -109,57 +32,108 @@ export const VaultList: FC<VaultListProps> = ({ service }) => {
         }
     };
 
-    const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-        const target = e.currentTarget;
-        target.style.backgroundColor = 'var(--nh-bg-hover, #112240)';
-        target.style.borderColor = 'var(--nh-accent-primary, #3B82F6)';
+    const handleDeleteClick = (e: React.MouseEvent, path: string) => {
+        e.stopPropagation();
+        // TODO: Implement vault deletion from history
+        console.log('Delete vault:', path);
     };
 
-    const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-        const target = e.currentTarget;
-        target.style.backgroundColor = 'var(--nh-bg-tertiary, #0C1929)';
-        target.style.borderColor = 'var(--nh-border, #1E3A5F)';
-    };
+    if (vaults.length === 0) {
+        return (
+            <div style={styles.emptyState}>
+                <Icon name="folder-open" size={48} className="opacity-30" />
+                <Label variant="caption" className="mt-4">No recent vaults</Label>
+                <Label variant="muted" className="mt-1">Open or create a vault to get started</Label>
+            </div>
+        );
+    }
 
     return (
         <div style={styles.container}>
-            <div style={styles.header}>
-                <svg style={styles.headerIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                </svg>
-                <h2 style={styles.headerTitle}>Recent Vaults</h2>
-            </div>
-
-            <div style={styles.list}>
-                {vaults.length === 0 ? (
-                    <div style={styles.emptyState}>
-                        <p>No recent vaults</p>
-                        <p style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-                            Open or create a vault to get started
-                        </p>
+            {vaults.map((vault) => (
+                <Card
+                    key={vault.path}
+                    variant="interactive"
+                    padding="sm"
+                    onClick={() => handleVaultClick(vault.path)}
+                    className="flex items-center gap-3"
+                >
+                    <div style={styles.iconWrapper}>
+                        <Icon name="box" size={24} />
                     </div>
-                ) : (
-                    vaults.map((vault) => (
-                        <div
-                            key={vault.path}
-                            style={styles.vaultItem}
-                            onClick={() => handleVaultClick(vault.path)}
-                            onMouseEnter={handleMouseEnter}
-                            onMouseLeave={handleMouseLeave}
-                        >
-                            <svg style={styles.vaultIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                            </svg>
-                            <div style={styles.vaultInfo}>
-                                <p style={styles.vaultName}>{vault.name}</p>
-                                <p style={styles.vaultPath}>{vault.path}</p>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+                    <div style={styles.vaultInfo}>
+                        <Label variant="body" className="font-medium truncate block">
+                            {vault.name}
+                        </Label>
+                        <Label variant="muted" className="truncate block">
+                            {vault.path}
+                        </Label>
+                    </div>
+                    <button
+                        style={styles.deleteButton}
+                        onClick={(e) => handleDeleteClick(e, vault.path)}
+                        aria-label="Remove from history"
+                    >
+                        <Icon name="trash-2" size={16} />
+                    </button>
+                </Card>
+            ))}
         </div>
     );
 };
 
+/**
+ * Styles for VaultList
+ */
+const styles: Record<string, React.CSSProperties> = {
+    container: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+    },
+    emptyState: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flex: 1,
+        color: 'var(--nh-text-muted, #888888)',
+        textAlign: 'center',
+        padding: '20px',
+    },
+    iconWrapper: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '40px',
+        height: '40px',
+        borderRadius: '8px',
+        backgroundColor: 'var(--nh-bg-main, #1a1a1a)',
+        color: 'var(--nh-text-secondary, #a0a0a0)',
+        flexShrink: 0,
+    },
+    vaultInfo: {
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px',
+    },
+    deleteButton: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '32px',
+        height: '32px',
+        borderRadius: '6px',
+        border: 'none',
+        background: 'transparent',
+        color: 'var(--nh-text-muted, #888888)',
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+        flexShrink: 0,
+    },
+};
+
 export default VaultList;
+
