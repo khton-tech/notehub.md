@@ -1,0 +1,19 @@
+{
+    "name": "notehub.md",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "pnpm -r build",
+        "dev": "pnpm -r --parallel dev",
+        "clean": "pnpm -r clean",
+        "gen:plugin": "tsx scripts/create-plugin.ts"
+    },
+    "devDependencies": {
+        "@types/prompts": "^2.4.9",
+        "prompts": "^2.4.2",
+        "tsx": "^4.21.0",
+        "typescript": "^5.3.0"
+    },
+    "packageManager": "pnpm@9.0.0"
+}
