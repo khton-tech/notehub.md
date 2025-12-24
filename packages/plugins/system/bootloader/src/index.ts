@@ -44,13 +44,24 @@ export class BootloaderPlugin implements IPlugin {
 
     private bootloader: Bootloader | null = null;
     private lastResult: BootloaderResult | null = null;
+    private app: NotehubCore | null = null;
+
+    /**
+     * Log a message via the Logger plugin
+     */
+    private log(level: 'info' | 'warn' | 'error', message: string): void {
+        if (this.app) {
+            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
+        }
+    }
 
     /**
      * Load the bootloader plugin
      * Registers API methods for plugin loading
      */
     async load(app: NotehubCore): Promise<void> {
-        console.log(`[${this.manifest.id}] Loading...`);
+        this.app = app;
+        this.log('info', 'Loading...');
 
         this.bootloader = new Bootloader(app as NotehubCore);
 
@@ -59,14 +70,14 @@ export class BootloaderPlugin implements IPlugin {
         app.api.register('bootloader.getResult', this.getLastResult.bind(this));
         app.api.register('bootloader.getInstance', this.getInstance.bind(this));
 
-        console.log(`[${this.manifest.id}] Loaded successfully`);
+        this.log('info', 'Loaded successfully');
     }
 
     /**
      * Unload the bootloader plugin
      */
     async unload(app: NotehubCore): Promise<void> {
-        console.log(`[${this.manifest.id}] Unloading...`);
+        this.log('info', 'Unloading...');
 
         // Unregister API methods
         app.api.unregister('bootloader.load');
@@ -76,7 +87,8 @@ export class BootloaderPlugin implements IPlugin {
         this.bootloader = null;
         this.lastResult = null;
 
-        console.log(`[${this.manifest.id}] Unloaded successfully`);
+        this.log('info', 'Unloaded successfully');
+        this.app = null;
     }
 
     /**

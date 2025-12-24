@@ -14,32 +14,45 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
         name: 'FsDriverTauri',
         version: '0.0.0',
         type: 'system',
-        dependencies: ['nh.system.fs-manager'],
+        dependencies: ['nh.system.logger', 'nh.system.fs-manager'],
     };
+
+    private app: NotehubCore | null = null;
+
+    /**
+     * Log a message via the Logger plugin
+     */
+    private log(level: 'info' | 'warn' | 'error', message: string): void {
+        if (this.app) {
+            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
+        }
+    }
 
     /**
      * Load the driver and register with fs-manager
      */
     async load(app: NotehubCore): Promise<void> {
-        console.log(`[${this.manifest.id}] Loading...`);
+        this.app = app;
+        this.log('info', 'Loading...');
 
         // Check if we're running in Tauri environment
         if (!this.isTauriEnvironment()) {
-            console.warn(`[${this.manifest.id}] Not in Tauri environment, skipping registration`);
+            this.log('warn', 'Not in Tauri environment, skipping registration');
             return;
         }
 
         // Register this driver with fs-manager
         await app.api.invoke('fs:register-driver', this, 'Tauri');
 
-        console.log(`[${this.manifest.id}] Loaded and registered with fs-manager`);
+        this.log('info', 'Loaded and registered with fs-manager');
     }
 
     /**
      * Unload the driver
      */
     async unload(_app: NotehubCore): Promise<void> {
-        console.log(`[${this.manifest.id}] Unloaded`);
+        this.log('info', 'Unloaded');
+        this.app = null;
     }
 
     /**

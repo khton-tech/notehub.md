@@ -1,0 +1,10 @@
+{
+    "id": "nh.ui.layout-manager",
+    "name": "LayoutManager",
+    "version": "0.0.0",
+    "type": "ui",
+    "dependencies": [
+        "nh.system.logger",
+        "nh.ui.theme-manager"
+    ]
+}

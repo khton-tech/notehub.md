@@ -4,6 +4,7 @@
     "version": "0.0.0",
     "type": "system",
     "dependencies": [
+        "nh.system.logger",
         "nh.system.fs-manager"
     ]
 }

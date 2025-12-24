@@ -88,6 +88,8 @@ export class Bootloader {
     private results: Map<string, PluginLoadResult>;
     private failedPlugins: Set<string>;
 
+    private static readonly SOURCE = 'Bootloader';
+
     constructor(app: NotehubCore) {
         this.app = app;
         this.graph = new DependencyGraph();
@@ -97,13 +99,20 @@ export class Bootloader {
     }
 
     /**
+     * Log a message via the Logger plugin
+     */
+    private log(level: 'info' | 'warn' | 'error', message: string): void {
+        this.app.api.invoke(`logger:${level}`, Bootloader.SOURCE, message);
+    }
+
+    /**
      * Main entry point: Load all plugins
      * 
      * @param rawPlugins - Array of loadable plugins (manifest + init function)
      * @returns Bootloader result with status of all plugins
      */
     async load(rawPlugins: LoadablePlugin[]): Promise<BootloaderResult> {
-        console.log(`[Bootloader] Starting load of ${rawPlugins.length} plugin(s)`);
+        this.log('info', `Starting load of ${rawPlugins.length} plugin(s)`);
 
         // Phase 1: Discovery - Validate manifests and collect plugins
         const validatedPlugins = this.discover(rawPlugins);
@@ -117,7 +126,7 @@ export class Bootloader {
             sortResult = topologicalSort(this.graph);
         } catch (error) {
             if (error instanceof CyclicDependencyError) {
-                console.error('[Bootloader] Cyclic dependency detected:', error.involvedPlugins);
+                this.log('error', `Cyclic dependency detected: ${error.involvedPlugins.join(', ')}`);
                 // Mark all cycle participants as failed
                 for (const pluginId of error.involvedPlugins) {
                     this.markFailed(pluginId, error);
@@ -127,9 +136,9 @@ export class Bootloader {
             throw error;
         }
 
-        console.log(`[Bootloader] Load order: ${sortResult.waves.length} wave(s)`);
+        this.log('info', `Load order: ${sortResult.waves.length} wave(s)`);
         for (let i = 0; i < sortResult.waves.length; i++) {
-            console.log(`[Bootloader]   Wave ${i}: ${sortResult.waves[i]!.join(', ')}`);
+            this.log('info', `  Wave ${i}: ${sortResult.waves[i]!.join(', ')}`);
         }
 
         // Phase 4: Initialization - Wavefront parallel loading
@@ -143,7 +152,7 @@ export class Bootloader {
      * Validate raw manifests and filter out invalid ones
      */
     private discover(rawPlugins: LoadablePlugin[]): LoadablePlugin[] {
-        console.log('[Bootloader] Phase 1: Discovery');
+        this.log('info', 'Phase 1: Discovery');
         const valid: LoadablePlugin[] = [];
 
         for (const plugin of rawPlugins) {
@@ -154,10 +163,10 @@ export class Bootloader {
                     manifest: validatedManifest,
                     init: plugin.init,
                 });
-                console.log(`[Bootloader]   ✓ Validated: ${validatedManifest.id}`);
+                this.log('info', `  ✓ Validated: ${validatedManifest.id}`);
             } catch (error) {
                 const pluginId = (plugin.manifest as any)?.id ?? 'unknown';
-                console.error(`[Bootloader]   ✗ Invalid manifest for "${pluginId}":`, error);
+                this.log('error', `  ✗ Invalid manifest for "${pluginId}": ${error instanceof Error ? error.message : String(error)}`);
                 // Skip invalid plugins
             }
         }
@@ -170,7 +179,7 @@ export class Bootloader {
      * Build the dependency graph
      */
     private resolve(plugins: LoadablePlugin[]): void {
-        console.log('[Bootloader] Phase 2: Resolution');
+        this.log('info', 'Phase 2: Resolution');
 
         // Reset state
         this.graph = new DependencyGraph();
@@ -189,11 +198,11 @@ export class Bootloader {
             this.graph.buildEdges();
         } catch (error) {
             // If a required dependency is missing, we need to handle it gracefully
-            console.error('[Bootloader] Resolution failed:', error);
+            this.log('error', `Resolution failed: ${error instanceof Error ? error.message : String(error)}`);
             throw error;
         }
 
-        console.log('[Bootloader]   Graph built successfully');
+        this.log('info', '  Graph built successfully');
     }
 
     /**
@@ -201,11 +210,11 @@ export class Bootloader {
      * Process waves sequentially, plugins within wave in parallel
      */
     private async initializeWavefront(waves: string[][]): Promise<void> {
-        console.log('[Bootloader] Phase 4: Initialization (Wavefront)');
+        this.log('info', 'Phase 4: Initialization (Wavefront)');
 
         for (let waveIndex = 0; waveIndex < waves.length; waveIndex++) {
             const wave = waves[waveIndex]!;
-            console.log(`[Bootloader]   Processing Wave ${waveIndex}...`);
+            this.log('info', `  Processing Wave ${waveIndex}...`);
 
             // Filter out plugins that should be skipped due to failed dependencies
             const toLoad: string[] = [];
@@ -218,7 +227,7 @@ export class Bootloader {
             }
 
             if (toLoad.length === 0) {
-                console.log(`[Bootloader]   Wave ${waveIndex}: all plugins skipped`);
+                this.log('info', `  Wave ${waveIndex}: all plugins skipped`);
                 continue;
             }
 
@@ -233,13 +242,13 @@ export class Bootloader {
 
                 if (result.status === 'fulfilled') {
                     this.markLoaded(pluginId);
-                    console.log(`[Bootloader]     ✓ Loaded: ${pluginId}`);
+                    this.log('info', `    ✓ Loaded: ${pluginId}`);
                 } else {
                     const reason = result.reason instanceof Error
                         ? result.reason
                         : new Error(String(result.reason));
                     this.markFailed(pluginId, reason);
-                    console.error(`[Bootloader]     ✗ Failed: ${pluginId}`, reason);
+                    this.log('error', `    ✗ Failed: ${pluginId} - ${reason.message}`);
 
                     // Cascade failure to dependents
                     this.cascadeFailure(pluginId);
@@ -295,7 +304,7 @@ export class Bootloader {
         for (const dependentId of dependents) {
             if (!this.results.has(dependentId)) {
                 this.markSkipped(dependentId, failedPluginId);
-                console.log(`[Bootloader]     ⊘ Skipped: ${dependentId} (depends on failed ${failedPluginId})`);
+                this.log('warn', `    ⊘ Skipped: ${dependentId} (depends on failed ${failedPluginId})`);
 
                 // Recursively cascade to dependents of the skipped plugin
                 this.cascadeFailure(dependentId);
@@ -364,10 +373,14 @@ export class Bootloader {
 
         const success = failed.length === 0 && skipped.length === 0;
 
-        console.log('[Bootloader] Load complete:');
-        console.log(`[Bootloader]   Loaded: ${loaded.length}`);
-        console.log(`[Bootloader]   Failed: ${failed.length}`);
-        console.log(`[Bootloader]   Skipped: ${skipped.length}`);
+        this.log('info', 'Load complete:');
+        this.log('info', `  Loaded: ${loaded.length}`);
+        if (failed.length > 0) {
+            this.log('warn', `  Failed: ${failed.length}`);
+        }
+        if (skipped.length > 0) {
+            this.log('warn', `  Skipped: ${skipped.length}`);
+        }
 
         return {
             success,

@@ -32,12 +32,20 @@ export class ConfigManagerPlugin implements IPlugin {
     private app: NotehubCore | null = null;
 
     /**
+     * Log a message via the Logger plugin
+     */
+    private log(level: 'info' | 'warn' | 'error', message: string): void {
+        if (this.app) {
+            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
+        }
+    }
+
+    /**
      * Load the plugin: register API methods and load config from disk
      */
     async load(app: NotehubCore): Promise<void> {
-        console.log(`[${this.manifest.id}] Loading...`);
-
         this.app = app;
+        this.log('info', 'Loading...');
 
         // Register API methods
         app.api.register('config:get', this.get.bind(this));
@@ -47,24 +55,24 @@ export class ConfigManagerPlugin implements IPlugin {
         // Load initial config from disk
         await this.loadFromDisk();
 
-        console.log(`[${this.manifest.id}] Loaded with ${Object.keys(this.config).length} setting(s)`);
+        this.log('info', `Loaded with ${Object.keys(this.config).length} setting(s)`);
     }
 
     /**
      * Unload the plugin and cleanup
      */
     async unload(app: NotehubCore): Promise<void> {
-        console.log(`[${this.manifest.id}] Unloading...`);
+        this.log('info', 'Unloading...');
 
         // Unregister API methods
         app.api.unregister('config:get');
         app.api.unregister('config:set');
         app.api.unregister('config:reload');
 
-        this.app = null;
         this.config = {};
 
-        console.log(`[${this.manifest.id}] Unloaded`);
+        this.log('info', 'Unloaded');
+        this.app = null;
     }
 
     // =============== API Methods ===============
@@ -103,9 +111,9 @@ export class ConfigManagerPlugin implements IPlugin {
      * Force reload configuration from disk
      */
     private async reload(): Promise<void> {
-        console.log(`[${this.manifest.id}] Reloading config from disk...`);
+        this.log('info', 'Reloading config from disk...');
         await this.loadFromDisk();
-        console.log(`[${this.manifest.id}] Config reloaded`);
+        this.log('info', 'Config reloaded');
     }
 
     // =============== Internal Methods ===============
@@ -115,7 +123,7 @@ export class ConfigManagerPlugin implements IPlugin {
      */
     private async loadFromDisk(): Promise<void> {
         if (!this.app) {
-            console.error(`[${this.manifest.id}] Cannot load: app reference not set`);
+            this.log('error', 'Cannot load: app reference not set');
             return;
         }
 
@@ -125,7 +133,7 @@ export class ConfigManagerPlugin implements IPlugin {
 
             if (!exists) {
                 // File doesn't exist - start with empty config
-                console.log(`[${this.manifest.id}] Config file not found, starting with empty config`);
+                this.log('info', 'Config file not found, starting with empty config');
                 this.config = {};
                 return;
             }
@@ -136,7 +144,7 @@ export class ConfigManagerPlugin implements IPlugin {
 
         } catch (error) {
             // Handle parse errors or other issues
-            console.error(`[${this.manifest.id}] Error loading config:`, error);
+            this.log('error', `Error loading config: ${error instanceof Error ? error.message : String(error)}`);
             this.config = {};
         }
     }
@@ -146,7 +154,7 @@ export class ConfigManagerPlugin implements IPlugin {
      */
     private async save(): Promise<void> {
         if (!this.app) {
-            console.error(`[${this.manifest.id}] Cannot save: app reference not set`);
+            this.log('error', 'Cannot save: app reference not set');
             return;
         }
 
@@ -154,7 +162,7 @@ export class ConfigManagerPlugin implements IPlugin {
             const content = JSON.stringify(this.config, null, 2);
             await this.app.api.invoke('fs:write-text-file', this.CONFIG_PATH, content);
         } catch (error) {
-            console.error(`[${this.manifest.id}] Error saving config:`, error);
+            this.log('error', `Error saving config: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }

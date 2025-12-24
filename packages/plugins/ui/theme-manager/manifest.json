@@ -1,0 +1,10 @@
+{
+    "id": "nh.ui.theme-manager",
+    "name": "ThemeManager",
+    "version": "0.0.0",
+    "type": "ui",
+    "dependencies": [
+        "nh.system.logger",
+        "nh.system.config-manager"
+    ]
+}

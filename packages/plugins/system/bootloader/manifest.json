@@ -3,5 +3,7 @@
     "name": "Bootloader",
     "version": "0.0.0",
     "type": "system",
-    "dependencies": []
+    "dependencies": [
+        "nh.system.logger"
+    ]
 }

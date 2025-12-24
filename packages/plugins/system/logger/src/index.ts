@@ -1,0 +1,179 @@
+import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+
+/**
+ * Log levels for message severity classification
+ */
+export enum LogLevel {
+    LOG = 'LOG',
+    INFO = 'INFO',
+    WARN = 'WARN',
+    ERROR = 'ERROR',
+    CRITICAL = 'CRITICAL',
+}
+
+/**
+ * Log entry structure for events
+ */
+export interface LogEntry {
+    timestamp: string;
+    level: LogLevel;
+    source: string;
+    message: string;
+}
+
+/**
+ * LoggerPlugin - Centralized logging system
+ *
+ * Provides a unified API for logging messages across the application.
+ * All log messages are formatted and emitted as events for UI consumption.
+ *
+ * API Methods:
+ * - `logger:log` - Log a message with specified level
+ * - `logger:info` - Convenience wrapper for INFO level
+ * - `logger:warn` - Convenience wrapper for WARN level
+ * - `logger:error` - Convenience wrapper for ERROR level
+ *
+ * Events:
+ * - `sys:log` - Emitted on every log call with LogEntry payload
+ */
+export class LoggerPlugin implements IPlugin {
+    readonly manifest: PluginManifest = {
+        id: 'nh.system.logger',
+        name: 'Logger',
+        version: '0.0.0',
+        type: 'system',
+    };
+
+    /** Reference to kernel for event emission and API calls */
+    private app: NotehubCore | null = null;
+
+    /**
+     * Format a log entry as a string
+     * Format: [ISO-TIME] [LEVEL] [SOURCE] Message
+     */
+    private formatMessage(level: LogLevel, source: string, message: string): string {
+        const timestamp = new Date().toISOString();
+        return `[${timestamp}] [${level}] [${source}] ${message}`;
+    }
+
+    /**
+     * Create a LogEntry object
+     */
+    private createEntry(level: LogLevel, source: string, message: string): LogEntry {
+        return {
+            timestamp: new Date().toISOString(),
+            level,
+            source,
+            message,
+        };
+    }
+
+    /**
+     * Core logging method
+     * Outputs to console and emits sys:log event
+     */
+    private log(level: LogLevel, source: string, message: string): void {
+        const formattedMessage = this.formatMessage(level, source, message);
+        const entry = this.createEntry(level, source, message);
+
+        // Output to console based on level
+        switch (level) {
+            case LogLevel.ERROR:
+            case LogLevel.CRITICAL:
+                console.error(formattedMessage);
+                break;
+            case LogLevel.WARN:
+                console.warn(formattedMessage);
+                break;
+            case LogLevel.INFO:
+            case LogLevel.LOG:
+            default:
+                console.log(formattedMessage);
+                break;
+        }
+
+        // Emit event for UI consumption (e.g., Developer Console)
+        if (this.app) {
+            this.app.events.emit('sys:log', entry);
+        }
+    }
+
+    // =============== API Method Handlers ===============
+
+    /**
+     * API handler for logger:log
+     */
+    private handleLog = (level: string, source: string, message: string): void => {
+        const logLevel = this.parseLevel(level);
+        this.log(logLevel, source, message);
+    };
+
+    /**
+     * API handler for logger:info
+     */
+    private handleInfo = (source: string, message: string): void => {
+        this.log(LogLevel.INFO, source, message);
+    };
+
+    /**
+     * API handler for logger:warn
+     */
+    private handleWarn = (source: string, message: string): void => {
+        this.log(LogLevel.WARN, source, message);
+    };
+
+    /**
+     * API handler for logger:error
+     */
+    private handleError = (source: string, message: string): void => {
+        this.log(LogLevel.ERROR, source, message);
+    };
+
+    /**
+     * Parse string to LogLevel, defaults to LOG for unknown values
+     */
+    private parseLevel(level: string): LogLevel {
+        const normalized = level.toUpperCase();
+        if (Object.values(LogLevel).includes(normalized as LogLevel)) {
+            return normalized as LogLevel;
+        }
+        console.warn(`[Logger] Unknown log level: "${level}", defaulting to LOG`);
+        return LogLevel.LOG;
+    }
+
+    // =============== Plugin Lifecycle ===============
+
+    /**
+     * Load the plugin: register API methods
+     */
+    async load(app: NotehubCore): Promise<void> {
+        this.app = app;
+
+        // Register API methods
+        app.api.register('logger:log', this.handleLog);
+        app.api.register('logger:info', this.handleInfo);
+        app.api.register('logger:warn', this.handleWarn);
+        app.api.register('logger:error', this.handleError);
+
+        // Log our own initialization
+        this.log(LogLevel.INFO, 'Logger', 'Logger plugin initialized');
+    }
+
+    /**
+     * Unload the plugin and cleanup
+     */
+    async unload(app: NotehubCore): Promise<void> {
+        this.log(LogLevel.INFO, 'Logger', 'Logger plugin unloading');
+
+        // Unregister API methods
+        app.api.unregister('logger:log');
+        app.api.unregister('logger:info');
+        app.api.unregister('logger:warn');
+        app.api.unregister('logger:error');
+
+        this.app = null;
+    }
+}
+
+// Default export for dynamic loading
+export default LoggerPlugin;

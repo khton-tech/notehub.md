@@ -4,16 +4,19 @@
     "name": "Bootloader",
     "version": "0.0.0",
     "type": "system",
-    "dependencies": []
+    "dependencies": [
+      "nh.system.logger"
+    ]
   },
   {
     "id": "nh.system.config-manager",
     "name": "ConfigManager",
     "version": "0.0.0",
     "type": "system",
-    "dependencies": {
-      "nh.system.fs-manager": "^1.0.0"
-    }
+    "dependencies": [
+      "nh.system.logger",
+      "nh.system.fs-manager"
+    ]
   },
   {
     "id": "nh.system.fs-driver-tauri",
@@ -21,14 +24,55 @@
     "version": "0.0.0",
     "type": "system",
     "dependencies": [
+      "nh.system.logger",
       "nh.system.fs-manager"
     ]
+  },
+  {
+    "id": "nh.system.logger",
+    "name": "Logger",
+    "version": "0.0.0",
+    "type": "system",
+    "description": "Centralized logging system with level-based filtering and event emission",
+    "dependencies": []
   },
   {
     "id": "nh.system.fs-manager",
     "name": "FsManager",
     "version": "0.0.0",
     "type": "system",
-    "dependencies": []
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.system.state-manager",
+    "name": "StateManager",
+    "version": "0.0.0",
+    "type": "system",
+    "description": "Runtime session state storage (non-persistent)",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.ui.layout-manager",
+    "name": "LayoutManager",
+    "version": "0.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.theme-manager",
+    "name": "ThemeManager",
+    "version": "0.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.system.config-manager"
+    ]
   }
 ]

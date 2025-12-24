@@ -31,12 +31,23 @@ export class FsManagerPlugin implements IPlugin {
 
     private driver: IFileSystem | null = null;
     private driverName: string = '';
+    private app: NotehubCore | null = null;
+
+    /**
+     * Log a message via the Logger plugin
+     */
+    private log(level: 'info' | 'warn' | 'error', message: string): void {
+        if (this.app) {
+            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
+        }
+    }
 
     /**
      * Load the plugin and register API methods
      */
     async load(app: NotehubCore): Promise<void> {
-        console.log(`[${this.manifest.id}] Loading...`);
+        this.app = app;
+        this.log('info', 'Loading...');
 
         // Register driver registration API
         app.api.register('fs:register-driver', this.registerDriver.bind(this));
@@ -50,14 +61,14 @@ export class FsManagerPlugin implements IPlugin {
         app.api.register('fs:read-dir', this.readDir.bind(this));
         app.api.register('fs:exists', this.exists.bind(this));
 
-        console.log(`[${this.manifest.id}] Loaded - awaiting driver registration`);
+        this.log('info', 'Loaded - awaiting driver registration');
     }
 
     /**
      * Unload the plugin
      */
     async unload(app: NotehubCore): Promise<void> {
-        console.log(`[${this.manifest.id}] Unloading...`);
+        this.log('info', 'Unloading...');
 
         // Unregister all API methods
         app.api.unregister('fs:register-driver');
@@ -72,7 +83,8 @@ export class FsManagerPlugin implements IPlugin {
         this.driver = null;
         this.driverName = '';
 
-        console.log(`[${this.manifest.id}] Unloaded`);
+        this.log('info', 'Unloaded');
+        this.app = null;
     }
 
     /**
@@ -82,12 +94,12 @@ export class FsManagerPlugin implements IPlugin {
      */
     private registerDriver(driver: IFileSystem, name: string = 'Unknown'): void {
         if (this.driver) {
-            console.warn(`[${this.manifest.id}] Replacing existing driver "${this.driverName}" with "${name}"`);
+            this.log('warn', `Replacing existing driver "${this.driverName}" with "${name}"`);
         }
 
         this.driver = driver;
         this.driverName = name;
-        console.log(`FS Driver Registered: ${name}`);
+        this.log('info', `Driver registered: ${name}`);
     }
 
     /**
@@ -95,7 +107,9 @@ export class FsManagerPlugin implements IPlugin {
      */
     private ensureDriver(): IFileSystem {
         if (!this.driver) {
-            throw new Error('No FS Driver available');
+            const error = 'No FS Driver available';
+            this.log('error', error);
+            throw new Error(error);
         }
         return this.driver;
     }

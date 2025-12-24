@@ -12,8 +12,13 @@
     "dependencies": {
         "@notehub/core": "workspace:*",
         "@notehub/bootloader": "workspace:*",
+        "@notehub/logger": "workspace:*",
         "@notehub/fs-manager": "workspace:*",
         "@notehub/fs-driver-tauri": "workspace:*",
+        "@notehub/state-manager": "workspace:*",
+        "@notehub/config-manager": "workspace:*",
+        "@notehub/theme-manager": "workspace:*",
+        "@notehub/layout-manager": "workspace:*",
         "@tauri-apps/api": "^2.0.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0"
