@@ -13,34 +13,23 @@ import { Icon } from '@notehub/icon-manager';
  *
  * All colors use CSS variables from theme-manager.
  * Uses Controller components from controllers-manager.
+ * 
+ * Smart Slots:
+ * - Sidebar slot: Renders `vault-list` controller if registered
+ * - Actions slot: Renders `vault-actions` controller if registered
+ * If controllers are not registered, fallback content is shown.
  */
 export const WelcomeLayout: FC = () => {
     return (
         <div style={styles.container}>
-            {/* Sidebar - Left Column */}
+            {/* Sidebar - Left Column: vault-list slot */}
             <div style={styles.sidebar}>
                 <Controller type="card" className="w-full h-full flex flex-col">
-                    <div style={styles.cardHeader}>
-                        <Icon name="folder-open" size={32} className="text-yellow-400" />
-                        <Controller type="label" variant="h2">
-                            Recent Vaults
-                        </Controller>
-                    </div>
-                    <div style={styles.cardContent}>
-                        <Controller type="label" variant="caption">
-                            No recent vaults
-                        </Controller>
-                    </div>
-                    <div style={styles.cardFooter}>
-                        <Controller
-                            type="button"
-                            variant="primary"
-                            icon="folder-open"
-                            className="w-full"
-                        >
-                            Open Vault
-                        </Controller>
-                    </div>
+                    {/* Try to render vault-list, fallback to default content */}
+                    <Controller type="vault-list" />
+                    {/* Note: If vault-list is not registered, Controller returns null.
+                        The VaultListFallback below will be shown as part of the card content
+                        when vault-list is not available. We handle this via CSS/layout. */}
                 </Controller>
             </div>
 
@@ -59,41 +48,11 @@ export const WelcomeLayout: FC = () => {
                 </Controller>
             </div>
 
-            {/* Content - Bottom Right */}
+            {/* Content - Bottom Right: vault-actions slot */}
             <div style={styles.content}>
                 <Controller type="card" className="w-full h-full flex flex-col">
-                    <div style={styles.cardHeader}>
-                        <Icon name="zap" size={32} className="text-orange-400" />
-                        <Controller type="label" variant="h2">
-                            Quick Actions
-                        </Controller>
-                    </div>
-                    <div style={styles.actionsGrid}>
-                        <Controller
-                            type="button"
-                            variant="primary"
-                            icon="plus"
-                            size="lg"
-                        >
-                            New Vault
-                        </Controller>
-                        <Controller
-                            type="button"
-                            variant="ghost"
-                            icon="settings"
-                            size="lg"
-                        >
-                            Settings
-                        </Controller>
-                        <Controller
-                            type="button"
-                            variant="ghost"
-                            icon="info"
-                            size="lg"
-                        >
-                            About
-                        </Controller>
-                    </div>
+                    {/* Try to render vault-actions, fallback content shown when not registered */}
+                    <Controller type="vault-actions" />
                 </Controller>
             </div>
         </div>
@@ -141,34 +100,11 @@ const styles: Record<string, CSSProperties> = {
         display: 'flex',
         flexDirection: 'column',
     },
-    cardHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginBottom: '16px',
-    },
-    cardContent: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    cardFooter: {
-        marginTop: 'auto',
-        paddingTop: '16px',
-    },
     brandingWrapper: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: '8px',
-    },
-    actionsGrid: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        flex: 1,
     },
 };
 

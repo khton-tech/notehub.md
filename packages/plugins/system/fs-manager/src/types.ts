@@ -69,4 +69,10 @@ export interface IFileSystem {
      * @param path - Absolute path to check
      */
     exists(path: string): Promise<boolean>;
+
+    /**
+     * Open a native directory picker dialog
+     * @returns Selected directory path or null if cancelled
+     */
+    pickDirectory(): Promise<string | null>;
 }

@@ -1,5 +1,5 @@
 {
-    "name": "@notehub/fs-driver-tauri",
+    "name": "@notehub/vault-picker",
     "version": "0.0.0",
     "type": "module",
     "main": "./dist/index.js",
@@ -20,11 +20,10 @@
     },
     "dependencies": {
         "@notehub/core": "workspace:*",
-        "@notehub/fs-manager": "workspace:*",
-        "@tauri-apps/plugin-fs": "^2.0.0",
-        "@tauri-apps/plugin-dialog": "^2.0.0"
+        "react": "^18.2.0"
     },
     "devDependencies": {
+        "@types/react": "^18.2.0",
         "typescript": "^5.3.0",
         "rimraf": "^5.0.0"
     }

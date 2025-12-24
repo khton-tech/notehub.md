@@ -1,6 +1,7 @@
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import type { IFileSystem, DirEntry, CreateDirOptions } from '@notehub/fs-manager';
 import * as tauriFs from '@tauri-apps/plugin-fs';
+import { open } from '@tauri-apps/plugin-dialog';
 
 /**
  * FsDriverTauriPlugin - Tauri V2 file system driver
@@ -97,7 +98,18 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
     async exists(path: string): Promise<boolean> {
         return await tauriFs.exists(path);
     }
+
+    async pickDirectory(): Promise<string | null> {
+        try {
+            const result = await open({ directory: true });
+            return result ?? null;
+        } catch (error) {
+            this.log('error', `pickDirectory failed: ${error}`);
+            return null;
+        }
+    }
 }
 
 // Default export for dynamic loading
 export default FsDriverTauriPlugin;
+

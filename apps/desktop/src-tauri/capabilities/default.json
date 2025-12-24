@@ -7,15 +7,87 @@
     ],
     "permissions": [
         "core:default",
-        "fs:default",
-        "fs:allow-read",
-        "fs:allow-write",
-        "fs:allow-exists",
-        "fs:allow-mkdir",
-        "fs:allow-read-dir",
-        "fs:allow-read-file",
-        "fs:allow-read-text-file",
-        "fs:allow-write-file",
-        "fs:allow-write-text-file"
+        {
+            "identifier": "fs:default",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-read",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-write",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-exists",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-mkdir",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-read-dir",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-read-file",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-read-text-file",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-write-file",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-write-text-file",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        },
+        "dialog:default",
+        "dialog:allow-open"
     ]
 }

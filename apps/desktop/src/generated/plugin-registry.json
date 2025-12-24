@@ -1,5 +1,19 @@
 [
   {
+    "id": "nh.features.vault-picker",
+    "name": "VaultPicker",
+    "version": "0.0.0",
+    "type": "feature",
+    "dependencies": [
+      "nh.system.fs-manager",
+      "nh.system.config-manager",
+      "nh.system.state-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.layout-manager"
+    ]
+  },
+  {
     "id": "nh.system.bootloader",
     "name": "Bootloader",
     "version": "0.0.0",
@@ -9,8 +23,8 @@
     ]
   },
   {
-    "id": "nh.system.fs-driver-tauri",
-    "name": "FsDriverTauri",
+    "id": "nh.system.config-manager",
+    "name": "ConfigManager",
     "version": "0.0.0",
     "type": "system",
     "dependencies": [
@@ -19,8 +33,8 @@
     ]
   },
   {
-    "id": "nh.system.config-manager",
-    "name": "ConfigManager",
+    "id": "nh.system.fs-driver-tauri",
+    "name": "FsDriverTauri",
     "version": "0.0.0",
     "type": "system",
     "dependencies": [
@@ -56,6 +70,27 @@
     ]
   },
   {
+    "id": "nh.ui.ck-standard",
+    "name": "CKStandard",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.controllers-manager",
+    "name": "ControllersManager",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
     "id": "nh.ui.icon-manager",
     "name": "IconManager",
     "version": "1.0.0",
@@ -72,7 +107,9 @@
     "dependencies": [
       "nh.system.logger",
       "nh.ui.theme-manager",
-      "nh.ui.icon-manager"
+      "nh.ui.icon-manager",
+      "nh.ui.controllers-manager",
+      "nh.ui.ck-standard"
     ]
   },
   {
