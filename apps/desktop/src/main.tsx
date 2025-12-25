@@ -23,6 +23,7 @@ import { LayoutManagerPlugin, LayoutRenderer } from '@notehub/layout-manager';
 
 // Feature Plugins
 import { VaultPickerPlugin } from '@notehub/vault-picker';
+import { ExplorerPlugin } from '@notehub/explorer';
 
 /**
  * Global core instance for the application
@@ -72,6 +73,7 @@ async function initApp(onStatusUpdate: (status: string) => void): Promise<Notehu
     // Layer 4: Feature Plugins
     core.registerPlugin(new VaultPickerPlugin());
     core.registerPlugin(new WorkbenchPlugin());
+    core.registerPlugin(new ExplorerPlugin());
 
     // Initialize Bootloader (Orchestrator)
     new Bootloader(core);

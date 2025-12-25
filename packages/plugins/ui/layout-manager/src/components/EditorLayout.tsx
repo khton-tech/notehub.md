@@ -78,7 +78,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
 
             {/* Sidebar Area */}
             <div style={{ gridArea: 'sidebar', position: 'relative' }} className="border-r border-[#444] bg-[var(--nh-bg-sidebar)]">
-                <Controller type="explorer-placeholder" />
+                <Controller type="explorer-tree" />
 
                 {/* Resize Handle */}
                 <div

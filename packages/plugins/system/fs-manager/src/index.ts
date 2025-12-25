@@ -62,6 +62,7 @@ export class FsManagerPlugin implements IPlugin {
         app.api.register('fs:read-dir', this.readDir.bind(this));
         app.api.register('fs:exists', this.exists.bind(this));
         app.api.register('fs:pick-directory', this.pickDirectory.bind(this));
+        app.api.register('fs:watch', this.watch.bind(this));
 
         this.log('info', 'Loaded - awaiting driver registration');
     }
@@ -82,6 +83,7 @@ export class FsManagerPlugin implements IPlugin {
         app.api.unregister('fs:read-dir');
         app.api.unregister('fs:exists');
         app.api.unregister('fs:pick-directory');
+        app.api.unregister('fs:watch');
 
         this.driver = null;
         this.driverName = '';
@@ -149,6 +151,10 @@ export class FsManagerPlugin implements IPlugin {
 
     private async pickDirectory(): Promise<string | null> {
         return this.ensureDriver().pickDirectory();
+    }
+
+    private async watch(path: string, onChange: (event: import('./types.js').FsEvent) => void): Promise<() => void> {
+        return this.ensureDriver().watch(path, onChange);
     }
 }
 

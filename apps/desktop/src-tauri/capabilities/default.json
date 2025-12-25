@@ -88,6 +88,14 @@
             ]
         },
         "dialog:default",
-        "dialog:allow-open"
+        "dialog:allow-open",
+        {
+            "identifier": "fs:allow-watch",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        }
     ]
 }

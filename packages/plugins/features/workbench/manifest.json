@@ -7,6 +7,7 @@
     "nh.ui.layout-manager",
     "nh.ui.theme-manager",
     "nh.ui.ck-standard",
-    "nh.system.state-manager"
+    "nh.system.state-manager",
+    "nh.features.explorer"
   ]
 }

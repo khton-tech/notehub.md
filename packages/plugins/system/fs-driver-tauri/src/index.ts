@@ -108,6 +108,57 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
             return null;
         }
     }
+
+    async watch(path: string, onChange: (event: import('@notehub/fs-manager').FsEvent) => void): Promise<() => void> {
+        try {
+            // @tauri-apps/plugin-fs v2 watch returns a Promise<UnlistenFn>
+            // The event structure needs to be mapped to our FsEvent
+            const unwatch = await tauriFs.watch(path, (event) => {
+                // Tauri watch event: { type: 'any', paths: string[], attrs: any }
+                // or specific types depending on the platform/backend.
+                // We simplify to 'modify' for now or try to map if possible.
+                // Note: The actual event structure depends on the backend (e.g., notify crate in Rust).
+
+                // Usually event contains `type` (or `kind`) and `paths`.
+                // We map to our simplified event.
+
+                // Basic implementation - we just treat everything as a modification on the watched path
+                // or specific subpaths if provided.
+
+                // Debug log to see what we get (optional)
+                // this.log('info', `Watch event: ${JSON.stringify(event)}`);
+
+                // We assume event might look like { type: 'modify', paths: [...] }
+                const paths = (event as any).paths || [path];
+                const typeStr = (event as any).type || 'any';
+
+                let type: 'create' | 'modify' | 'remove' | 'any' = 'any';
+                if (typeof typeStr === 'string') {
+                    if (typeStr.includes('create')) type = 'create';
+                    else if (typeStr.includes('remove')) type = 'remove';
+                    else if (typeStr.includes('modify')) type = 'modify';
+                } else if (typeof typeStr === 'object') {
+                    // Sometimes type is an object like { modify: { kind: 'data' } }
+                    if ('create' in typeStr) type = 'create';
+                    else if ('remove' in typeStr) type = 'remove';
+                    else if ('modify' in typeStr) type = 'modify';
+                }
+
+                paths.forEach((p: string) => {
+                    onChange({
+                        path: p,
+                        type: type
+                    });
+                });
+            }, { recursive: true });
+
+            return unwatch;
+        } catch (error) {
+            this.log('error', `watch failed for ${path}: ${error}`);
+            // Return empty cleanup if failed
+            return () => { };
+        }
+    }
 }
 
 // Default export for dynamic loading

@@ -13,6 +13,10 @@ import {
     X,
     FileText,
     HelpCircle,
+    File,
+    Folder,
+    ChevronRight,
+    ChevronDown,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -65,6 +69,10 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     'x': X,
     'file-text': FileText,
     'help-circle': HelpCircle,
+    'file': File,
+    'folder': Folder,
+    'chevron-right': ChevronRight,
+    'chevron-down': ChevronDown,
 };
 
 /**

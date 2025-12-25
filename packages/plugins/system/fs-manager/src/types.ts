@@ -18,6 +18,17 @@ export interface CreateDirOptions {
     recursive?: boolean;
 }
 
+
+/**
+ * File System Event
+ */
+export interface FsEvent {
+    /** Absolute path to the file/directory that changed */
+    path: string;
+    /** Type of change */
+    type: 'create' | 'modify' | 'remove' | 'any';
+}
+
 /**
  * File System interface that all FS drivers must implement
  * 
@@ -75,4 +86,12 @@ export interface IFileSystem {
      * @returns Selected directory path or null if cancelled
      */
     pickDirectory(): Promise<string | null>;
+
+    /**
+     * Watch a path for changes
+     * @param path - Absolute path to watch (file or directory)
+     * @param onChange - Callback for changes
+     * @returns Function to stop watching
+     */
+    watch(path: string, onChange: (event: FsEvent) => void): Promise<() => void>;
 }

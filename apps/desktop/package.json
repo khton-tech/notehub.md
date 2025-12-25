@@ -16,6 +16,7 @@
         "@notehub/controllers-manager": "workspace:*",
         "@notehub/core": "workspace:*",
         "@notehub/dialog-manager": "workspace:*",
+        "@notehub/explorer": "workspace:*",
         "@notehub/fs-driver-tauri": "workspace:*",
         "@notehub/fs-manager": "workspace:*",
         "@notehub/icon-manager": "workspace:*",

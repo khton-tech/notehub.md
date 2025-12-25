@@ -1,0 +1,27 @@
+{
+    "name": "@notehub/explorer",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "clean": "rimraf dist"
+    },
+    "dependencies": {
+        "@notehub/ck-standard": "workspace:^",
+        "@notehub/core": "workspace:*",
+        "@notehub/fs-manager": "workspace:*",
+        "@notehub/icon-manager": "workspace:*",
+        "@notehub/theme-manager": "workspace:*",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "rimraf": "^5.0.0",
+        "typescript": "^5.3.0"
+    }
+}

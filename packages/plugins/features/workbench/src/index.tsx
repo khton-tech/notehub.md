@@ -1,5 +1,5 @@
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
-import { RibbonPlaceholder, ExplorerPlaceholder, EditorPlaceholder } from './components/Placeholders';
+import { RibbonPlaceholder, EditorPlaceholder } from './components/Placeholders';
 
 export class WorkbenchPlugin implements IPlugin {
     readonly manifest: PluginManifest = {
@@ -31,7 +31,7 @@ export class WorkbenchPlugin implements IPlugin {
 
         // Register placeholders
         app.api.invoke('controller:register', 'ribbon-placeholder', RibbonPlaceholder);
-        app.api.invoke('controller:register', 'explorer-placeholder', ExplorerPlaceholder);
+        // app.api.invoke('controller:register', 'explorer-placeholder', ExplorerPlaceholder);
         app.api.invoke('controller:register', 'editor-placeholder', EditorPlaceholder);
 
         // Auto-Login Check
@@ -55,7 +55,7 @@ export class WorkbenchPlugin implements IPlugin {
     async unload(_app: NotehubCore): Promise<void> {
         this.log('info', 'Unloading...');
 
-        app.events.off('app:vault-opened', this.handleVaultOpened);
+        this.app?.events.off('app:vault-opened', this.handleVaultOpened);
 
         // We don't unregister controllers ideally, or we need a way to unregister them if API supports it.
         // controller:unregister is not in the interface I saw in ControllersManagerPlugin.
