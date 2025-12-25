@@ -23,8 +23,8 @@
     ]
   },
   {
-    "id": "nh.system.fs-driver-tauri",
-    "name": "FsDriverTauri",
+    "id": "nh.system.config-manager",
+    "name": "ConfigManager",
     "version": "0.0.0",
     "type": "system",
     "dependencies": [
@@ -33,8 +33,8 @@
     ]
   },
   {
-    "id": "nh.system.config-manager",
-    "name": "ConfigManager",
+    "id": "nh.system.fs-driver-tauri",
+    "name": "FsDriverTauri",
     "version": "0.0.0",
     "type": "system",
     "dependencies": [
