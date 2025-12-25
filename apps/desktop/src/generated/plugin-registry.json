@@ -14,6 +14,18 @@
     ]
   },
   {
+    "id": "nh.features.workbench",
+    "name": "Workbench",
+    "version": "0.0.0",
+    "type": "features",
+    "dependencies": [
+      "nh.ui.layout-manager",
+      "nh.ui.theme-manager",
+      "nh.ui.ck-standard",
+      "nh.system.state-manager"
+    ]
+  },
+  {
     "id": "nh.system.bootloader",
     "name": "Bootloader",
     "version": "0.0.0",

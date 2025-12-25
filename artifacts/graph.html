@@ -94,6 +94,7 @@
                 <pre class="mermaid">
 flowchart LR
     nh_features_vault-picker["VaultPicker"]
+    nh_features_workbench["Workbench"]
     nh_system_bootloader["Bootloader"]
     nh_system_config-manager["ConfigManager"]
     nh_system_fs-driver-tauri["FsDriverTauri"]
@@ -112,6 +113,10 @@ flowchart LR
     nh_features_vault-picker --> nh_system_logger
     nh_features_vault-picker --> nh_ui_controllers-manager
     nh_features_vault-picker --> nh_ui_layout-manager
+    nh_features_workbench --> nh_ui_layout-manager
+    nh_features_workbench --> nh_ui_theme-manager
+    nh_features_workbench --> nh_ui_ck-standard
+    nh_features_workbench --> nh_system_state-manager
     nh_system_bootloader --> nh_system_logger
     nh_system_config-manager --> nh_system_logger
     nh_system_config-manager --> nh_system_fs-manager
@@ -140,6 +145,7 @@ flowchart LR
     classDef ui fill:#4dabf7,stroke:#1971c2,color:#fff
     classDef feature fill:#51cf66,stroke:#2f9e44,color:#fff
     class nh_features_vault-picker feature
+    class nh_features_workbench feature
     class nh_system_bootloader,nh_system_config-manager,nh_system_fs-driver-tauri,nh_system_fs-manager,nh_system_logger,nh_system_state-manager system
     class nh_ui_ck-standard,nh_ui_controllers-manager,nh_ui_dialog-manager,nh_ui_icon-manager,nh_ui_layout-manager,nh_ui_theme-manager ui
                 </pre>

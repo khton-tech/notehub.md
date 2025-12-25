@@ -45,19 +45,9 @@ export class VaultPickerPlugin implements IPlugin {
         this.log('info', 'Loading...');
 
         // Set up Phase 2 transition listener
-        this.vaultOpenedHandler = (payload: unknown) => {
-            const data = payload as { path: string; name: string };
-            this.log('info', `Transitioning to Phase 2 (Editor) - Vault: ${data.name}`);
-            // TODO: In future, switch to editor layout
-            // For now, show an alert to confirm the transition
-            if (typeof window !== 'undefined') {
-                // Use setTimeout to avoid blocking the event handler
-                setTimeout(() => {
-                    alert(`Vault opened: ${data.name}\n\nPath: ${data.path}\n\nPhase 2 (Editor) coming soon!`);
-                }, 100);
-            }
-        };
-        app.events.on('app:vault-opened', this.vaultOpenedHandler);
+        // Handled by Workbench plugin now
+        // this.vaultOpenedHandler = (payload: unknown) => { ... }
+        // app.events.on('app:vault-opened', this.vaultOpenedHandler);
 
         // Check for last opened vault
         const lastOpened = await this.service.getLastOpenedVault();
@@ -110,7 +100,7 @@ export class VaultPickerPlugin implements IPlugin {
         app.api.invoke('controller:register', 'vault-actions', VaultActionsWrapper);
 
         // Set welcome layout as active
-        app.api.invoke('layout:set-active', 'welcome');
+        app.api.invoke('layout:set', 'welcome');
 
         this.log('info', 'Welcome screen initialized');
     }

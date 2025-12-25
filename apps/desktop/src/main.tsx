@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { NotehubCore } from '@notehub/core';
+import WorkbenchPlugin from '@notehub/workbench';
 
 // System Plugins
 import { LoggerPlugin } from '@notehub/logger';
@@ -8,6 +9,7 @@ import { FsManagerPlugin } from '@notehub/fs-manager';
 import { FsDriverTauriPlugin } from '@notehub/fs-driver-tauri';
 import { StateManagerPlugin } from '@notehub/state-manager';
 import { ConfigManagerPlugin } from '@notehub/config-manager';
+import { Bootloader } from '@notehub/bootloader';
 
 // UI Plugins
 import { ThemeManagerPlugin } from '@notehub/theme-manager';
@@ -67,12 +69,16 @@ async function initApp(): Promise<NotehubCore> {
 
     // Layer 4: Feature Plugins
     core.registerPlugin(new VaultPickerPlugin());        // Depends on: FsManager, StateManager, LayoutManager
+    core.registerPlugin(new WorkbenchPlugin());          // Logic for editor layout
+
+    // Initialize Bootloader (Orchestrator)
+    const bootloader = new Bootloader(core);
+    // Note: Bootloader might need to be started or initialized if it has methods, 
+    // but usually creating it with core sets up listeners.
 
     // ===== INITIALIZATION =====
     // This will load plugins in registration order
     await core.init();
-
-    // Note: VaultPickerPlugin handles layout activation on load
 
     console.log('[Desktop] Notehub.md started successfully');
 

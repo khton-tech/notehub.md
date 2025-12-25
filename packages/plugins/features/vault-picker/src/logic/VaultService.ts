@@ -114,10 +114,10 @@ export class VaultService {
                 lastOpened: Date.now(),
             };
             const newHistory = [newEntry, ...filteredHistory].slice(0, 10);
-            await this.app.api.invoke('state:set', 'vault.history', newHistory);
+            await this.app.api.invoke('config:set', 'vault.history', newHistory);
 
             // Save last opened vault
-            await this.app.api.invoke('state:set', 'vault.last-opened', fullPath);
+            await this.app.api.invoke('config:set', 'vault.last-opened', fullPath);
 
             // Emit vault opened event
             this.app.events.emit('app:vault-opened', { path: fullPath, name });
@@ -135,7 +135,7 @@ export class VaultService {
      * Get list of recently opened vaults
      */
     async getRecentVaults(): Promise<VaultHistoryEntry[]> {
-        const history = await this.app.api.invoke<VaultHistoryEntry[] | undefined>('state:get', 'vault.history');
+        const history = await this.app.api.invoke<VaultHistoryEntry[] | undefined>('config:get', 'vault.history');
         return Array.isArray(history) ? history : [];
     }
 
@@ -143,7 +143,7 @@ export class VaultService {
      * Get the last opened vault path
      */
     async getLastOpenedVault(): Promise<string | null> {
-        const result = await this.app.api.invoke<string | undefined>('state:get', 'vault.last-opened');
+        const result = await this.app.api.invoke<string | undefined>('config:get', 'vault.last-opened');
         return result ?? null;
     }
 

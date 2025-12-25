@@ -68,6 +68,9 @@ importers:
       '@notehub/vault-picker':
         specifier: workspace:*
         version: link:../../packages/plugins/features/vault-picker
+      '@notehub/workbench':
+        specifier: workspace:*
+        version: link:../../packages/plugins/features/workbench
       '@tauri-apps/api':
         specifier: ^2.0.0
         version: 2.9.1
@@ -131,6 +134,40 @@ importers:
         specifier: ^5.3.0
         version: 5.9.3
 
+  packages/plugins/features/workbench:
+    dependencies:
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../../ui/ck-standard
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+      '@notehub/layout-manager':
+        specifier: workspace:*
+        version: link:../../ui/layout-manager
+      '@notehub/state-manager':
+        specifier: workspace:*
+        version: link:../../system/state-manager
+      '@notehub/theme-manager':
+        specifier: workspace:*
+        version: link:../../ui/theme-manager
+      lucide-react:
+        specifier: ^0.300.0
+        version: 0.300.0(react@18.3.1)
+      react:
+        specifier: ^18.0.0
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.27
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
   packages/plugins/system/bootloader:
     dependencies:
       '@notehub/core':
@@ -152,6 +189,9 @@ importers:
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.9.1
     devDependencies:
       rimraf:
         specifier: ^5.0.0
@@ -232,6 +272,9 @@ importers:
       '@notehub/icon-manager':
         specifier: workspace:*
         version: link:../icon-manager
+      lucide-react:
+        specifier: ^0.300.0
+        version: 0.300.0(react@18.3.1)
       react:
         specifier: ^18.0.0
         version: 18.3.1
@@ -317,6 +360,9 @@ importers:
 
   packages/plugins/ui/layout-manager:
     dependencies:
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../ck-standard
       '@notehub/controllers-manager':
         specifier: workspace:*
         version: link:../controllers-manager
@@ -326,6 +372,9 @@ importers:
       '@notehub/icon-manager':
         specifier: workspace:*
         version: link:../icon-manager
+      '@notehub/theme-manager':
+        specifier: workspace:*
+        version: link:../theme-manager
       react:
         specifier: ^18.0.0
         version: 18.3.1
@@ -1172,6 +1221,11 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
+  lucide-react@0.300.0:
+    resolution: {integrity: sha512-rQxUUCmWAvNLoAsMZ5j04b2+OJv6UuNLYMY7VK0eVlm4aTwUEjEEHc09/DipkNIlhXUSDn2xoyIzVT0uh7dRsg==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0
 
   lucide-react@0.469.0:
     resolution: {integrity: sha512-28vvUnnKQ/dBwiCQtwJw7QauYnE7yd2Cyp4tTTJpvglX4EMpbflcdBgrgToX2j71B3YvugK/NH3BGUk+E/p/Fw==}
@@ -2060,6 +2114,10 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  lucide-react@0.300.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
 
   lucide-react@0.469.0(react@18.3.1):
     dependencies:

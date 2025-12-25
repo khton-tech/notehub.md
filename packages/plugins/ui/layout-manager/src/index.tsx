@@ -1,6 +1,7 @@
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { useSyncExternalStore, type FC } from 'react';
 import { WelcomeLayout } from './components/WelcomeLayout.js';
+import { EditorLayout } from './components/EditorLayout.js';
 
 /**
  * Layout component type definition
@@ -148,7 +149,7 @@ export class LayoutManagerPlugin implements IPlugin {
      * @param name - Layout identifier to activate
      * @param props - Optional props to pass to the layout component
      */
-    private handleSetActive = (name: string, props: Record<string, unknown> = {}): boolean => {
+    private handleSet = (name: string, props: Record<string, unknown> = {}): boolean => {
         if (!layoutRegistry.has(name)) {
             this.log('error', `Layout "${name}" not found`);
             return false;
@@ -190,12 +191,13 @@ export class LayoutManagerPlugin implements IPlugin {
 
         // Register API methods
         app.api.register('layout:register-component', this.handleRegisterComponent);
-        app.api.register('layout:set-active', this.handleSetActive);
+        app.api.register('layout:set', this.handleSet);
         app.api.register('layout:get-active', this.handleGetActive);
         app.api.register('layout:list', this.handleList);
 
         // Register built-in layouts
         this.handleRegisterComponent('welcome', WelcomeLayout);
+        this.handleRegisterComponent('editor', EditorLayout);
 
         this.log('info', 'Loaded successfully');
     }
@@ -208,7 +210,7 @@ export class LayoutManagerPlugin implements IPlugin {
 
         // Unregister API methods
         app.api.unregister('layout:register-component');
-        app.api.unregister('layout:set-active');
+        app.api.unregister('layout:set');
         app.api.unregister('layout:get-active');
         app.api.unregister('layout:list');
 
@@ -225,6 +227,7 @@ export class LayoutManagerPlugin implements IPlugin {
 
 // Re-export components
 export { WelcomeLayout } from './components/WelcomeLayout.js';
+export { EditorLayout } from './components/EditorLayout.js';
 
 // Default export for dynamic loading
 export default LayoutManagerPlugin;

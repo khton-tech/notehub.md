@@ -21,7 +21,8 @@
     "dependencies": {
         "@notehub/core": "workspace:*",
         "@notehub/controllers-manager": "workspace:*",
-        "@notehub/icon-manager": "workspace:*"
+        "@notehub/icon-manager": "workspace:*",
+        "lucide-react": "^0.300.0"
     },
     "peerDependencies": {
         "react": "^18.0.0"

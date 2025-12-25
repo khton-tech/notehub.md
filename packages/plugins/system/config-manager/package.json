@@ -19,7 +19,8 @@
         "clean": "rimraf dist"
     },
     "dependencies": {
-        "@notehub/core": "workspace:*"
+        "@notehub/core": "workspace:*",
+        "@tauri-apps/api": "^2.0.0"
     },
     "devDependencies": {
         "typescript": "^5.3.0",

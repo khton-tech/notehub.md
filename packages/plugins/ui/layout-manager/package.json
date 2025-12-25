@@ -21,7 +21,9 @@
     "dependencies": {
         "@notehub/core": "workspace:*",
         "@notehub/icon-manager": "workspace:*",
-        "@notehub/controllers-manager": "workspace:*"
+        "@notehub/controllers-manager": "workspace:*",
+        "@notehub/ck-standard": "workspace:*",
+        "@notehub/theme-manager": "workspace:*"
     },
     "peerDependencies": {
         "react": "^18.0.0"
