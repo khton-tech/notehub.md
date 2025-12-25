@@ -1,4 +1,4 @@
-import type { FC, ReactNode, MouseEventHandler, CSSProperties } from 'react';
+import { useState, type FC, type ReactNode, type MouseEventHandler, type CSSProperties } from 'react';
 import { Icon } from '@notehub/icon-manager';
 
 /**
@@ -76,6 +76,7 @@ const variantStyles: Record<string, CSSProperties> = {
  * Button Component
  *
  * Themeable button with icon support using CSS variables.
+ * Includes keyboard focus states for accessibility.
  */
 export const Button: FC<ButtonProps> = ({
     variant = 'primary',
@@ -86,6 +87,8 @@ export const Button: FC<ButtonProps> = ({
     className = '',
     disabled = false,
 }) => {
+    const [isFocused, setIsFocused] = useState(false);
+
     const baseStyle: CSSProperties = {
         display: 'inline-flex',
         alignItems: 'center',
@@ -94,8 +97,10 @@ export const Button: FC<ButtonProps> = ({
         fontWeight: 500,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
-        transition: 'filter 0.15s ease, background-color 0.15s ease',
+        transition: 'filter 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease',
         fontFamily: 'inherit',
+        outline: 'none',
+        boxShadow: isFocused ? '0 0 0 2px var(--nh-accent-primary, #6b5ce7)' : 'none',
         ...sizeStyles[size],
         ...variantStyles[variant],
     };
@@ -110,6 +115,9 @@ export const Button: FC<ButtonProps> = ({
         e.currentTarget.style.filter = 'none';
     };
 
+    const handleFocus = () => setIsFocused(true);
+    const handleBlur = () => setIsFocused(false);
+
     return (
         <button
             style={baseStyle}
@@ -118,6 +126,8 @@ export const Button: FC<ButtonProps> = ({
             disabled={disabled}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
         >
             {icon && <Icon name={icon} size={iconSizes[size] || 16} />}
             {children}

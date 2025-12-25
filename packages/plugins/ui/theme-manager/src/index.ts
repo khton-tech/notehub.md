@@ -33,6 +33,10 @@ export interface ThemePalette {
     'button-text'?: string;
     /** Danger/destructive action color */
     'danger'?: string;
+    /** Default font family */
+    'font-family': string;
+    /** Monospace font family */
+    'font-family-mono'?: string;
     /** Additional custom properties */
     [key: string]: string | undefined;
 }
@@ -60,7 +64,11 @@ const DEEP_SPACE_THEME: ThemePalette = {
     // Button
     'button-text': '#ffffff',
     // Danger
+    // Danger
     'danger': '#dc2626',
+    // Typography
+    'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    'font-family-mono': 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
 };
 
 /**
@@ -135,7 +143,11 @@ export class ThemeManagerPlugin implements IPlugin {
                 height: 100%;
                 margin: 0;
                 padding: 0;
+                margin: 0;
+                padding: 0;
                 overflow: hidden;
+                font-family: var(--nh-font-family, system-ui, sans-serif);
+                color: var(--nh-text-primary, #e0e0e0);
             }
             #root {
                 height: 100%;

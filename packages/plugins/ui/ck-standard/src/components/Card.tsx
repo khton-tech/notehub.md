@@ -1,4 +1,4 @@
-import type { FC, ReactNode, MouseEventHandler, CSSProperties } from 'react';
+import { useState, type FC, type ReactNode, type MouseEventHandler, type CSSProperties } from 'react';
 
 /**
  * Card component props
@@ -31,6 +31,7 @@ const paddingValues: Record<string, string> = {
  *
  * Container component with themed background and border.
  * Uses CSS variables for theme-aware styling.
+ * Interactive cards support keyboard navigation with focus states.
  */
 export const Card: FC<CardProps> = ({
     variant = 'default',
@@ -40,6 +41,7 @@ export const Card: FC<CardProps> = ({
     onClick,
 }) => {
     const isInteractive = variant === 'interactive';
+    const [isFocused, setIsFocused] = useState(false);
 
     const baseStyle: CSSProperties = {
         backgroundColor: 'var(--nh-bg-surface, #2a2a2a)',
@@ -47,7 +49,9 @@ export const Card: FC<CardProps> = ({
         borderRadius: '8px',
         padding: paddingValues[padding] || paddingValues.md,
         cursor: isInteractive ? 'pointer' : 'default',
-        transition: 'filter 0.15s ease, border-color 0.15s ease',
+        transition: 'filter 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
+        outline: 'none',
+        boxShadow: isInteractive && isFocused ? '0 0 0 2px var(--nh-accent-primary, #6b5ce7)' : 'none',
     };
 
     const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -64,6 +68,16 @@ export const Card: FC<CardProps> = ({
         }
     };
 
+    const handleFocus = () => setIsFocused(true);
+    const handleBlur = () => setIsFocused(false);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (isInteractive && onClick && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+        }
+    };
+
     return (
         <div
             style={baseStyle}
@@ -71,6 +85,11 @@ export const Card: FC<CardProps> = ({
             onClick={onClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            tabIndex={isInteractive ? 0 : undefined}
+            role={isInteractive ? 'button' : undefined}
         >
             {children}
         </div>

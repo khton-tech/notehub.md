@@ -21,6 +21,7 @@
         "@notehub/icon-manager": "workspace:*",
         "@notehub/controllers-manager": "workspace:*",
         "@notehub/ck-standard": "workspace:*",
+        "@notehub/dialog-manager": "workspace:*",
         "@notehub/layout-manager": "workspace:*",
         "@notehub/vault-picker": "workspace:*",
         "@tauri-apps/api": "^2.0.0",

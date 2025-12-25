@@ -135,7 +135,7 @@ export class DependencyGraph {
                 if (this.nodes.has(depId)) {
                     deps.push(depId);
                 } else {
-                    console.log(
+                    console.warn(
                         `[DependencyGraph] Optional dependency "${depId}" for "${pluginId}" not found, skipping edge`
                     );
                 }

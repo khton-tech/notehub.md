@@ -1,0 +1,10 @@
+{
+    "id": "nh.ui.dialog-manager",
+    "name": "DialogManager",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+        "nh.system.logger",
+        "nh.ui.ck-standard"
+    ]
+}

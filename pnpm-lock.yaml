@@ -41,6 +41,9 @@ importers:
       '@notehub/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@notehub/dialog-manager':
+        specifier: workspace:*
+        version: link:../../packages/plugins/ui/dialog-manager
       '@notehub/fs-driver-tauri':
         specifier: workspace:*
         version: link:../../packages/plugins/system/fs-driver-tauri
@@ -255,6 +258,34 @@ importers:
       '@types/react':
         specifier: ^18.2.0
         version: 18.3.27
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/plugins/ui/dialog-manager:
+    dependencies:
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../ck-standard
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.20
+        version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.27)
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10

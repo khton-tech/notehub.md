@@ -30,6 +30,20 @@ export class VaultService {
     }
 
     /**
+     * Show a user-friendly error alert
+     * @param title - Alert title
+     * @param message - Error message to display
+     */
+    private showErrorAlert(title: string, message: string): void {
+        if (typeof window !== 'undefined') {
+            // Use setTimeout to avoid blocking
+            setTimeout(() => {
+                alert(`${title}\n\n${message}`);
+            }, 0);
+        }
+    }
+
+    /**
      * Create a new vault at the specified path
      *
      * @param basePath - Parent directory where the vault will be created
@@ -58,7 +72,9 @@ export class VaultService {
             // Open the newly created vault
             await this.openVault(fullPath);
         } catch (error) {
-            this.log('error', `Failed to create vault: ${error}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `Failed to create vault: ${errorMessage}`);
+            this.showErrorAlert('Failed to Create Vault', `Could not create vault at "${fullPath}".\n\nReason: ${errorMessage}`);
             throw error;
         }
     }
@@ -108,7 +124,9 @@ export class VaultService {
 
             this.log('info', `Vault opened: ${name}`);
         } catch (error) {
-            this.log('error', `Failed to open vault: ${error}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `Failed to open vault: ${errorMessage}`);
+            this.showErrorAlert('Failed to Open Vault', `Could not open vault at "${fullPath}".\n\nReason: ${errorMessage}`);
             throw error;
         }
     }

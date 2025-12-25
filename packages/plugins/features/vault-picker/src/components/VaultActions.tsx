@@ -45,7 +45,7 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
             if (!basePath) return;
 
             // Prompt for vault name
-            const name = window.prompt('Enter vault name:', 'My Notes');
+            const name = await app.api.invoke('dialog:prompt', 'Create Vault', 'Enter vault name:', 'My Notes') as string | null;
             if (!name || name.trim() === '') return;
 
             await service.createVault(basePath, name.trim());

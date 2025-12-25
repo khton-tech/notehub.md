@@ -27,15 +27,14 @@ export const VaultList: FC<VaultListProps> = ({ service }) => {
     const handleVaultClick = async (path: string) => {
         try {
             await service.openVault(path);
-        } catch (error) {
-            console.error('Failed to open vault:', error);
+        } catch {
+            // Error is already logged and displayed by VaultService
         }
     };
 
-    const handleDeleteClick = (e: React.MouseEvent, path: string) => {
+    const handleDeleteClick = (e: React.MouseEvent, _path: string) => {
         e.stopPropagation();
         // TODO: Implement vault deletion from history
-        console.log('Delete vault:', path);
     };
 
     if (vaults.length === 0) {

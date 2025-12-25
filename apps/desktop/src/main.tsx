@@ -14,6 +14,7 @@ import { ThemeManagerPlugin } from '@notehub/theme-manager';
 import { IconManagerPlugin } from '@notehub/icon-manager';
 import { ControllersManagerPlugin } from '@notehub/controllers-manager';
 import { CKStandardPlugin } from '@notehub/ck-standard';
+import { DialogManagerPlugin } from '@notehub/dialog-manager';
 import { LayoutManagerPlugin, LayoutRenderer } from '@notehub/layout-manager';
 
 // Feature Plugins
@@ -61,6 +62,7 @@ async function initApp(): Promise<NotehubCore> {
     core.registerPlugin(new IconManagerPlugin());        // Depends on: Logger
     core.registerPlugin(new ControllersManagerPlugin()); // Depends on: Logger
     core.registerPlugin(new CKStandardPlugin());         // Depends on: ControllersManager, IconManager
+    core.registerPlugin(new DialogManagerPlugin());      // Depends on: Logger, CKStandard
     core.registerPlugin(new LayoutManagerPlugin());      // Depends on: Logger, ControllersManager
 
     // Layer 4: Feature Plugins
