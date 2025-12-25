@@ -1,18 +1,22 @@
+import React from 'react';
 import { Files, Search, Settings, Box, FileText } from 'lucide-react';
-
+import { RibbonButton, Label } from '@notehub/ck-standard';
 
 // Ribbon Placeholder
 export const RibbonPlaceholder: React.FC = () => {
     return (
-        <div className="flex flex-col items-center gap-4 w-full pt-2">
-            <div className="p-2 text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)] hover:bg-white/5 rounded cursor-pointer transition-colors">
+        <div className="flex flex-col items-center gap-2 w-full py-2">
+            <RibbonButton isActive={true} label="Explorer">
                 <Files size={20} />
-            </div>
-            <div className="p-2 text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)] hover:bg-white/5 rounded cursor-pointer transition-colors">
+            </RibbonButton>
+            <RibbonButton label="Search">
                 <Search size={20} />
-            </div>
-            <div className="p-2 text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)] hover:bg-white/5 rounded cursor-pointer transition-colors mt-auto mb-2">
-                <Settings size={20} />
+            </RibbonButton>
+
+            <div className="mt-auto flex flex-col gap-2">
+                <RibbonButton label="Settings">
+                    <Settings size={20} />
+                </RibbonButton>
             </div>
         </div>
     );
@@ -21,11 +25,22 @@ export const RibbonPlaceholder: React.FC = () => {
 // Explorer Placeholder
 export const ExplorerPlaceholder: React.FC = () => {
     return (
-        <div className="p-4 text-sm text-[var(--nh-text-muted)] select-none">
-            <div className="font-bold mb-2 uppercase text-[10px] tracking-wider text-[var(--nh-text-muted)]">Explorer</div>
-            <div className="flex items-center gap-2 py-1 hover:text-[var(--nh-text-primary)] cursor-pointer">
-                <Box size={14} />
-                <span>Phase 2 (Editor) coming soon!</span>
+        <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="h-9 flex items-center px-4 border-b border-[var(--nh-border-subtle)]">
+                <Label variant="caption" className="uppercase tracking-wider font-bold">
+                    Explorer
+                </Label>
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+                <div className="flex items-center gap-2 p-2 hover:bg-white/5 rounded cursor-pointer transition-colors text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)]">
+                    <Box size={16} />
+                    <Label variant="body" className="text-inherit">
+                        Phase 2 (Editor)
+                    </Label>
+                </div>
             </div>
         </div>
     );
@@ -36,9 +51,8 @@ export const EditorPlaceholder: React.FC = () => {
     return (
         <div className="flex flex-col items-center justify-center h-full text-[var(--nh-text-muted)] select-none">
             <FileText size={64} className="mb-4 opacity-20" />
-            <div className="text-lg font-medium">Notehub.md</div>
-            <div className="text-sm opacity-60">No file is open</div>
-            <div className="text-xs opacity-40 mt-8">Phase 2: Editor Interface</div>
+            <Label variant="h2" className="mb-1">Notehub.md</Label>
+            <Label variant="caption" className="opacity-60">No file is open</Label>
         </div>
     );
 };

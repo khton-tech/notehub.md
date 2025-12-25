@@ -53,6 +53,9 @@ function getSnapshot(): ActiveLayout | null {
     return activeLayout;
 }
 
+/** Reference to kernel (module-level for LayoutRenderer access) */
+let appInstance: NotehubCore | null = null;
+
 // =============== LayoutRenderer Component ===============
 
 /**
@@ -88,7 +91,8 @@ export const LayoutRenderer: FC = () => {
         return null;
     }
 
-    return <Component {...currentLayout.props} />;
+    // Inject app instance into layout component
+    return <Component {...currentLayout.props} app={appInstance} />;
 };
 
 // =============== Plugin Implementation ===============
@@ -187,6 +191,7 @@ export class LayoutManagerPlugin implements IPlugin {
      */
     async load(app: NotehubCore): Promise<void> {
         this.app = app;
+        appInstance = app;
         this.log('info', 'Loading...');
 
         // Register API methods

@@ -52,7 +52,7 @@ export class WorkbenchPlugin implements IPlugin {
         this.log('info', 'Loaded successfully');
     }
 
-    async unload(app: NotehubCore): Promise<void> {
+    async unload(_app: NotehubCore): Promise<void> {
         this.log('info', 'Unloading...');
 
         app.events.off('app:vault-opened', this.handleVaultOpened);
