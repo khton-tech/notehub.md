@@ -1,29 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { NotehubCore } from '@notehub/core';
-import WorkbenchPlugin from '@notehub/workbench';
+import { NotehubCore, type IPlugin } from '@notehub/core';
+import { Bootloader, type LoadablePlugin, type PluginManifest } from '@notehub/bootloader';
+import { LayoutRenderer } from '@notehub/layout-manager';
 import { Hexagon } from 'lucide-react';
 import './index.css';
 
-// System Plugins
-import { LoggerPlugin } from '@notehub/logger';
-import { FsManagerPlugin } from '@notehub/fs-manager';
-import { FsDriverTauriPlugin } from '@notehub/fs-driver-tauri';
-import { StateManagerPlugin } from '@notehub/state-manager';
-import { ConfigManagerPlugin } from '@notehub/config-manager';
-import { Bootloader } from '@notehub/bootloader';
+/**
+ * Plugin registry entry from generated JSON
+ */
+interface PluginRegistryEntry {
+    id: string;
+    name: string;
+    version: string;
+    type: string;
+    dependencies?: string[];
+}
 
-// UI Plugins
-import { ThemeManagerPlugin } from '@notehub/theme-manager';
-import { IconManagerPlugin } from '@notehub/icon-manager';
-import { ControllersManagerPlugin } from '@notehub/controllers-manager';
-import { CKStandardPlugin } from '@notehub/ck-standard';
-import { DialogManagerPlugin } from '@notehub/dialog-manager';
-import { LayoutManagerPlugin, LayoutRenderer } from '@notehub/layout-manager';
-
-// Feature Plugins
-import { VaultPickerPlugin } from '@notehub/vault-picker';
-import { ExplorerPlugin } from '@notehub/explorer';
+/**
+ * Plugin module that exports a plugin class
+ */
+interface PluginModule {
+    default?: new () => IPlugin;
+    [key: string]: unknown;
+}
 
 /**
  * Global core instance for the application
@@ -38,49 +38,207 @@ export function getCore(): NotehubCore | null {
 }
 
 /**
- * Initialize the Notehub.md application
+ * Convert plugin ID to package name
+ * Examples:
+ *   "nh.system.logger" -> "@notehub/logger"
+ *   "nh.ui.theme-manager" -> "@notehub/theme-manager"
+ *   "nh.features.vault-picker" -> "@notehub/vault-picker"
+ */
+function pluginIdToPackageName(id: string): string {
+    const parts = id.split('.');
+    const name = parts[parts.length - 1];
+    return `@notehub/${name}`;
+}
+
+/**
+ * Dynamically import a plugin by its package name
+ */
+async function importPlugin(packageName: string): Promise<PluginModule> {
+    // Use dynamic import with the package name
+    // Vite will handle the resolution at build time
+    switch (packageName) {
+        // System plugins
+        case '@notehub/logger':
+            return import('@notehub/logger');
+        case '@notehub/fs-manager':
+            return import('@notehub/fs-manager');
+        case '@notehub/state-manager':
+            return import('@notehub/state-manager');
+        case '@notehub/fs-driver-tauri':
+            return import('@notehub/fs-driver-tauri');
+        case '@notehub/config-manager':
+            return import('@notehub/config-manager');
+        case '@notehub/bootloader':
+            return import('@notehub/bootloader');
+
+        // UI plugins
+        case '@notehub/theme-manager':
+            return import('@notehub/theme-manager');
+        case '@notehub/icon-manager':
+            return import('@notehub/icon-manager');
+        case '@notehub/controllers-manager':
+            return import('@notehub/controllers-manager');
+        case '@notehub/ck-standard':
+            return import('@notehub/ck-standard');
+        case '@notehub/dialog-manager':
+            return import('@notehub/dialog-manager');
+        case '@notehub/layout-manager':
+            return import('@notehub/layout-manager');
+
+        // Feature plugins
+        case '@notehub/vault-picker':
+            return import('@notehub/vault-picker');
+        case '@notehub/workbench':
+            return import('@notehub/workbench');
+        case '@notehub/explorer':
+            return import('@notehub/explorer');
+
+        default:
+            throw new Error(`Unknown plugin package: ${packageName}`);
+    }
+}
+
+/**
+ * Extract plugin class from module
+ */
+function extractPluginClass(module: PluginModule, manifest: PluginRegistryEntry): (new () => IPlugin) | null {
+    // Try default export first
+    if (module.default && typeof module.default === 'function') {
+        return module.default as new () => IPlugin;
+    }
+
+    // Try named export based on manifest name + "Plugin"
+    const namedExport = `${manifest.name}Plugin`;
+    if (module[namedExport] && typeof module[namedExport] === 'function') {
+        return module[namedExport] as new () => IPlugin;
+    }
+
+    // Try any export that looks like a plugin class
+    for (const key of Object.keys(module)) {
+        if (key.endsWith('Plugin') && typeof module[key] === 'function') {
+            return module[key] as new () => IPlugin;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Initialize the Notehub.md application with dynamic plugin loading
  */
 async function initApp(onStatusUpdate: (status: string) => void): Promise<NotehubCore> {
     onStatusUpdate('Initializing Core...');
-    console.log('[Desktop] Starting Notehub.md...');
+    console.log('[Desktop] Starting Notehub.md (Dynamic Bootstrap)...');
 
     // Create core kernel
     const core = new NotehubCore();
     coreInstance = core;
 
-    // ===== PLUGIN REGISTRATION =====
-    onStatusUpdate('Registering Plugins...');
+    // ===== PHASE 1: Load Plugin Registry =====
+    onStatusUpdate('Loading Plugin Registry...');
+    console.log('[Desktop] Phase 1: Loading plugin registry...');
 
-    // Layer 0: Foundation
-    core.registerPlugin(new LoggerPlugin());
+    let registry: PluginRegistryEntry[];
+    try {
+        const registryModule = await import('./generated/plugin-registry.json');
+        registry = registryModule.default as PluginRegistryEntry[];
+        console.log(`[Desktop] Found ${registry.length} plugins in registry`);
+    } catch (error) {
+        console.error('[Desktop] Failed to load plugin registry:', error);
+        throw new Error('Plugin registry not found. Run "pnpm run link-plugins" first.');
+    }
 
-    // Layer 1: Core Infrastructure
-    core.registerPlugin(new FsManagerPlugin());
-    core.registerPlugin(new StateManagerPlugin());
+    // ===== PHASE 2: Dynamic Plugin Import =====
+    onStatusUpdate('Loading Plugins...');
+    console.log('[Desktop] Phase 2: Dynamic plugin import...');
 
-    // Layer 2: Drivers & Services
-    core.registerPlugin(new FsDriverTauriPlugin());
-    core.registerPlugin(new ConfigManagerPlugin());
+    const loadablePlugins: LoadablePlugin[] = [];
+    const pluginInstances: IPlugin[] = [];
 
-    // Layer 3: UI Foundation
-    core.registerPlugin(new ThemeManagerPlugin());
-    core.registerPlugin(new IconManagerPlugin());
-    core.registerPlugin(new ControllersManagerPlugin());
-    core.registerPlugin(new CKStandardPlugin());
-    core.registerPlugin(new DialogManagerPlugin());
-    core.registerPlugin(new LayoutManagerPlugin());
+    for (const entry of registry) {
+        // Skip bootloader - it's the orchestrator, not a regular plugin
+        if (entry.id === 'nh.system.bootloader') {
+            continue;
+        }
 
-    // Layer 4: Feature Plugins
-    core.registerPlugin(new VaultPickerPlugin());
-    core.registerPlugin(new WorkbenchPlugin());
-    core.registerPlugin(new ExplorerPlugin());
+        const packageName = pluginIdToPackageName(entry.id);
 
-    // Initialize Bootloader (Orchestrator)
-    new Bootloader(core);
+        try {
+            console.log(`[Desktop]   Importing ${entry.id} from ${packageName}...`);
+            const module = await importPlugin(packageName);
+            const PluginClass = extractPluginClass(module, entry);
 
-    // ===== INITIALIZATION =====
-    onStatusUpdate('Starting Plugins...');
-    await core.init();
+            if (!PluginClass) {
+                console.error(`[Desktop]   ✗ No plugin class found in ${packageName}`);
+                continue;
+            }
+
+            const plugin = new PluginClass();
+            pluginInstances.push(plugin);
+
+            // Register with core
+            core.registerPlugin(plugin);
+
+            // Convert manifest to bootloader format
+            // IMPORTANT: Use entry.dependencies from registry (has correct data from manifest.json)
+            // NOT plugin.manifest.dependencies which may be undefined
+            const coreManifest = plugin.manifest;
+            const bootloaderManifest: PluginManifest = {
+                id: coreManifest.id,
+                name: coreManifest.name,
+                version: coreManifest.version,
+                type: coreManifest.type as 'system' | 'ui' | 'feature',
+                // Use entry.dependencies from registry - these have the correct values
+                dependencies: (entry.dependencies || []).reduce((acc, dep) => {
+                    acc[dep] = '*';
+                    return acc;
+                }, {} as Record<string, string>),
+                optionalDependencies: {},
+            };
+
+            // Prepare for bootloader
+            loadablePlugins.push({
+                manifest: bootloaderManifest,
+                init: (app) => plugin.load(app),
+            });
+
+            console.log(`[Desktop]   ✓ ${entry.id} imported successfully`);
+        } catch (error) {
+            console.error(`[Desktop]   ✗ Failed to import ${entry.id}:`, error);
+            // Continue with other plugins - one failure shouldn't crash the app
+        }
+    }
+
+    console.log(`[Desktop] Successfully imported ${pluginInstances.length} plugins`);
+
+    // ===== PHASE 3: Bootloader Initialization =====
+    onStatusUpdate('Starting Bootloader...');
+    console.log('[Desktop] Phase 3: Bootloader initialization...');
+
+    const bootloader = new Bootloader(core);
+    const result = await bootloader.load(loadablePlugins);
+
+    console.log('[Desktop] Bootloader result:');
+    console.log(`[Desktop]   Loaded: ${result.loaded.length}`);
+    console.log(`[Desktop]   Failed: ${result.failed.length}`);
+    console.log(`[Desktop]   Skipped: ${result.skipped.length}`);
+    console.log(`[Desktop]   Waves: ${result.waves.length}`);
+
+    if (result.failed.length > 0) {
+        console.warn('[Desktop] Failed plugins:', result.failed);
+    }
+    if (result.skipped.length > 0) {
+        console.warn('[Desktop] Skipped plugins:', result.skipped);
+    }
+
+    // Mark core as initialized
+    core.setInitialized(true);
+
+    // ===== PHASE 4: onReady Lifecycle =====
+    onStatusUpdate('Finalizing...');
+    console.log('[Desktop] Phase 4: Calling onReady on all plugins...');
+
+    await core.callOnReady();
 
     onStatusUpdate('Ready');
     console.log('[Desktop] Notehub.md started successfully');

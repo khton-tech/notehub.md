@@ -7,6 +7,8 @@
     "description": "File Explorer for Notehub",
     "dependencies": [
       "nh.system.fs-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
       "nh.ui.icon-manager",
       "nh.ui.theme-manager"
     ]
@@ -77,6 +79,14 @@
     ]
   },
   {
+    "id": "nh.system.logger",
+    "name": "Logger",
+    "version": "0.0.0",
+    "type": "system",
+    "description": "Centralized logging system with level-based filtering and event emission",
+    "dependencies": []
+  },
+  {
     "id": "nh.system.state-manager",
     "name": "StateManager",
     "version": "0.0.0",
@@ -85,14 +95,6 @@
     "dependencies": [
       "nh.system.logger"
     ]
-  },
-  {
-    "id": "nh.system.logger",
-    "name": "Logger",
-    "version": "0.0.0",
-    "type": "system",
-    "description": "Centralized logging system with level-based filtering and event emission",
-    "dependencies": []
   },
   {
     "id": "nh.ui.ck-standard",

@@ -32,7 +32,7 @@ export class NotehubCore<TEvents extends EventMap = EventMap> {
     public readonly api: ApiBus;
 
     /** Registry of loaded plugins */
-    private plugins: Map<string, IPlugin> = new Map();
+    private pluginRegistry: Map<string, IPlugin> = new Map();
 
     /** Track initialization state */
     private initialized = false;
@@ -52,11 +52,11 @@ export class NotehubCore<TEvents extends EventMap = EventMap> {
     registerPlugin(plugin: IPlugin): void {
         const { id } = plugin.manifest;
 
-        if (this.plugins.has(id)) {
+        if (this.pluginRegistry.has(id)) {
             throw new Error(`[NotehubCore] Plugin "${id}" is already registered`);
         }
 
-        this.plugins.set(id, plugin);
+        this.pluginRegistry.set(id, plugin);
         console.log(`[NotehubCore] Plugin "${id}" registered`);
     }
 
@@ -67,7 +67,7 @@ export class NotehubCore<TEvents extends EventMap = EventMap> {
      * @returns true if plugin was unregistered, false if not found
      */
     unregisterPlugin(pluginId: string): boolean {
-        const removed = this.plugins.delete(pluginId);
+        const removed = this.pluginRegistry.delete(pluginId);
         if (removed) {
             console.log(`[NotehubCore] Plugin "${pluginId}" unregistered`);
         }
@@ -81,21 +81,29 @@ export class NotehubCore<TEvents extends EventMap = EventMap> {
      * @returns Plugin instance or undefined if not found
      */
     getPlugin(pluginId: string): IPlugin | undefined {
-        return this.plugins.get(pluginId);
+        return this.pluginRegistry.get(pluginId);
     }
 
     /**
      * Get all registered plugin IDs
      */
     getPluginIds(): string[] {
-        return Array.from(this.plugins.keys());
+        return Array.from(this.pluginRegistry.keys());
+    }
+
+    /**
+     * Get iterator over all registered plugins
+     * Used by bootloader to iterate plugins for onReady calls
+     */
+    getPlugins(): IterableIterator<[string, IPlugin]> {
+        return this.pluginRegistry.entries();
     }
 
     /**
      * Initialize the kernel and load all registered plugins
      *
-     * Note: Current implementation uses simple sequential loading.
-     * Dependency graph resolution will be added in a future iteration.
+     * @deprecated Use Bootloader.load() for proper dependency resolution and parallel loading.
+     * This method is kept for backward compatibility but loads plugins sequentially.
      */
     async init(): Promise<void> {
         if (this.initialized) {
@@ -103,9 +111,9 @@ export class NotehubCore<TEvents extends EventMap = EventMap> {
             return;
         }
 
-        console.log(`[NotehubCore] Initializing with ${this.plugins.size} plugin(s)...`);
+        console.log(`[NotehubCore] Initializing with ${this.pluginRegistry.size} plugin(s)...`);
 
-        for (const [id, plugin] of this.plugins) {
+        for (const [id, plugin] of this.pluginRegistry) {
             try {
                 console.log(`[NotehubCore] Loading plugin "${id}"...`);
                 await plugin.load(this);
@@ -118,6 +126,39 @@ export class NotehubCore<TEvents extends EventMap = EventMap> {
 
         this.initialized = true;
         console.log('[NotehubCore] Kernel initialized successfully');
+
+        // Call onReady for all plugins (deprecated path)
+        await this.callOnReady();
+    }
+
+    /**
+     * Call onReady() on all plugins that implement it
+     * Should be called after all plugins have been loaded
+     */
+    async callOnReady(): Promise<void> {
+        console.log('[NotehubCore] Calling onReady on all plugins...');
+
+        for (const [id, plugin] of this.pluginRegistry) {
+            if (plugin.onReady) {
+                try {
+                    console.log(`[NotehubCore] Calling onReady for "${id}"...`);
+                    await plugin.onReady(this);
+                } catch (error) {
+                    console.error(`[NotehubCore] onReady failed for "${id}":`, error);
+                    // Continue with other plugins - don't throw
+                }
+            }
+        }
+
+        console.log('[NotehubCore] All onReady calls completed');
+    }
+
+    /**
+     * Set initialization state (used by Bootloader)
+     * @internal
+     */
+    setInitialized(value: boolean): void {
+        this.initialized = value;
     }
 
     /**
@@ -133,7 +174,7 @@ export class NotehubCore<TEvents extends EventMap = EventMap> {
         console.log('[NotehubCore] Shutting down...');
 
         // Unload in reverse order
-        const pluginEntries = Array.from(this.plugins.entries()).reverse();
+        const pluginEntries = Array.from(this.pluginRegistry.entries()).reverse();
 
         for (const [id, plugin] of pluginEntries) {
             try {

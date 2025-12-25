@@ -99,10 +99,39 @@ export class Bootloader {
     }
 
     /**
-     * Log a message via the Logger plugin
+     * Log a message via the Logger plugin (with console fallback)
+     * During early boot phases, Logger may not be available yet
      */
     private log(level: 'info' | 'warn' | 'error', message: string): void {
-        this.app.api.invoke(`logger:${level}`, Bootloader.SOURCE, message);
+        const fullMessage = `[${Bootloader.SOURCE}] ${message}`;
+
+        // Try to use Logger plugin, fallback to console if not available
+        try {
+            if (this.app.api.has(`logger:${level}`)) {
+                this.app.api.invoke(`logger:${level}`, Bootloader.SOURCE, message);
+            } else {
+                this.consoleLog(level, fullMessage);
+            }
+        } catch {
+            this.consoleLog(level, fullMessage);
+        }
+    }
+
+    /**
+     * Direct console logging (fallback)
+     */
+    private consoleLog(level: 'info' | 'warn' | 'error', message: string): void {
+        switch (level) {
+            case 'info':
+                console.log(message);
+                break;
+            case 'warn':
+                console.warn(message);
+                break;
+            case 'error':
+                console.error(message);
+                break;
+        }
     }
 
     /**
