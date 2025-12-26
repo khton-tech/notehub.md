@@ -136,6 +136,9 @@ importers:
 
   packages/plugins/features/editor:
     dependencies:
+      '@codemirror/autocomplete':
+        specifier: ^6.20.0
+        version: 6.20.0
       '@codemirror/commands':
         specifier: ^6.7.1
         version: 6.10.1
@@ -163,6 +166,9 @@ importers:
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core
+      '@notehub/icon-manager':
+        specifier: workspace:*
+        version: link:../../ui/icon-manager
       lucide-react:
         specifier: ^0.460.0
         version: 0.460.0(react@18.3.1)

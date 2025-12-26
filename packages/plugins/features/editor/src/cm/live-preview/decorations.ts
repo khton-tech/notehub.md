@@ -107,3 +107,44 @@ export const headingMarks = {
 // ============================================================================
 
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
+// ============================================================================
+// CODE BLOCK DECORATIONS
+// ============================================================================
+
+/**
+ * Hides the code block fences (```)
+ */
+export const codeBlockFenceHide = Decoration.replace({});
+
+/**
+ * Applies background color to code block lines
+ */
+export const codeBlockBackground = Decoration.line({
+    class: 'cm-code-block-bg'
+});
+
+/**
+ * Widget to display language badge
+ */
+class BadgeWidget extends WidgetType {
+    constructor(readonly text: string) {
+        super();
+    }
+
+    eq(other: BadgeWidget) {
+        return other.text === this.text;
+    }
+
+    toDOM() {
+        const span = document.createElement('span');
+        span.className = 'cm-code-block-badge';
+        span.textContent = this.text;
+        return span;
+    }
+}
+
+export const codeBlockLangBadge = (lang: string) => Decoration.widget({
+    widget: new BadgeWidget(lang),
+    side: 1
+});

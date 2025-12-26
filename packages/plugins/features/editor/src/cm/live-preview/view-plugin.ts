@@ -23,10 +23,13 @@ import {
     linkMark,
     headingMarks,
     headingLines,
-    bulletPointWidget
+    bulletPointWidget,
+    codeBlockFenceHide,
+    codeBlockLangBadge
 } from './decorations';
 import type { HeadingLevel } from './decorations';
 import { CheckboxWidget } from '../widgets/CheckboxWidget';
+import { CalloutHeaderWidget } from '../widgets/CalloutHeaderWidget';
 
 // ============================================================================
 // TYPES
@@ -189,6 +192,28 @@ class LivePreviewPluginClass {
                         this.buildListMarkDecorations(node.node, selection, addDecoration, state);
                         return false;
                     }
+
+                    // Handle FencedCode
+                    if (node.name === 'FencedCode') {
+                        this.buildCodeBlockDecorations(node.node, selection, addDecoration, state);
+                        return false;
+                    }
+
+                    // Handle Blockquote (Callouts & Standard Quotes)
+                    if (node.name === 'Blockquote') {
+                        // Return false to prevent descending into children (QuoteMarks etc)
+                        // because we handle everything line-by-line in the handler.
+                        // Actually, wait. If we return false, we skip StrongEmphasis etc inside the quote?
+                        // We must return TRUE to process inner syntax (bold, italic).
+                        // BUT we must NOT process QuoteMark individually if we want to control it here.
+                        this.buildBlockquoteDecorations(node.node, selection, addDecoration, state);
+                        return true;
+                    }
+
+                    // Handle QuoteMark (> symbol) - REMOVED
+                    // We handle QuoteMarks inside buildBlockquoteDecorations now.
+                    // This prevents conflicts and allows selective hiding.
+                    // if (node.name === 'QuoteMark') { ... }
 
                     // Continue iterating for other nodes
                     return true;
@@ -448,6 +473,148 @@ class LivePreviewPluginClass {
 
         // For regular lists (ListItem), replace with bullet
         addDecoration(bulletPointWidget.range(node.from, node.to), true);
+    }
+
+    private buildCodeBlockDecorations(
+        node: SyntaxNode,
+        selection: SelectionRange,
+        addDecoration: (deco: Range<Decoration>, isAtomic: boolean) => void,
+        state: EditorState
+    ): void {
+        const isOverlapping = isSelectionOverlapping(selection, node.from, node.to);
+        const startLine = state.doc.lineAt(node.from);
+        const endLine = state.doc.lineAt(node.to);
+
+        // Apply background to all lines in the block
+        for (let i = startLine.number; i <= endLine.number; i++) {
+            const linePos = state.doc.line(i).from;
+            let className = 'cm-code-block-bg';
+            if (i === startLine.number) className += ' cm-code-block-first';
+            if (i === endLine.number) className += ' cm-code-block-last';
+
+            addDecoration(Decoration.line({ class: className }).range(linePos), false);
+        }
+
+        // If cursor inside, show everything (just background applied above)
+        if (isOverlapping) {
+            return;
+        }
+
+        // If cursor outside, apply fancy styling
+        const infos = findAllChildNodes(node, 'CodeInfo');
+        const marks = findAllChildNodes(node, 'CodeMark');
+
+        // Hide fences
+        marks.forEach(mark => {
+            addDecoration(codeBlockFenceHide.range(mark.from, mark.to), true);
+        });
+
+        // Hide info string (language name)
+        infos.forEach(info => {
+            addDecoration(codeBlockFenceHide.range(info.from, info.to), true);
+        });
+
+        // Add Language Badge
+        let lang = '';
+        if (infos.length > 0) {
+            lang = state.doc.sliceString(infos[0]!.from, infos[0]!.to);
+        }
+        if (lang) {
+            addDecoration(codeBlockLangBadge(lang).range(node.from), false);
+        }
+    }
+
+    private buildBlockquoteDecorations(
+        node: SyntaxNode,
+        selection: SelectionRange,
+        addDecoration: (deco: Range<Decoration>, isAtomic: boolean) => void,
+        state: EditorState
+    ): void {
+        const startLine = state.doc.lineAt(node.from);
+        const endLine = state.doc.lineAt(node.to);
+        const text = startLine.text;
+
+        // ROBUST REGEX:
+        // 1. Optional leading whitespace/tabs
+        // 2. > character
+        // 3. Optional whitespace
+        // 4. [!TYPE] - case insensitive, dashes allowed
+        // 5. Optional Title (rest of line)
+        const match = text.match(/^[ \t]*>[ \t]*\[!([a-zA-Z0-9_-]+)\]\s*(.*)?$/);
+
+        if (!match) {
+            // Standard Blockquote (Card Style)
+            for (let i = startLine.number; i <= endLine.number; i++) {
+                const line = state.doc.line(i);
+                const lineText = line.text;
+
+                // Build class list for this line
+                let className = 'cm-blockquote';
+                if (i === startLine.number) className += ' cm-blockquote-first';
+                if (i === endLine.number) className += ' cm-blockquote-last';
+
+                // Apply line decoration for visual styling
+                addDecoration(Decoration.line({ class: className }).range(line.from), false);
+
+                // Hide the '>' marker if cursor is NOT on this line
+                if (!isSelectionOverlapping(selection, line.from, line.to)) {
+                    const markerMatch = lineText.match(/^[ \t]*>( ?)/);
+                    if (markerMatch) {
+                        const matchLen = markerMatch[0].length;
+                        const markerStart = line.from + (markerMatch.index || 0);
+                        const markerEnd = markerStart + matchLen;
+
+                        addDecoration(hiddenSyntax.range(markerStart, markerEnd), true);
+                    }
+                }
+            }
+            return;
+        }
+
+        // Is Callout
+        const type = match[1]!;
+        const title = match[2] || type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+        const lowerType = type.toLowerCase();
+
+        // 1. HEADER LINE
+        const isCursorOnHeader = isSelectionOverlapping(selection, startLine.from, startLine.to);
+
+        // Apply distinct class for the header line itself (optional, but good for specific styling)
+        addDecoration(Decoration.line({ class: `cm-callout-header-line cm-callout-${lowerType}` }).range(startLine.from), false);
+
+        if (!isCursorOnHeader) {
+            addDecoration(Decoration.replace({
+                widget: new CalloutHeaderWidget(type, title),
+                inclusive: true
+            }).range(startLine.from, startLine.to), true);
+        }
+
+        // 2. BODY LINES
+        for (let i = startLine.number + 1; i <= endLine.number; i++) {
+            const line = state.doc.line(i);
+            const lineText = line.text;
+
+            // Apply body styling
+            let className = `cm-callout-body cm-callout-${lowerType}`;
+            if (i === endLine.number) className += ` cm-callout-last`;
+
+            addDecoration(Decoration.line({ class: className }).range(line.from), false);
+
+            // Hide the marker ">" or "> " only if cursor is NOT on this line
+            // This prevents "jiggling" and deletion bugs
+            if (!isSelectionOverlapping(selection, line.from, line.to)) {
+                // Find ">" at start of line
+                // We use simple regex because we are identifying the marker visual
+                const markerMatch = lineText.match(/^[ \t]*>( ?)/);
+                if (markerMatch) {
+                    const matchLen = markerMatch[0].length;
+                    const markerStart = line.from + markerMatch.index!;
+                    const markerEnd = markerStart + matchLen;
+
+                    addDecoration(hiddenSyntax.range(markerStart, markerEnd), true);
+                }
+            }
+        }
     }
 }
 

@@ -19,6 +19,7 @@
         "clean": "rimraf dist"
     },
     "dependencies": {
+        "@codemirror/autocomplete": "^6.20.0",
         "@codemirror/commands": "^6.7.1",
         "@codemirror/lang-markdown": "^6.3.2",
         "@codemirror/language": "^6.10.8",
@@ -28,6 +29,7 @@
         "@lezer/highlight": "^1.2.1",
         "@notehub/ck-standard": "workspace:*",
         "@notehub/core": "workspace:*",
+        "@notehub/icon-manager": "workspace:*",
         "lucide-react": "^0.460.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0"

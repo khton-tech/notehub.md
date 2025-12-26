@@ -31,6 +31,9 @@ import {
     Check,
     AlertTriangle,
     Loader,
+    // Icons for Callouts
+    Lightbulb,
+    Quote,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -101,6 +104,9 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     'check': Check,
     'alert-triangle': AlertTriangle,
     'loader': Loader,
+    // Icons for Callouts
+    'lightbulb': Lightbulb,
+    'quote': Quote,
 };
 
 /**
