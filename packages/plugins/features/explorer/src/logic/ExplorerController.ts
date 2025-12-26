@@ -50,6 +50,13 @@ export class ExplorerController {
     }
 
     /**
+     * Select a file and emit event via EventBus
+     */
+    selectFile(path: string): void {
+        this.app.events.emit('explorer:file-selected', { path });
+    }
+
+    /**
      * Set root directory and load it
      */
     async setRoot(path: string) {

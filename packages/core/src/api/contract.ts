@@ -323,6 +323,16 @@ export interface NotehubApiMap {
 
     /** Get the bootloader instance for advanced usage */
     'bootloader.getInstance': () => unknown | null;
+
+    // =========================================================================
+    // Editor Plugin (nh.features.editor)
+    // =========================================================================
+
+    /** Open a file in the editor */
+    'editor:open': (path: string) => Promise<void>;
+
+    /** Force save current file */
+    'editor:save': () => Promise<void>;
 }
 
 // ============================================================================

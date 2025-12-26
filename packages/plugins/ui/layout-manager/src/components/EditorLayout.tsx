@@ -101,7 +101,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
 
             {/* Main Area */}
             <div style={{ gridArea: 'main' }} className="bg-[var(--nh-bg-main)]">
-                <Controller type="empty-slot" />
+                <Controller type="notehub-editor" />
             </div>
 
             {/* Status Area */}
