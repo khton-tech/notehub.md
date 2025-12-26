@@ -17,6 +17,7 @@ export class EditorController {
     // State
     private _currentPath: string | null = null;
     private _isDirty: boolean = false;
+    private scrollPositions: Map<string, number> = new Map();
 
     // Debounce
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -114,6 +115,16 @@ export class EditorController {
             }
 
             this.log('info', `File loaded: ${path}`);
+
+            // Restore scroll position
+            if (this.scrollPositions.has(path) && this.view) {
+                const scrollTop = this.scrollPositions.get(path)!;
+                // Use requestAnimationFrame to ensure DOM is ready
+                requestAnimationFrame(() => {
+                    this.view?.scrollDOM?.scrollTo({ top: scrollTop });
+                });
+            }
+
             this.notify();
         } catch (error) {
             this.log('error', `Failed to load file: ${error}`);
@@ -127,6 +138,11 @@ export class EditorController {
     async save(): Promise<void> {
         if (!this._currentPath || !this.view) {
             return;
+        }
+
+        // Save scroll position
+        if (this.view.scrollDOM) {
+            this.scrollPositions.set(this._currentPath, this.view.scrollDOM.scrollTop);
         }
 
         this.clearDebounce();

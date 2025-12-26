@@ -39,26 +39,27 @@ export const Checkbox = memo<CheckboxProps>(({ checked, onChange, className = ''
         'w-4 h-4 rounded',
         'border cursor-pointer',
         'align-middle',
-        'transition-colors duration-150',
+        'transition-all duration-200',
         'focus:outline-none focus:ring-2 focus:ring-[var(--nh-accent-primary)] focus:ring-offset-1'
     ].join(' ');
+    ].join(' ');
 
-    const stateClasses = checked
-        ? 'bg-[var(--nh-accent-primary)] border-[var(--nh-accent-primary)]'
-        : 'bg-transparent border-[var(--nh-text-muted)] hover:border-[var(--nh-accent-primary)]';
+const stateClasses = checked
+    ? 'bg-[var(--nh-accent-primary)] border-[var(--nh-accent-primary)]'
+    : 'bg-transparent border-[var(--nh-text-muted)] hover:border-[var(--nh-accent-primary)]';
 
-    return (
-        <span
-            role="checkbox"
-            aria-checked={checked}
-            tabIndex={0}
-            className={`${baseClasses} ${stateClasses} ${className}`}
-            onClick={handleClick}
-            onKeyDown={handleKeyDown}
-        >
-            {checked && <Check size={14} className="text-white" strokeWidth={3} />}
-        </span>
-    );
+return (
+    <span
+        role="checkbox"
+        aria-checked={checked}
+        tabIndex={0}
+        className={`${baseClasses} ${stateClasses} ${className}`}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+    >
+        {checked && <Check size={14} className="text-white" strokeWidth={3} />}
+    </span>
+);
 });
 
 Checkbox.displayName = 'Checkbox';

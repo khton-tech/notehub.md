@@ -5,6 +5,7 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { EditorController } from '../logic/EditorController';
 import { livePreview } from '../cm/live-preview';
+import { blockStyling } from '../cm/block-styling';
 import { BridgeProvider, EditorPortalRenderer } from '../cm/react-bridge';
 import { FileText } from 'lucide-react';
 
@@ -23,7 +24,8 @@ const notehubTheme = EditorView.theme({
     },
     '.cm-content': {
         caretColor: 'var(--nh-accent-primary)',
-        padding: '1rem'
+        padding: '1rem',
+        transition: 'padding 0.3s ease'
     },
     '.cm-cursor': {
         borderLeftColor: 'var(--nh-accent-primary)'
@@ -33,10 +35,37 @@ const notehubTheme = EditorView.theme({
         opacity: '0.3'
     },
     '.cm-activeLine': {
-        backgroundColor: 'rgba(255, 255, 255, 0.03)'
+        backgroundColor: 'transparent !important',
+        position: 'relative'
+    },
+    '.cm-activeLine::before': {
+        content: '""',
+        position: 'absolute',
+        left: '0',
+        top: '0',
+        width: '3px',
+        height: '100%',
+        backgroundColor: 'var(--nh-accent-primary)',
+        transition: 'opacity 0.2s ease-in-out'
     },
     '.cm-activeLineGutter': {
         backgroundColor: 'rgba(255, 255, 255, 0.03)'
+    },
+    // ===== BLOCK STYLING =====
+    '.cm-code-block': {
+        backgroundColor: 'var(--nh-bg-secondary)',
+        fontFamily: 'var(--nh-font-family-mono)',
+        fontSize: '0.9em'
+    },
+    '.cm-blockquote': {
+        borderLeft: '4px solid var(--nh-border-main)',
+        paddingLeft: '1rem',
+        fontStyle: 'italic',
+        color: 'var(--nh-text-muted)'
+    },
+    '.cm-callout-base': {
+        backgroundColor: 'var(--nh-bg-surface)',
+        borderRadius: '0.375rem'
     },
     '.cm-gutters': {
         backgroundColor: 'var(--nh-bg-sidebar)',
@@ -140,6 +169,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({ controller }) => {
                 markdown({ base: markdownLanguage }),
                 notehubTheme,
                 livePreview(),
+                blockStyling(),
                 updateListener,
                 EditorView.lineWrapping
             ]
