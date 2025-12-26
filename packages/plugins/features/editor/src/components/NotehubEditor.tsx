@@ -2,9 +2,10 @@ import React, { useRef, useEffect, useState } from 'react';
 import { EditorView, keymap } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { markdown } from '@codemirror/lang-markdown';
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { EditorController } from '../logic/EditorController';
 import { livePreview } from '../cm/live-preview';
+import { BridgeProvider, EditorPortalRenderer } from '../cm/react-bridge';
 import { FileText } from 'lucide-react';
 
 /**
@@ -90,7 +91,15 @@ const notehubTheme = EditorView.theme({
     '.cm-nh-h3-line': { paddingTop: '0.3em', paddingBottom: '0.15em' },
     '.cm-nh-h4-line': { paddingTop: '0.2em', paddingBottom: '0.1em' },
     '.cm-nh-h5-line': { paddingTop: '0.15em', paddingBottom: '0.075em' },
-    '.cm-nh-h6-line': { paddingTop: '0.1em', paddingBottom: '0.05em' }
+    '.cm-nh-h6-line': { paddingTop: '0.1em', paddingBottom: '0.05em' },
+    // Bullet points
+    '.cm-nh-bullet': {
+        color: 'var(--nh-text-muted)',
+        fontWeight: 'bold',
+        display: 'inline-block',
+        width: '1em',
+        textAlign: 'center'
+    }
 }, { dark: true });
 
 interface NotehubEditorProps {
@@ -128,7 +137,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({ controller }) => {
             extensions: [
                 keymap.of([...defaultKeymap, ...historyKeymap]),
                 history(),
-                markdown(),
+                markdown({ base: markdownLanguage }),
                 notehubTheme,
                 livePreview(),
                 updateListener,
@@ -155,54 +164,59 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({ controller }) => {
     const fileName = currentPath ? (currentPath.split(/[\\/]/).pop() || currentPath) : '';
 
     return (
-        <div
-            className="flex flex-col h-full w-full"
-            style={{
-                backgroundColor: 'var(--nh-bg-main)',
-                position: 'relative'
-            }}
-        >
-            {/* Header bar - only show when file is open */}
-            {currentPath && (
-                <div
-                    className="flex items-center justify-between px-4 py-2 border-b shrink-0"
-                    style={{
-                        borderColor: 'var(--nh-border-subtle)',
-                        backgroundColor: 'var(--nh-bg-sidebar)'
-                    }}
-                >
-                    <span className="text-sm font-medium" style={{ color: 'var(--nh-text-primary)' }}>
-                        {fileName}
-                        {isDirty && <span className="ml-1 text-[var(--nh-accent-primary)]">•</span>}
-                    </span>
-                    {isDirty && (
-                        <span className="text-xs italic" style={{ color: 'var(--nh-text-muted)' }}>
-                            unsaved
-                        </span>
-                    )}
-                </div>
-            )}
-
-            {/* Editor container - ALWAYS rendered so CodeMirror can mount */}
+        <BridgeProvider>
             <div
-                ref={containerRef}
-                className="flex-1 overflow-hidden"
+                className="flex flex-col h-full w-full"
                 style={{
-                    display: currentPath ? 'block' : 'none'
+                    backgroundColor: 'var(--nh-bg-main)',
+                    position: 'relative'
                 }}
-            />
+            >
+                {/* Header bar - only show when file is open */}
+                {currentPath && (
+                    <div
+                        className="flex items-center justify-between px-4 py-2 border-b shrink-0"
+                        style={{
+                            borderColor: 'var(--nh-border-subtle)',
+                            backgroundColor: 'var(--nh-bg-sidebar)'
+                        }}
+                    >
+                        <span className="text-sm font-medium" style={{ color: 'var(--nh-text-primary)' }}>
+                            {fileName}
+                            {isDirty && <span className="ml-1 text-[var(--nh-accent-primary)]">•</span>}
+                        </span>
+                        {isDirty && (
+                            <span className="text-xs italic" style={{ color: 'var(--nh-text-muted)' }}>
+                                unsaved
+                            </span>
+                        )}
+                    </div>
+                )}
 
-            {/* Placeholder - shown when no file is open, positioned over editor area */}
-            {!currentPath && (
+                {/* Editor container - ALWAYS rendered so CodeMirror can mount */}
                 <div
-                    className="flex flex-col items-center justify-center flex-1 text-[var(--nh-text-muted)] select-none"
-                >
-                    <FileText size={64} className="mb-4 opacity-20" />
-                    <h2 className="text-xl font-medium mb-1">Notehub.md</h2>
-                    <p className="text-sm opacity-60">Select a file from the explorer</p>
-                </div>
-            )}
-        </div>
+                    ref={containerRef}
+                    className="flex-1 overflow-hidden"
+                    style={{
+                        display: currentPath ? 'block' : 'none'
+                    }}
+                />
+
+                {/* Portal Renderer for React widgets inside CodeMirror */}
+                <EditorPortalRenderer />
+
+                {/* Placeholder - shown when no file is open, positioned over editor area */}
+                {!currentPath && (
+                    <div
+                        className="flex flex-col items-center justify-center flex-1 text-[var(--nh-text-muted)] select-none"
+                    >
+                        <FileText size={64} className="mb-4 opacity-20" />
+                        <h2 className="text-xl font-medium mb-1">Notehub.md</h2>
+                        <p className="text-sm opacity-60">Select a file from the explorer</p>
+                    </div>
+                )}
+            </div>
+        </BridgeProvider>
     );
 };
 

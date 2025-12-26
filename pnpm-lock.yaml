@@ -157,6 +157,9 @@ importers:
       '@lezer/highlight':
         specifier: ^1.2.1
         version: 1.2.3
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../../ui/ck-standard
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core
@@ -166,10 +169,16 @@ importers:
       react:
         specifier: ^18.2.0
         version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
     devDependencies:
       '@types/react':
         specifier: ^18.2.0
         version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.2.0
+        version: 18.3.7(@types/react@18.3.27)
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10

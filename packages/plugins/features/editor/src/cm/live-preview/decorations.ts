@@ -5,7 +5,7 @@
  * Classes map to styles defined in notehubTheme.
  */
 
-import { Decoration } from '@codemirror/view';
+import { Decoration, WidgetType } from '@codemirror/view';
 
 // ============================================================================
 // HIDDEN SYNTAX DECORATIONS
@@ -54,6 +54,23 @@ export const strikethroughMark = Decoration.mark({
  */
 export const inlineCodeMark = Decoration.mark({
     class: 'cm-nh-inline-code'
+});
+
+/**
+ * Bullet point replacement decoration
+ * We use a WidgetDecoration to replace the dash with a bullet
+ */
+class BulletWidget extends WidgetType {
+    toDOM() {
+        const span = document.createElement('span');
+        span.textContent = '•';
+        span.className = 'cm-nh-bullet';
+        return span;
+    }
+}
+
+export const bulletPointWidget = Decoration.replace({
+    widget: new BulletWidget()
 });
 
 // ============================================================================

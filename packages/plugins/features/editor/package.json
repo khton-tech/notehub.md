@@ -26,12 +26,15 @@
         "@codemirror/view": "^6.35.3",
         "@lezer/common": "^1.5.0",
         "@lezer/highlight": "^1.2.1",
+        "@notehub/ck-standard": "workspace:*",
         "@notehub/core": "workspace:*",
         "lucide-react": "^0.460.0",
-        "react": "^18.2.0"
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
     },
     "devDependencies": {
         "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
         "rimraf": "^5.0.0",
         "typescript": "^5.3.0"
     }

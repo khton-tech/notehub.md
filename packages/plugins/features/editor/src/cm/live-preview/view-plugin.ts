@@ -22,9 +22,11 @@ import {
     italicMark,
     linkMark,
     headingMarks,
-    headingLines
+    headingLines,
+    bulletPointWidget
 } from './decorations';
 import type { HeadingLevel } from './decorations';
+import { CheckboxWidget } from '../widgets/CheckboxWidget';
 
 // ============================================================================
 // TYPES
@@ -173,6 +175,18 @@ class LivePreviewPluginClass {
                     // Handle Link
                     if (node.name === 'Link') {
                         this.buildLinkDecorations(node.node, selection, addDecoration, state);
+                        return false;
+                    }
+
+                    // Handle TaskMarker (checkbox for task lists)
+                    if (node.name === 'TaskMarker') {
+                        this.buildTaskMarkerDecorations(node.node, selection, addDecoration, state);
+                        return false;
+                    }
+
+                    // Handle ListMark (bullets)
+                    if (node.name === 'ListMark') {
+                        this.buildListMarkDecorations(node.node, selection, addDecoration, state);
                         return false;
                     }
 
@@ -333,6 +347,107 @@ class LivePreviewPluginClass {
             addDecoration(linkMark.range(textStart, textEnd), false);
         }
         addDecoration(hiddenSyntax.range(urlSectionStart, urlSectionEnd), true);
+    }
+
+    /**
+     * Build decorations for task list markers (checkboxes)
+     * 
+     * TaskMarker nodes represent `[ ]` or `[x]` in task lists.
+     * We replace them with interactive CheckboxWidget.
+     */
+    private buildTaskMarkerDecorations(
+        node: SyntaxNode,
+        selection: SelectionRange,
+        addDecoration: (deco: Range<Decoration>, isAtomic: boolean) => void,
+        state: EditorState
+    ): void {
+        const markerText = state.doc.sliceString(node.from, node.to);
+
+        // Determine checked state from marker text
+        // Valid markers: [ ], [x], [X]
+        const isChecked = markerText === '[x]' || markerText === '[X]';
+        const isValidMarker = isChecked || markerText === '[ ]';
+
+        if (!isValidMarker) {
+            return;
+        }
+
+        // Check if cursor is exactly on the task marker brackets
+        // If cursor is on the brackets, show raw text for editing
+        const isCursorOnMarker = isSelectionOverlapping(selection, node.from, node.to);
+
+        if (isCursorOnMarker) {
+            // Show raw text - don't replace with widget
+            // Just apply styling to indicate it's a task marker
+            return;
+        }
+
+        // Replace the marker with a CheckboxWidget
+        // pos is the position of the `[` character for toggleCheckbox
+        const widget = new CheckboxWidget(isChecked, node.from);
+        const decoration = Decoration.replace({
+            widget,
+            inclusive: false
+        });
+
+        addDecoration(decoration.range(node.from, node.to), true);
+    }
+
+    /**
+     * Build decorations for list markers
+     * Replaces - or * with bullet point •
+     */
+    private buildListMarkDecorations(
+        node: SyntaxNode,
+        selection: SelectionRange,
+        addDecoration: (deco: Range<Decoration>, isAtomic: boolean) => void,
+        state: EditorState
+    ): void {
+        // If cursor overlaps, show original mark
+        if (isSelectionOverlapping(selection, node.from, node.to)) {
+            return;
+        }
+
+        // Check if this is a Task List item to hide the bullet.
+        // Structure depends on parser:
+        // 1. Task > ListMark, TaskMarker ...
+        // 2. ListItem > ListMark, Paragraph > TaskMarker ...
+        // 3. ListItem > ListMark, TaskMarker ...
+
+        let isTask = false;
+        const parent = node.parent;
+
+        // Check 1: Parent is explicitly 'Task'
+        if (parent?.name === 'Task') {
+            isTask = true;
+        }
+        // Check 2: Direct sibling is TaskMarker
+        else if (node.nextSibling?.name === 'TaskMarker') {
+            isTask = true;
+        }
+        // Check 4: Parent has TaskMarker child (fallback)
+        else if (parent?.getChild('TaskMarker')) {
+            isTask = true;
+        }
+
+        // Check 5 (ROBUST FALLBACK): Check text content immediately following the ListMark
+        // If the text looks like "... [ ]" or "... [x]", treat it as a task.
+        // This handles cases where parser AST structure is unexpected.
+        if (!isTask) {
+            const nextChars = state.doc.sliceString(node.to, node.to + 10);
+            if (/^\s*\[[ xX]\]/.test(nextChars)) {
+                isTask = true;
+            }
+        }
+
+        if (isTask) {
+            // Hide the dash for task items
+            addDecoration(hiddenSyntax.range(node.from, node.to), true);
+            return;
+        }
+
+        // For regular lists (ListItem), replace with bullet
+        addDecoration(bulletPointWidget.range(node.from, node.to), true);
     }
 }
 
