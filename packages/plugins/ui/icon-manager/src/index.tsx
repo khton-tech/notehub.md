@@ -17,6 +17,20 @@ import {
     Folder,
     ChevronRight,
     ChevronDown,
+    // New icons for StatusBar and extended functionality
+    CheckCircle2,
+    RefreshCw,
+    AlertCircle,
+    Search,
+    Edit,
+    Save,
+    Undo,
+    Redo,
+    Menu,
+    MoreVertical,
+    Check,
+    AlertTriangle,
+    Loader,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -73,6 +87,20 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     'folder': Folder,
     'chevron-right': ChevronRight,
     'chevron-down': ChevronDown,
+    // New icons for StatusBar and extended functionality
+    'check-circle': CheckCircle2,
+    'refresh-cw': RefreshCw,
+    'alert-circle': AlertCircle,
+    'search': Search,
+    'edit': Edit,
+    'save': Save,
+    'undo': Undo,
+    'redo': Redo,
+    'menu': Menu,
+    'more-vertical': MoreVertical,
+    'check': Check,
+    'alert-triangle': AlertTriangle,
+    'loader': Loader,
 };
 
 /**

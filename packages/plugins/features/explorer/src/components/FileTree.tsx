@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ExplorerController } from '../logic/ExplorerController';
 import { FileTreeItem } from './FileTreeItem';
 import type { FileNode } from '../types';
@@ -11,23 +11,47 @@ interface FileTreeProps {
 import { Button, Card } from '@notehub/ck-standard';
 import { Icon } from '@notehub/icon-manager';
 
+/**
+ * Flatten the tree to get an array of visible nodes for keyboard navigation
+ */
+function flattenTree(node: FileNode | null): FileNode[] {
+    if (!node) return [];
+
+    const result: FileNode[] = [];
+
+    const traverse = (n: FileNode) => {
+        result.push(n);
+        if (n.kind === 'directory' && n.isExpanded && n.children) {
+            for (const child of n.children) {
+                traverse(child);
+            }
+        }
+    };
+
+    // Start from children of root (don't include root itself)
+    if (node.children) {
+        for (const child of node.children) {
+            traverse(child);
+        }
+    }
+
+    return result;
+}
+
 export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) => {
-    // Determine how to sync state. 
-    // ExplorerController does not implement a specific store interface but has `subscribe`.
-    // We can use useSyncExternalStore or a simple useEffect/useState wrapper.
     const [rootNode, setRootNode] = useState<FileNode | null>(controller.getTree());
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
+    const [focusedIndex, setFocusedIndex] = useState<number>(-1);
     const [showNewMenu, setShowNewMenu] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Initial load if needed
         if (defaultPath) {
             controller.setRoot(defaultPath);
         }
 
         const unsubscribe = controller.subscribe(() => {
             setRootNode(prev => {
-                // Return new obj if needed
                 if (!prev && !controller.getTree()) return null;
                 const newVal = controller.getTree();
                 return newVal ? { ...newVal } : null;
@@ -39,16 +63,21 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         };
     }, [controller, defaultPath]);
 
-    const handleToggle = (path: string) => {
-        controller.toggleDir(path);
-    };
+    const flatNodes = flattenTree(rootNode);
 
-    const handleSelect = (path: string) => {
+    const handleToggle = useCallback((path: string) => {
+        controller.toggleDir(path);
+    }, [controller]);
+
+    const handleSelect = useCallback((path: string) => {
         setSelectedPath(path);
-        // Despatch global event
+        // Update focused index to match selected
+        const idx = flatNodes.findIndex(n => n.path === path);
+        if (idx !== -1) setFocusedIndex(idx);
+        // Dispatch global event
         const event = new CustomEvent('explorer:file-selected', { detail: { path } });
         window.dispatchEvent(event);
-    };
+    }, [flatNodes]);
 
     const handleCreateNote = () => {
         if (rootNode) {
@@ -63,6 +92,64 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
             setShowNewMenu(false);
         }
     };
+
+    // Keyboard navigation handler
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (flatNodes.length === 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setFocusedIndex(prev => Math.min(prev + 1, flatNodes.length - 1));
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setFocusedIndex(prev => Math.max(prev - 1, 0));
+                break;
+            case 'Enter':
+            case ' ': {
+                e.preventDefault();
+                const focusedNode = flatNodes[focusedIndex];
+                if (focusedNode) {
+                    if (focusedNode.kind === 'directory') {
+                        handleToggle(focusedNode.path);
+                    } else {
+                        handleSelect(focusedNode.path);
+                    }
+                }
+                break;
+            }
+            case 'ArrowRight': {
+                e.preventDefault();
+                const focusedNode = flatNodes[focusedIndex];
+                if (focusedNode && focusedNode.kind === 'directory' && !focusedNode.isExpanded) {
+                    handleToggle(focusedNode.path);
+                }
+                break;
+            }
+            case 'ArrowLeft': {
+                e.preventDefault();
+                const focusedNode = flatNodes[focusedIndex];
+                if (focusedNode && focusedNode.kind === 'directory' && focusedNode.isExpanded) {
+                    handleToggle(focusedNode.path);
+                }
+                break;
+            }
+            case 'Home':
+                e.preventDefault();
+                setFocusedIndex(0);
+                break;
+            case 'End':
+                e.preventDefault();
+                setFocusedIndex(flatNodes.length - 1);
+                break;
+        }
+    }, [flatNodes, focusedIndex, handleToggle, handleSelect]);
+
+    // Get focused path
+    const focusedPath = focusedIndex >= 0 && focusedIndex < flatNodes.length
+        ? flatNodes[focusedIndex]?.path
+        : null;
 
     if (!rootNode) {
         return <div className="p-4 text-[var(--nh-text-muted)] text-sm">No folder opened</div>;
@@ -116,10 +203,15 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 </div>
             </div>
 
-            {/* Tree Content */}
+            {/* Tree Content with keyboard navigation */}
             <div
-                className="flex-1 overflow-y-auto overflow-x-hidden py-1"
-                onClick={() => setShowNewMenu(false)} // Close menu on click outside
+                ref={containerRef}
+                className="flex-1 overflow-y-auto overflow-x-hidden py-1 outline-none"
+                onClick={() => setShowNewMenu(false)}
+                onKeyDown={handleKeyDown}
+                tabIndex={0}
+                role="tree"
+                aria-label="File explorer"
             >
                 {rootNode.children && rootNode.children.map(child => (
                     <FileTreeItem
@@ -129,6 +221,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                         onToggle={handleToggle}
                         onSelect={handleSelect}
                         selectedPath={selectedPath}
+                        focusedPath={focusedPath}
                     />
                 ))}
 
@@ -141,3 +234,4 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         </div>
     );
 };
+

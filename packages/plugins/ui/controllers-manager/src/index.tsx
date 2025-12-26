@@ -48,6 +48,7 @@ export const Controller: FC<ControllerProps> = ({ type, ...props }) => {
  *
  * API Methods:
  * - `controller:register` - Register a controller component
+ * - `controller:unregister` - Unregister a controller component
  * - `controller:get` - Get a controller component by name
  *
  * @example
@@ -110,6 +111,21 @@ export class ControllersManagerPlugin implements IPlugin {
         return controller;
     };
 
+    /**
+     * Unregister a controller component
+     * @param name - Controller identifier to remove
+     * @returns true if controller was removed, false if not found
+     */
+    private handleUnregister = (name: string): boolean => {
+        if (!this.controllers.has(name)) {
+            this.log('warn', `Controller "${name}" not found for unregister`);
+            return false;
+        }
+        this.controllers.delete(name);
+        this.log('info', `Controller "${name}" unregistered`);
+        return true;
+    };
+
     // =============== Plugin Lifecycle ===============
 
     /**
@@ -124,6 +140,7 @@ export class ControllersManagerPlugin implements IPlugin {
 
         // Register API methods
         app.api.register('controller:register', this.handleRegister);
+        app.api.register('controller:unregister', this.handleUnregister);
         app.api.register('controller:get', this.handleGet);
 
         this.log('info', 'Loaded successfully');
@@ -140,6 +157,7 @@ export class ControllersManagerPlugin implements IPlugin {
 
         // Unregister API methods
         app.api.unregister('controller:register');
+        app.api.unregister('controller:unregister');
         app.api.unregister('controller:get');
 
         // Clear state

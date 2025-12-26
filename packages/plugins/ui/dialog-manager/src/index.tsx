@@ -1,5 +1,5 @@
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
-import { useState, useEffect, type FC, type CSSProperties, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, type FC, type ChangeEvent, type KeyboardEvent } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Button } from '@notehub/ck-standard';
 
@@ -18,66 +18,7 @@ export interface DialogState {
     reject: () => void;
 }
 
-// =============== Styles ===============
-
-const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    backdropFilter: 'blur(4px)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999,
-    animation: 'dialogFadeIn 0.2s ease-out',
-};
-
-const dialogStyle: CSSProperties = {
-    backgroundColor: 'var(--nh-bg-secondary, #1e1e2e)',
-    borderRadius: '12px',
-    border: '1px solid var(--nh-border, #333)',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-    padding: '24px',
-    minWidth: '320px',
-    maxWidth: '480px',
-    animation: 'dialogSlideIn 0.2s ease-out',
-    fontFamily: 'var(--nh-font-family, system-ui, sans-serif)',
-};
-
-const titleStyle: CSSProperties = {
-    fontSize: '18px',
-    fontWeight: 600,
-    color: 'var(--nh-text-primary, #e0e0e0)',
-    marginBottom: '12px',
-};
-
-const messageStyle: CSSProperties = {
-    fontSize: '14px',
-    color: 'var(--nh-text-secondary, #a0a0a0)',
-    marginBottom: '20px',
-    lineHeight: 1.5,
-};
-
-const inputStyle: CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    fontSize: '14px',
-    backgroundColor: 'var(--nh-bg-primary, #121212)',
-    border: '1px solid var(--nh-border, #333)',
-    borderRadius: '8px',
-    color: 'var(--nh-text-primary, #e0e0e0)',
-    marginBottom: '20px',
-    outline: 'none',
-    boxSizing: 'border-box',
-};
-
-const actionsStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '12px',
-};
-
-// =============== Dialog Component ===============
+// =============== Dialog Component with Tailwind + Focus Trap ===============
 
 interface DialogOverlayProps {
     dialog: DialogState;
@@ -86,8 +27,10 @@ interface DialogOverlayProps {
 
 const DialogOverlay: FC<DialogOverlayProps> = ({ dialog, onClose }) => {
     const [inputValue, setInputValue] = useState(dialog.defaultValue || '');
+    const dialogRef = useRef<HTMLDivElement>(null);
+    const firstFocusableRef = useRef<HTMLElement | null>(null);
 
-    const handleConfirm = () => {
+    const handleConfirm = useCallback(() => {
         if (dialog.type === 'alert') {
             dialog.resolve(undefined);
         } else if (dialog.type === 'confirm') {
@@ -96,18 +39,18 @@ const DialogOverlay: FC<DialogOverlayProps> = ({ dialog, onClose }) => {
             dialog.resolve(inputValue);
         }
         onClose();
-    };
+    }, [dialog, inputValue, onClose]);
 
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
         if (dialog.type === 'confirm') {
             dialog.resolve(false);
         } else if (dialog.type === 'prompt') {
             dialog.resolve(null);
         }
         onClose();
-    };
+    }, [dialog, onClose]);
 
-    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    const handleInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             handleConfirm();
         } else if (e.key === 'Escape') {
@@ -119,33 +62,114 @@ const DialogOverlay: FC<DialogOverlayProps> = ({ dialog, onClose }) => {
         setInputValue(e.target.value);
     };
 
-    // Focus input on mount for prompt dialogs
+    // Focus trap implementation
     useEffect(() => {
-        if (dialog.type === 'prompt') {
-            const input = document.getElementById('dialog-prompt-input');
-            input?.focus();
+        const dialogEl = dialogRef.current;
+        if (!dialogEl) return;
+
+        // Get all focusable elements
+        const getFocusableElements = (): HTMLElement[] => {
+            const nodeList = dialogEl.querySelectorAll<HTMLElement>(
+                'button, input, [tabindex]:not([tabindex="-1"])'
+            );
+            return Array.from(nodeList);
+        };
+
+        // Store the element that had focus before dialog opened
+        const previouslyFocused = document.activeElement as HTMLElement;
+
+        // Focus first focusable element
+        const focusable = getFocusableElements();
+        if (focusable.length > 0) {
+            const firstEl = focusable[0];
+            if (firstEl) {
+                firstFocusableRef.current = firstEl;
+                firstEl.focus();
+            }
         }
-    }, [dialog.type]);
+
+        // Handle tab key for focus trap
+        const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                handleCancel();
+                return;
+            }
+
+            if (e.key !== 'Tab') return;
+
+            const focusable = getFocusableElements();
+            if (focusable.length === 0) return;
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+
+            if (!first || !last) return;
+
+            if (e.shiftKey) {
+                // Shift + Tab
+                if (document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                }
+            } else {
+                // Tab
+                if (document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            // Restore focus to previous element
+            previouslyFocused?.focus?.();
+        };
+    }, [handleCancel]);
 
     return (
-        <div style={overlayStyle} onClick={handleCancel}>
-            <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
-                <div style={titleStyle}>{dialog.title}</div>
-                <div style={messageStyle}>{dialog.message}</div>
+        <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] animate-[dialogFadeIn_0.2s_ease-out]"
+            onClick={handleCancel}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dialog-title"
+            aria-describedby="dialog-message"
+        >
+            <div
+                ref={dialogRef}
+                className="bg-[var(--nh-bg-surface,#2a2a2a)] rounded-xl border border-[var(--nh-border-secondary,#3a3a3a)] shadow-2xl p-6 min-w-[20rem] max-w-[30rem] animate-[dialogSlideIn_0.2s_ease-out] font-[var(--nh-font-family,system-ui)]"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <h2
+                    id="dialog-title"
+                    className="text-lg font-semibold text-[var(--nh-text-primary,#e0e0e0)] mb-3"
+                >
+                    {dialog.title}
+                </h2>
+                <p
+                    id="dialog-message"
+                    className="text-sm text-[var(--nh-text-secondary,#a0a0a0)] mb-5 leading-relaxed"
+                >
+                    {dialog.message}
+                </p>
 
                 {dialog.type === 'prompt' && (
                     <input
                         id="dialog-prompt-input"
                         type="text"
-                        style={inputStyle}
+                        className="w-full px-3 py-2.5 text-sm bg-[var(--nh-bg-main,#1a1a1a)] border border-[var(--nh-border-secondary,#3a3a3a)] rounded-lg text-[var(--nh-text-primary,#e0e0e0)] mb-5 outline-none focus:border-[var(--nh-accent-primary,#6b5ce7)] focus:ring-1 focus:ring-[var(--nh-accent-primary,#6b5ce7)] transition-colors"
                         value={inputValue}
                         onChange={handleInputChange}
-                        onKeyDown={handleKeyDown}
+                        onKeyDown={handleInputKeyDown}
                         placeholder="Enter value..."
                     />
                 )}
 
-                <div style={actionsStyle}>
+                <div className="flex justify-end gap-3">
                     {dialog.type !== 'alert' && (
                         <Button variant="ghost" onClick={handleCancel}>
                             Cancel
@@ -157,6 +181,7 @@ const DialogOverlay: FC<DialogOverlayProps> = ({ dialog, onClose }) => {
                 </div>
             </div>
 
+            {/* CSS Keyframes for animations */}
             <style>{`
                 @keyframes dialogFadeIn {
                     from { opacity: 0; }
@@ -170,6 +195,7 @@ const DialogOverlay: FC<DialogOverlayProps> = ({ dialog, onClose }) => {
         </div>
     );
 };
+
 
 // =============== Plugin ===============
 

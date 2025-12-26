@@ -1,7 +1,8 @@
 /**
  * Generic event callback type
+ * Supports both sync and async handlers
  */
-export type EventCallback<T = unknown> = (payload: T) => void;
+export type EventCallback<T = unknown> = (payload: T) => void | Promise<void>;
 
 /**
  * Event map type for type-safe event definitions
@@ -62,18 +63,21 @@ export class EventBus<TEvents extends EventMap = EventMap> {
     }
 
     /**
-     * Emit an event to all subscribers
+     * Emit an event to all subscribers asynchronously
+     * Uses Promise.allSettled to ensure one failing listener doesn't block others
      * @param event - Event name
      * @param payload - Event payload data
      */
-    emit<K extends keyof TEvents>(event: K, payload?: TEvents[K]): void {
+    async emit<K extends keyof TEvents>(event: K, payload?: TEvents[K]): Promise<void> {
         const callbacks = this.listeners.get(event);
         if (callbacks) {
-            for (const callback of callbacks) {
-                try {
-                    callback(payload);
-                } catch (error) {
-                    console.error(`[EventBus] Error in handler for event "${String(event)}":`, error);
+            const results = await Promise.allSettled(
+                Array.from(callbacks).map(cb => Promise.resolve(cb(payload)))
+            );
+            // Log any errors from failed handlers
+            for (const result of results) {
+                if (result.status === 'rejected') {
+                    console.error(`[EventBus] Error in handler for event "${String(event)}":`, result.reason);
                 }
             }
         }

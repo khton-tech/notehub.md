@@ -20,6 +20,9 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
 
     private app: NotehubCore | null = null;
 
+    /** Active file watchers for cleanup on unload */
+    private activeWatchers: Set<() => void> = new Set();
+
     /**
      * Log a message via the Logger plugin
      */
@@ -52,8 +55,23 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
      * Unload the driver
      */
     async unload(_app: NotehubCore): Promise<void> {
-        this.log('info', 'Unloaded');
+        this.log('info', 'Unloading...');
+
+        // Clean up all active file watchers
+        if (this.activeWatchers.size > 0) {
+            this.log('info', `Cleaning up ${this.activeWatchers.size} active file watcher(s)`);
+            for (const unwatch of this.activeWatchers) {
+                try {
+                    unwatch();
+                } catch (error) {
+                    this.log('warn', `Error during watcher cleanup: ${error}`);
+                }
+            }
+            this.activeWatchers.clear();
+        }
+
         this.app = null;
+        this.log('info', 'Unloaded - all watchers cleaned up');
     }
 
     /**
@@ -152,7 +170,17 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
                 });
             }, { recursive: true });
 
-            return unwatch;
+            // Create a wrapped cleanup function that removes from tracking set
+            const cleanup = () => {
+                unwatch();
+                this.activeWatchers.delete(cleanup);
+            };
+
+            // Track this watcher for cleanup on unload
+            this.activeWatchers.add(cleanup);
+
+            this.log('info', `File watcher registered for: ${path}`);
+            return cleanup;
         } catch (error) {
             this.log('error', `watch failed for ${path}: ${error}`);
             // Return empty cleanup if failed

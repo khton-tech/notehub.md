@@ -12,12 +12,25 @@ export class ExplorerPlugin implements IPlugin {
         dependencies: ['nh.system.fs-manager', 'nh.ui.icon-manager', 'nh.ui.theme-manager']
     };
 
-    // private app: NotehubCore | null = null; // Unused
+    private app: NotehubCore | null = null;
     private controller: ExplorerController | null = null;
-    private unsubscribe: (() => void) | null = null;
+
+    /** Event cleanup functions for lifecycle hygiene */
+    private eventCleanups: Array<() => void> = [];
+
+    /**
+     * Log a message via the Logger plugin
+     */
+    private log(level: 'info' | 'warn' | 'error', message: string): void {
+        if (this.app) {
+            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
+        }
+    }
 
     async load(app: NotehubCore): Promise<void> {
-        // this.app = app;
+        this.app = app;
+        this.log('info', 'Loading...');
+
         this.controller = new ExplorerController(app);
 
         // Initialize controller
@@ -38,13 +51,11 @@ export class ExplorerPlugin implements IPlugin {
         };
 
         // Register the UI component in the registry
-        // We assume 'controller:register' is the method used by other plugins (e.g. ck-standard)
         await app.api.invoke('controller:register', 'explorer-tree', ExplorerTreeComponent);
 
-        // Expose API to open a folder (e.g. from Vault Picker or Menu)
-        // We assume 'api:register' is not how we register methods, usually we handle events or use a service registry
-        // But since IPlugin is basic, let's subscribe to an event 'explorer:open'
-        // Expose API ...
+        // === Event Handlers with proper cleanup tracking ===
+
+        // Handler for 'explorer:open' event
         const openHandler = async (payload: any) => {
             const path = typeof payload === 'string' ? payload : payload.path;
             if (path && this.controller) {
@@ -52,31 +63,46 @@ export class ExplorerPlugin implements IPlugin {
             }
         };
         app.events.on('explorer:open', openHandler);
-        this.unsubscribe = () => {
-            app.events.off('explorer:open', openHandler);
-        };
+        this.eventCleanups.push(() => app.events.off('explorer:open', openHandler));
 
-        // Also listen for 'vault:opened' if such event exists from previous tasks 
-        // (Vault Persistence task mentioned 'vault.last-opened')
-        // Let's assume there's a 'vault:opened' event.
-        // Also listen for 'app:vault-opened' as emitted by Workbench/VaultPicker
-        app.events.on('app:vault-opened', async (payload: any) => {
+        // Handler for 'app:vault-opened' event
+        const vaultOpenedHandler = async (payload: any) => {
             const path = typeof payload === 'string' ? payload : payload.path;
             if (path && this.controller) {
                 await this.controller.setRoot(path);
             }
-        });
+        };
+        app.events.on('app:vault-opened', vaultOpenedHandler);
+        this.eventCleanups.push(() => app.events.off('app:vault-opened', vaultOpenedHandler));
 
-        console.log('Explorer plugin loaded');
+        this.log('info', 'Loaded successfully');
     }
 
-    async unload(_app: NotehubCore): Promise<void> {
-        if (this.unsubscribe) {
-            this.unsubscribe();
-            this.unsubscribe = null;
+    async unload(app: NotehubCore): Promise<void> {
+        this.log('info', 'Unloading...');
+
+        // === LIFECYCLE HYGIENE: Proper cleanup ===
+
+        // 1. Unsubscribe all event handlers
+        for (const cleanup of this.eventCleanups) {
+            try {
+                cleanup();
+            } catch (error) {
+                this.log('warn', `Error during event cleanup: ${error}`);
+            }
         }
+        this.eventCleanups = [];
+
+        // 2. Unregister the controller component
+        app.api.invoke('controller:unregister', 'explorer-tree');
+
+        // 3. Clear controller reference
         this.controller = null;
-        // this.app = null;
+
+        // 4. Clear app reference
+        this.app = null;
+
+        this.log('info', 'Unloaded - all listeners cleaned up');
     }
 }
 
