@@ -4,10 +4,12 @@ import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorController } from '../logic/EditorController';
+import { livePreview } from '../cm/live-preview';
 import { FileText } from 'lucide-react';
 
 /**
  * CodeMirror theme using CSS variables from theme-manager
+ * Includes Live Preview styling for hidden/visible Markdown syntax
  */
 const notehubTheme = EditorView.theme({
     '&': {
@@ -46,7 +48,49 @@ const notehubTheme = EditorView.theme({
     },
     '.cm-scroller': {
         overflow: 'auto'
-    }
+    },
+    // ===== LIVE PREVIEW STYLES =====
+    // Bold text
+    '.cm-nh-bold': {
+        fontWeight: 'bold',
+        color: 'var(--nh-text-primary)'
+    },
+    // Italic text
+    '.cm-nh-italic': {
+        fontStyle: 'italic'
+    },
+    // Links
+    '.cm-nh-link': {
+        color: 'var(--nh-accent-primary)',
+        textDecoration: 'underline',
+        cursor: 'pointer'
+    },
+    // Strikethrough
+    '.cm-nh-strikethrough': {
+        textDecoration: 'line-through',
+        opacity: '0.7'
+    },
+    // Inline code
+    '.cm-nh-inline-code': {
+        fontFamily: 'var(--nh-font-family-mono)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        padding: '0.1em 0.3em',
+        borderRadius: '3px'
+    },
+    // Heading text marks (inline styling)
+    '.cm-nh-h1': { fontSize: '1.75em', fontWeight: 'bold' },
+    '.cm-nh-h2': { fontSize: '1.5em', fontWeight: 'bold' },
+    '.cm-nh-h3': { fontSize: '1.25em', fontWeight: 'bold' },
+    '.cm-nh-h4': { fontSize: '1.1em', fontWeight: 'bold' },
+    '.cm-nh-h5': { fontSize: '1.05em', fontWeight: 'bold' },
+    '.cm-nh-h6': { fontSize: '1em', fontWeight: 'bold' },
+    // Heading line decorations (line container styling)
+    '.cm-nh-h1-line': { paddingTop: '0.5em', paddingBottom: '0.25em' },
+    '.cm-nh-h2-line': { paddingTop: '0.4em', paddingBottom: '0.2em' },
+    '.cm-nh-h3-line': { paddingTop: '0.3em', paddingBottom: '0.15em' },
+    '.cm-nh-h4-line': { paddingTop: '0.2em', paddingBottom: '0.1em' },
+    '.cm-nh-h5-line': { paddingTop: '0.15em', paddingBottom: '0.075em' },
+    '.cm-nh-h6-line': { paddingTop: '0.1em', paddingBottom: '0.05em' }
 }, { dark: true });
 
 interface NotehubEditorProps {
@@ -86,6 +130,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({ controller }) => {
                 history(),
                 markdown(),
                 notehubTheme,
+                livePreview(),
                 updateListener,
                 EditorView.lineWrapping
             ]

@@ -95,8 +95,8 @@
 flowchart LR
     nh_features_editor["Editor"]
     nh_features_explorer["Explorer"]
-    nh_features_vault-picker["VaultPicker"]
     nh_features_workbench["Workbench"]
+    nh_features_vault-picker["VaultPicker"]
     nh_system_bootloader["Bootloader"]
     nh_system_config-manager["ConfigManager"]
     nh_system_fs-driver-tauri["FsDriverTauri"]
@@ -118,17 +118,17 @@ flowchart LR
     nh_features_explorer --> nh_ui_controllers-manager
     nh_features_explorer --> nh_ui_icon-manager
     nh_features_explorer --> nh_ui_theme-manager
+    nh_features_workbench --> nh_ui_layout-manager
+    nh_features_workbench --> nh_ui_theme-manager
+    nh_features_workbench --> nh_ui_ck-standard
+    nh_features_workbench --> nh_system_state-manager
+    nh_features_workbench --> nh_features_explorer
     nh_features_vault-picker --> nh_system_fs-manager
     nh_features_vault-picker --> nh_system_config-manager
     nh_features_vault-picker --> nh_system_state-manager
     nh_features_vault-picker --> nh_system_logger
     nh_features_vault-picker --> nh_ui_controllers-manager
     nh_features_vault-picker --> nh_ui_layout-manager
-    nh_features_workbench --> nh_ui_layout-manager
-    nh_features_workbench --> nh_ui_theme-manager
-    nh_features_workbench --> nh_ui_ck-standard
-    nh_features_workbench --> nh_system_state-manager
-    nh_features_workbench --> nh_features_explorer
     nh_system_bootloader --> nh_system_logger
     nh_system_config-manager --> nh_system_logger
     nh_system_config-manager --> nh_system_fs-manager
