@@ -9,13 +9,16 @@
 
 import { EditorView, Decoration } from '@codemirror/view';
 import { livePreviewPlugin } from './view-plugin';
+import { livePreviewTheme } from './theme';
 
 // Re-export for advanced usage
 export { livePreviewPlugin } from './view-plugin';
+export { livePreviewTheme } from './theme';
 export * from './decorations';
 
 /**
  * Complete Live Preview extension including:
+ * - Theme (proper EditorView.theme with CSS variables)
  * - ViewPlugin for decoration computation
  * - Atomic Ranges for smooth cursor navigation
  * 
@@ -36,6 +39,9 @@ export * from './decorations';
  */
 export function livePreview() {
     return [
+        // Live Preview theme - MUST be first for proper CSS cascade
+        livePreviewTheme,
+
         // The main ViewPlugin that computes decorations
         livePreviewPlugin,
 
