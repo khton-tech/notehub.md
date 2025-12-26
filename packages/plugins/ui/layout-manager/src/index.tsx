@@ -1,4 +1,4 @@
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import type { IPlugin, PluginManifest, NotehubCore, ZoneItem } from '@notehub/core';
 import { useSyncExternalStore, type FC } from 'react';
 import { WelcomeLayout } from './components/WelcomeLayout.js';
 import { EditorLayout } from './components/EditorLayout.js';
@@ -16,6 +16,9 @@ interface ActiveLayout {
     props: Record<string, unknown>;
 }
 
+// Re-export ZoneItem type for convenience
+export type { ZoneItem } from '@notehub/core';
+
 // =============== Layout Store (Module-level State) ===============
 
 /** Registry of available layouts */
@@ -24,14 +27,35 @@ const layoutRegistry = new Map<string, LayoutComponent>();
 /** Currently active layout */
 let activeLayout: ActiveLayout | null = null;
 
-/** Subscribers for state changes */
-const subscribers = new Set<() => void>();
+/** Subscribers for layout state changes */
+const layoutSubscribers = new Set<() => void>();
+
+// =============== Zone Store (Module-level State) ===============
+
+/** Zone registry: zoneId -> array of items */
+const zoneRegistry = new Map<string, ZoneItem[]>();
+
+/** Subscribers for zone state changes */
+const zoneSubscribers = new Set<() => void>();
+
+/** Zone version for tracking changes (used by useSyncExternalStore) */
+let zoneVersion = 0;
 
 /**
- * Notify all subscribers of state change
+ * Notify all layout subscribers of state change
  */
-function notifySubscribers(): void {
-    for (const callback of subscribers) {
+function notifyLayoutSubscribers(): void {
+    for (const callback of layoutSubscribers) {
+        callback();
+    }
+}
+
+/**
+ * Notify all zone subscribers of state change
+ */
+function notifyZoneSubscribers(): void {
+    zoneVersion++;
+    for (const callback of zoneSubscribers) {
         callback();
     }
 }
@@ -39,21 +63,38 @@ function notifySubscribers(): void {
 /**
  * Subscribe to layout state changes
  */
-function subscribe(callback: () => void): () => void {
-    subscribers.add(callback);
+function subscribeLayout(callback: () => void): () => void {
+    layoutSubscribers.add(callback);
     return () => {
-        subscribers.delete(callback);
+        layoutSubscribers.delete(callback);
+    };
+}
+
+/**
+ * Subscribe to zone state changes
+ */
+function subscribeZone(callback: () => void): () => void {
+    zoneSubscribers.add(callback);
+    return () => {
+        zoneSubscribers.delete(callback);
     };
 }
 
 /**
  * Get current layout state snapshot
  */
-function getSnapshot(): ActiveLayout | null {
+function getLayoutSnapshot(): ActiveLayout | null {
     return activeLayout;
 }
 
-/** Reference to kernel (module-level for LayoutRenderer access) */
+/**
+ * Get zone version snapshot (for triggering re-renders)
+ */
+function getZoneSnapshot(): number {
+    return zoneVersion;
+}
+
+/** Reference to kernel (module-level for component access) */
 let appInstance: NotehubCore | null = null;
 
 // =============== LayoutRenderer Component ===============
@@ -75,9 +116,9 @@ let appInstance: NotehubCore | null = null;
  */
 export const LayoutRenderer: FC = () => {
     const currentLayout = useSyncExternalStore(
-        subscribe,
-        getSnapshot,
-        getSnapshot
+        subscribeLayout,
+        getLayoutSnapshot,
+        getLayoutSnapshot
     );
 
     if (!currentLayout) {
@@ -95,22 +136,100 @@ export const LayoutRenderer: FC = () => {
     return <Component {...currentLayout.props} app={appInstance} />;
 };
 
+// =============== ZoneRenderer Component ===============
+
+/**
+ * Props for ZoneRenderer component
+ */
+export interface ZoneRendererProps {
+    /** Zone ID to render */
+    name: string;
+    /** Optional CSS class for the container */
+    className?: string;
+    /** Optional inline styles for the container */
+    style?: React.CSSProperties;
+}
+
+/**
+ * ZoneRenderer - React component that renders all items in a zone
+ *
+ * Fetches items from the zone registry, sorts by priority (descending),
+ * and renders each using the Controller component from controllers-manager.
+ *
+ * @example
+ * ```tsx
+ * // In EditorLayout
+ * <div className="sidebar">
+ *   <ZoneRenderer name="sidebar-left" />
+ * </div>
+ * ```
+ */
+export const ZoneRenderer: FC<ZoneRendererProps> = ({ name, className, style }) => {
+    // Subscribe to zone changes to trigger re-render
+    useSyncExternalStore(
+        subscribeZone,
+        getZoneSnapshot,
+        getZoneSnapshot
+    );
+
+    // Get items for this zone
+    const items = zoneRegistry.get(name) ?? [];
+
+    // Sort by priority (higher priority = rendered first/top)
+    const sortedItems = [...items].sort((a, b) => b.priority - a.priority);
+
+    if (sortedItems.length === 0) {
+        return null;
+    }
+
+    // Get the Controller component from the registry
+    const Controller = appInstance?.api.invoke('controller:get', 'Controller') as FC<{ type: string }> | undefined;
+
+    if (!Controller) {
+        // Fallback: render items directly by invoking controller:get for each
+        return (
+            <div className={className} style={style}>
+                {sortedItems.map((item, index) => {
+                    const Component = appInstance?.api.invoke('controller:get', item.component) as FC | undefined;
+                    if (!Component) {
+                        console.warn(`[ZoneRenderer] Component "${item.component}" not found in controller registry`);
+                        return null;
+                    }
+                    return <Component key={`${item.component}-${index}`} />;
+                })}
+            </div>
+        );
+    }
+
+    return (
+        <div className={className} style={style}>
+            {sortedItems.map((item, index) => (
+                <Controller key={`${item.component}-${index}`} type={item.component} />
+            ))}
+        </div>
+    );
+};
+
 // =============== Plugin Implementation ===============
 
 /**
- * LayoutManagerPlugin - Layout and screen management
+ * LayoutManagerPlugin - Layout and screen management with Zone system
  *
- * Manages application layouts as React components.
- * Provides a registry for layouts and controls which one is active.
+ * Manages application layouts as React components and provides a zone-based
+ * architecture for flexible UI composition.
  *
  * API Methods:
  * - `layout:register-component` - Register a React component as a layout
- * - `layout:set-active` - Set the active layout
+ * - `layout:set` - Set the active layout
  * - `layout:get-active` - Get current layout info
  * - `layout:list` - List all registered layouts
+ * - `zone:register` - Register a component in a zone
+ * - `zone:get` - Get all items in a zone
+ * - `zone:clear` - Clear all items in a zone
  *
  * Events:
  * - `layout:changed` - Emitted when active layout changes
+ * - `zone:updated` - Emitted when a zone is updated
  */
 export class LayoutManagerPlugin implements IPlugin {
     readonly manifest: PluginManifest = {
@@ -132,7 +251,7 @@ export class LayoutManagerPlugin implements IPlugin {
         }
     }
 
-    // =============== API Method Handlers ===============
+    // =============== Layout API Method Handlers ===============
 
     /**
      * Register a layout component
@@ -153,14 +272,14 @@ export class LayoutManagerPlugin implements IPlugin {
      * @param name - Layout identifier to activate
      * @param props - Optional props to pass to the layout component
      */
-    private handleSet = (name: string, props: Record<string, unknown> = {}): boolean => {
+    private handleSetLayout = (name: string, props: Record<string, unknown> = {}): boolean => {
         if (!layoutRegistry.has(name)) {
             this.log('error', `Layout "${name}" not found`);
             return false;
         }
 
         activeLayout = { name, props };
-        notifySubscribers();
+        notifyLayoutSubscribers();
 
         if (this.app) {
             this.app.events.emit('layout:changed', { name, props });
@@ -173,15 +292,70 @@ export class LayoutManagerPlugin implements IPlugin {
     /**
      * Get current active layout info
      */
-    private handleGetActive = (): ActiveLayout | null => {
+    private handleGetActiveLayout = (): ActiveLayout | null => {
         return activeLayout;
     };
 
     /**
      * List all registered layout names
      */
-    private handleList = (): string[] => {
+    private handleListLayouts = (): string[] => {
         return Array.from(layoutRegistry.keys());
+    };
+
+    // =============== Zone API Method Handlers ===============
+
+    /**
+     * Register a component in a zone
+     * @param zoneId - Unique zone identifier (e.g., 'sidebar-left', 'status-bar')
+     * @param item - Zone item with component name and priority
+     */
+    private handleZoneRegister = (zoneId: string, item: ZoneItem): void => {
+        const items = zoneRegistry.get(zoneId) ?? [];
+
+        // Check if component already exists in zone
+        const existingIndex = items.findIndex(i => i.component === item.component);
+        if (existingIndex >= 0) {
+            // Update existing item
+            items[existingIndex] = item;
+            this.log('info', `Zone "${zoneId}": Updated "${item.component}" with priority ${item.priority}`);
+        } else {
+            // Add new item
+            items.push(item);
+            this.log('info', `Zone "${zoneId}": Registered "${item.component}" with priority ${item.priority}`);
+        }
+
+        zoneRegistry.set(zoneId, items);
+        notifyZoneSubscribers();
+
+        if (this.app) {
+            this.app.events.emit('zone:updated', { zoneId, items });
+        }
+    };
+
+    /**
+     * Get all items in a zone (sorted by priority, descending)
+     * @param zoneId - Zone identifier
+     */
+    private handleZoneGet = (zoneId: string): ZoneItem[] => {
+        const items = zoneRegistry.get(zoneId) ?? [];
+        return [...items].sort((a, b) => b.priority - a.priority);
+    };
+
+    /**
+     * Clear all items in a zone
+     * @param zoneId - Zone identifier
+     */
+    private handleZoneClear = (zoneId: string): void => {
+        if (zoneRegistry.has(zoneId)) {
+            zoneRegistry.delete(zoneId);
+            notifyZoneSubscribers();
+            this.log('info', `Zone "${zoneId}" cleared`);
+
+            if (this.app) {
+                this.app.events.emit('zone:updated', { zoneId, items: [] });
+            }
+        }
     };
 
     // =============== Plugin Lifecycle ===============
@@ -194,11 +368,16 @@ export class LayoutManagerPlugin implements IPlugin {
         appInstance = app;
         this.log('info', 'Loading...');
 
-        // Register API methods
+        // Register Layout API methods
         app.api.register('layout:register-component', this.handleRegisterComponent);
-        app.api.register('layout:set', this.handleSet);
-        app.api.register('layout:get-active', this.handleGetActive);
-        app.api.register('layout:list', this.handleList);
+        app.api.register('layout:set', this.handleSetLayout);
+        app.api.register('layout:get-active', this.handleGetActiveLayout);
+        app.api.register('layout:list', this.handleListLayouts);
+
+        // Register Zone API methods
+        app.api.register('zone:register', this.handleZoneRegister);
+        app.api.register('zone:get', this.handleZoneGet);
+        app.api.register('zone:clear', this.handleZoneClear);
 
         // Register built-in layouts
         this.handleRegisterComponent('welcome', WelcomeLayout);
@@ -213,24 +392,50 @@ export class LayoutManagerPlugin implements IPlugin {
     async unload(app: NotehubCore): Promise<void> {
         this.log('info', 'Unloading...');
 
-        // Unregister API methods
+        // Unregister Layout API methods
         app.api.unregister('layout:register-component');
         app.api.unregister('layout:set');
         app.api.unregister('layout:get-active');
         app.api.unregister('layout:list');
 
-        // Clear state
-        layoutRegistry.clear();
-        activeLayout = null;
-        notifySubscribers();
+        // Unregister Zone API methods
+        app.api.unregister('zone:register');
+        app.api.unregister('zone:get');
+        app.api.unregister('zone:clear');
 
+        // ========== BULLETPROOF STATE CLEANUP ==========
+        // Clear all module-level state to prevent zombie listeners on HMR
+
+        // 1. Clear registries
+        layoutRegistry.clear();
+        zoneRegistry.clear();
+
+        // 2. Reset active layout
+        activeLayout = null;
+
+        // 3. Reset zone version counter
+        zoneVersion = 0;
+
+        // 4. Notify subscribers before clearing to trigger React updates
+        notifyLayoutSubscribers();
+        notifyZoneSubscribers();
+
+        // 5. Clear all subscriber sets (remove zombie listeners)
+        layoutSubscribers.clear();
+        zoneSubscribers.clear();
+
+        // 6. Clear module-level app instance reference
+        appInstance = null;
+
+        // 7. Clear instance reference
         this.app = null;
 
-        this.log('info', 'Unloaded');
+        this.log('info', 'Unloaded - all state cleared');
     }
+
 }
 
-// Re-export components
+// Re-export components and layouts
 export { WelcomeLayout } from './components/WelcomeLayout.js';
 export { EditorLayout } from './components/EditorLayout.js';
 

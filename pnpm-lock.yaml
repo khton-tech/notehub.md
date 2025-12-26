@@ -116,7 +116,14 @@ importers:
         version: 5.4.21(@types/node@25.0.3)
 
   packages/core:
+    dependencies:
+      react:
+        specifier: ^18.0.0
+        version: 18.3.1
     devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.27
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10

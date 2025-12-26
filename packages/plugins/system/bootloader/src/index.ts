@@ -65,10 +65,10 @@ export class BootloaderPlugin implements IPlugin {
 
         this.bootloader = new Bootloader(app as NotehubCore);
 
-        // Register API methods
-        app.api.register('bootloader.load', this.loadPlugins.bind(this));
-        app.api.register('bootloader.getResult', this.getLastResult.bind(this));
-        app.api.register('bootloader.getInstance', this.getInstance.bind(this));
+        // Register API methods - using untyped overload since these are internal APIs
+        app.api.register('bootloader.load', this.loadPlugins.bind(this) as (plugins: unknown[]) => Promise<unknown>);
+        app.api.register('bootloader.getResult', this.getLastResult.bind(this) as () => unknown);
+        app.api.register('bootloader.getInstance', this.getInstance.bind(this) as () => unknown);
 
         this.log('info', 'Loaded successfully');
     }

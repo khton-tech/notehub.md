@@ -67,8 +67,8 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                 "ribbon sidebar main"
                 "status status  status"
             `,
-            gridTemplateColumns: `48px ${sidebarWidth}px 1fr`,
-            gridTemplateRows: '1fr 24px',
+            gridTemplateColumns: `3rem ${sidebarWidth / 16}rem 1fr`,
+            gridTemplateRows: '1fr 1.5rem',
             color: 'var(--nh-text-primary)'
         }}>
             {/* Ribbon Area */}

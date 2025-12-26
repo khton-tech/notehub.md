@@ -1,4 +1,19 @@
 /**
+ * @fileoverview API Bus for registering and invoking plugin methods
+ * @module @notehub/core/buses/ApiBus
+ */
+
+import type {
+    NotehubApiMap,
+    ApiMethodName,
+    ApiMethodArgs,
+    ApiMethodAwaitedResult
+} from '../api/contract.js';
+
+// Re-export types for convenience
+export type { NotehubApiMap, ApiMethodName, ApiMethodArgs, ApiMethodAwaitedResult };
+
+/**
  * Handler function type for API methods
  */
 export type ApiHandler<TArgs extends unknown[] = unknown[], TResult = unknown> = (
@@ -9,38 +24,52 @@ export type ApiHandler<TArgs extends unknown[] = unknown[], TResult = unknown> =
  * API Bus for registering and invoking plugin methods
  *
  * Provides a centralized registry for plugin-exposed APIs,
- * enabling direct method invocation between plugins.
+ * enabling direct method invocation between plugins with full type safety.
  *
  * @example
  * ```ts
  * const api = new ApiBus();
  *
- * // Plugin A registers a method
- * api.register('notes.create', async (title: string) => {
- *   return { id: '123', title };
- * });
+ * // Type-safe invocation
+ * const config = await api.invoke('config:get', 'theme.current', 'dark');
+ * //    ^? string | undefined
  *
- * // Plugin B invokes the method
- * const note = await api.invoke<{ id: string; title: string }>('notes.create', 'My Note');
+ * await api.invoke('logger:info', 'MyPlugin', 'Hello, World!');
  * ```
  */
 export class ApiBus {
     private handlers = new Map<string, ApiHandler>();
 
     /**
-     * Register an API method
-     * @param name - Unique method name (e.g., "notes.create")
+     * Register an API method with type safety
+     * 
+     * @param name - Unique method name from NotehubApiMap
      * @param handler - Handler function implementation
      * @throws Error if method name is already registered
+     * 
+     * @example
+     * ```ts
+     * api.register('logger:info', (source, message) => {
+     *     console.info(`[${source}] ${message}`);
+     * });
+     * ```
      */
-    register<TArgs extends unknown[], TResult>(
-        name: string,
-        handler: ApiHandler<TArgs, TResult>
-    ): void {
+    register<K extends ApiMethodName>(
+        name: K,
+        handler: (...args: ApiMethodArgs<K>) => ReturnType<NotehubApiMap[K]>
+    ): void;
+
+    /**
+     * Register an API method (untyped overload for dynamic registration)
+     * Use this only when the method name is not in NotehubApiMap yet.
+     */
+    register(name: string, handler: ApiHandler): void;
+
+    register(name: string, handler: ApiHandler): void {
         if (this.handlers.has(name)) {
             throw new Error(`[ApiBus] Handler "${name}" is already registered`);
         }
-        this.handlers.set(name, handler as ApiHandler);
+        this.handlers.set(name, handler);
     }
 
     /**
@@ -53,18 +82,40 @@ export class ApiBus {
     }
 
     /**
-     * Invoke a registered API method
-     * @param name - Method name to invoke
-     * @param args - Arguments to pass to the handler
-     * @returns Promise resolving to the handler's result
+     * Invoke a registered API method with full type safety
+     * 
+     * @param method - Method name from NotehubApiMap
+     * @param args - Arguments matching the method signature
+     * @returns Promise resolving to the method's return type
      * @throws Error if the method is not registered
+     * 
+     * @example
+     * ```ts
+     * // Fully typed - IDE knows the return type!
+     * const exists = await api.invoke('fs:exists', '/path/to/file');
+     * //    ^? boolean
+     * 
+     * const entries = await api.invoke('fs:read-dir', '/path');
+     * //    ^? DirEntry[]
+     * ```
      */
-    async invoke<TResult>(name: string, ...args: unknown[]): Promise<TResult> {
+    async invoke<K extends ApiMethodName>(
+        method: K,
+        ...args: ApiMethodArgs<K>
+    ): Promise<ApiMethodAwaitedResult<K>>;
+
+    /**
+     * Invoke an API method (untyped overload for dynamic invocation)
+     * Use this only when you need to call methods not in NotehubApiMap.
+     */
+    async invoke<TResult = unknown>(name: string, ...args: unknown[]): Promise<TResult>;
+
+    async invoke(name: string, ...args: unknown[]): Promise<unknown> {
         const handler = this.handlers.get(name);
         if (!handler) {
             throw new Error(`[ApiBus] Handler "${name}" is not registered`);
         }
-        return handler(...args) as Promise<TResult>;
+        return handler(...args);
     }
 
     /**

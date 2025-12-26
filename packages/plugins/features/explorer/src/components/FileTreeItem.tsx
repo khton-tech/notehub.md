@@ -8,6 +8,7 @@ interface FileTreeItemProps {
     onToggle: (path: string) => void;
     onSelect: (path: string) => void;
     selectedPath?: string | null | undefined;
+    focusedPath?: string | null | undefined;
 }
 
 export const FileTreeItem: React.FC<FileTreeItemProps> = ({
@@ -15,9 +16,11 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
     depth,
     onToggle,
     onSelect,
-    selectedPath
+    selectedPath,
+    focusedPath
 }) => {
     const isSelected = selectedPath === node.path;
+    const isFocused = focusedPath === node.path;
     const isDirectory = node.kind === 'directory';
 
     // Indentation style
@@ -34,17 +37,14 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
         }
     };
 
-    // const getIconName = () => { ... } // Unused
-    // if (!isDirectory) return 'file'; // Default file icon
-    // return node.isExpanded ? 'chevron-down' : 'chevron-right';
-
     return (
-        <div className="select-none">
+        <div className="select-none" role="treeitem" aria-selected={isSelected}>
             <div
                 className={`
                     flex items-center py-0.5 cursor-pointer text-[13px] h-[22px]
                     hover:bg-[var(--nh-bg-secondary)]
                     ${isSelected ? 'bg-[var(--nh-accent-secondary)] text-white' : 'text-[var(--nh-text-muted)]'}
+                    ${isFocused && !isSelected ? 'ring-1 ring-inset ring-[var(--nh-accent-primary)]' : ''}
                 `}
                 style={style}
                 onClick={handleClick}
@@ -72,7 +72,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
 
             {/* Children */}
             {isDirectory && node.isExpanded && node.children && (
-                <div>
+                <div role="group">
                     {node.children.map(child => (
                         <FileTreeItem
                             key={child.path}
@@ -81,6 +81,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
                             onToggle={onToggle}
                             onSelect={onSelect}
                             selectedPath={selectedPath}
+                            focusedPath={focusedPath}
                         />
                     ))}
                     {/* Empty State */}

@@ -1,4 +1,4 @@
-import { useState, type FC, type ReactNode, type MouseEventHandler, type CSSProperties } from 'react';
+import { type FC, type ReactNode, type MouseEventHandler } from 'react';
 import { Icon } from '@notehub/icon-manager';
 
 /**
@@ -19,16 +19,18 @@ export interface ButtonProps {
     className?: string;
     /** Disabled state */
     disabled?: boolean;
+    /** Loading state - shows spinner and disables button */
+    isLoading?: boolean;
 }
 
 /**
- * Size styles (padding, fontSize, gap, minWidth)
+ * Size class mappings - Tailwind utility classes
  */
-const sizeStyles: Record<string, CSSProperties> = {
-    sm: { padding: '4px 8px', fontSize: '12px', gap: '4px' },
-    md: { padding: '6px 12px', fontSize: '14px', gap: '6px' },
-    lg: { padding: '8px 16px', fontSize: '16px', gap: '8px' },
-    xl: { padding: '12px 32px', fontSize: '16px', gap: '12px', minWidth: '200px' },
+const sizeClasses: Record<string, string> = {
+    sm: 'px-2 py-1 text-xs gap-1',
+    md: 'px-3 py-1.5 text-sm gap-1.5',
+    lg: 'px-4 py-2 text-base gap-2',
+    xl: 'px-8 py-3 text-base gap-3 min-w-[200px]',
 };
 
 /**
@@ -42,41 +44,21 @@ const iconSizes: Record<string, number> = {
 };
 
 /**
- * Variant base styles
+ * Variant class mappings - using CSS variables for theming
  */
-const variantStyles: Record<string, CSSProperties> = {
-    primary: {
-        backgroundColor: 'var(--nh-accent-primary, #6b5ce7)',
-        color: 'var(--nh-button-text, #ffffff)',
-        border: 'none',
-    },
-    purple: {
-        backgroundColor: 'var(--nh-accent-primary, #6b5ce7)',
-        color: 'var(--nh-button-text, #ffffff)',
-        border: 'none',
-    },
-    secondary: {
-        backgroundColor: 'var(--nh-accent-secondary, #3a3a3a)',
-        color: 'var(--nh-text-primary, #e0e0e0)',
-        border: 'none',
-    },
-    ghost: {
-        backgroundColor: 'transparent',
-        color: 'var(--nh-text-primary, #e0e0e0)',
-        border: 'none',
-    },
-    danger: {
-        backgroundColor: 'var(--nh-danger, #dc2626)',
-        color: 'var(--nh-button-text, #ffffff)',
-        border: 'none',
-    },
+const variantClasses: Record<string, string> = {
+    primary: 'bg-[var(--nh-accent-primary,#6b5ce7)] text-[var(--nh-button-text,#ffffff)] border-none',
+    purple: 'bg-[var(--nh-accent-primary,#6b5ce7)] text-[var(--nh-button-text,#ffffff)] border-none',
+    secondary: 'bg-[var(--nh-accent-secondary,#3a3a3a)] text-[var(--nh-text-primary,#e0e0e0)] border-none',
+    ghost: 'bg-transparent text-[var(--nh-text-primary,#e0e0e0)] border-none',
+    danger: 'bg-[var(--nh-danger,#dc2626)] text-[var(--nh-button-text,#ffffff)] border-none',
 };
 
 /**
  * Button Component
  *
- * Themeable button with icon support using CSS variables.
- * Includes keyboard focus states for accessibility.
+ * Themeable button with icon support using Tailwind CSS and CSS variables.
+ * Includes hover, focus, disabled, and loading states.
  */
 export const Button: FC<ButtonProps> = ({
     variant = 'primary',
@@ -86,50 +68,45 @@ export const Button: FC<ButtonProps> = ({
     children,
     className = '',
     disabled = false,
+    isLoading = false,
 }) => {
-    const [isFocused, setIsFocused] = useState(false);
+    const baseClasses = [
+        // Layout
+        'inline-flex items-center justify-center',
+        // Typography
+        'font-medium font-sans',
+        // Shape
+        'rounded-lg',
+        // Transitions - specific properties only to avoid "jelly effect"
+        'transition-[filter,background-color,box-shadow] duration-150 ease-out',
+        // Focus states
+        'outline-none focus:ring-2 focus:ring-[var(--nh-accent-primary,#6b5ce7)] focus:ring-offset-1 focus:ring-offset-transparent',
+        // Hover states
+        'hover:brightness-[1.15]',
+        // Active states
+        'active:brightness-95',
+        // Disabled states
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100',
+        // Cursor
+        'cursor-pointer',
+    ].join(' ');
 
-    const baseStyle: CSSProperties = {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: '8px',
-        fontWeight: 500,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        transition: 'filter 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease',
-        fontFamily: 'inherit',
-        outline: 'none',
-        boxShadow: isFocused ? '0 0 0 2px var(--nh-accent-primary, #6b5ce7)' : 'none',
-        ...sizeStyles[size],
-        ...variantStyles[variant],
-    };
-
-    const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
-        if (!disabled) {
-            e.currentTarget.style.filter = 'brightness(1.15)';
-        }
-    };
-
-    const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-        e.currentTarget.style.filter = 'none';
-    };
-
-    const handleFocus = () => setIsFocused(true);
-    const handleBlur = () => setIsFocused(false);
+    const sizeClass = sizeClasses[size] || sizeClasses.md;
+    const variantClass = variantClasses[variant] || variantClasses.primary;
+    const isDisabled = disabled || isLoading;
 
     return (
         <button
-            style={baseStyle}
-            className={className}
+            className={`${baseClasses} ${sizeClass} ${variantClass} ${className}`}
             onClick={onClick}
-            disabled={disabled}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
+            disabled={isDisabled}
+            aria-busy={isLoading}
         >
-            {icon && <Icon name={icon} size={iconSizes[size] || 16} />}
+            {isLoading ? (
+                <Icon name="loader" size={iconSizes[size] || 16} className="animate-spin" />
+            ) : (
+                icon && <Icon name={icon} size={iconSizes[size] || 16} />
+            )}
             {children}
         </button>
     );

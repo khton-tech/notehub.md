@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import { useState, type FC } from 'react';
 import type { NotehubCore } from '@notehub/core';
 import { Icon } from '@notehub/icon-manager';
 import { Button, Label } from '@notehub/ck-standard';
@@ -22,17 +22,23 @@ interface VaultActionsProps {
  * - Open Vault button (secondary)
  */
 export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
+    const [isOpening, setIsOpening] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+
     /**
      * Handle adding a new vault (select folder to use as vault)
      */
     const handleAddVault = async () => {
         try {
+            setIsOpening(true);
             const path = await app.api.invoke('fs:pick-directory') as string | null;
             if (path) {
                 await service.openVault(path);
             }
         } catch (error) {
             console.error('Failed to add vault:', error);
+        } finally {
+            setIsOpening(false);
         }
     };
 
@@ -44,13 +50,19 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
             const basePath = await app.api.invoke('fs:pick-directory') as string | null;
             if (!basePath) return;
 
+            setIsCreating(true);
             // Prompt for vault name
             const name = await app.api.invoke('dialog:prompt', 'Create Vault', 'Enter vault name:', 'My Notes') as string | null;
-            if (!name || name.trim() === '') return;
+            if (!name || name.trim() === '') {
+                setIsCreating(false);
+                return;
+            }
 
             await service.createVault(basePath, name.trim());
         } catch (error) {
             console.error('Failed to create vault:', error);
+        } finally {
+            setIsCreating(false);
         }
     };
 
@@ -75,8 +87,9 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
                         size="xl"
                         icon="folder-open"
                         onClick={handleAddVault}
+                        isLoading={isOpening}
                     >
-                        Open Vault
+                        {isOpening ? 'Opening...' : 'Open Vault'}
                     </Button>
                     <Label variant="muted" className="mt-2 text-center">
                         Select an existing folder
@@ -90,8 +103,9 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
                         size="xl"
                         icon="plus-circle"
                         onClick={handleOpenVault}
+                        isLoading={isCreating}
                     >
-                        Create Vault
+                        {isCreating ? 'Creating...' : 'Create Vault'}
                     </Button>
                     <Label variant="muted" className="mt-2 text-center">
                         Create a new storage location

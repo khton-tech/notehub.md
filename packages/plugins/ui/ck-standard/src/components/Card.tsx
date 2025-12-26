@@ -1,4 +1,4 @@
-import { useState, type FC, type ReactNode, type MouseEventHandler, type CSSProperties } from 'react';
+import type { FC, ReactNode, MouseEventHandler, KeyboardEventHandler } from 'react';
 
 /**
  * Card component props
@@ -17,19 +17,19 @@ export interface CardProps {
 }
 
 /**
- * Padding size values
+ * Padding size class mappings
  */
-const paddingValues: Record<string, string> = {
-    none: '0',
-    sm: '8px',
-    md: '16px',
-    lg: '24px',
+const paddingClasses: Record<string, string> = {
+    none: 'p-0',
+    sm: 'p-2',
+    md: 'p-4',
+    lg: 'p-6',
 };
 
 /**
  * Card Component
  *
- * Container component with themed background and border.
+ * Container component with themed background and border using Tailwind CSS.
  * Uses CSS variables for theme-aware styling.
  * Interactive cards support keyboard navigation with focus states.
  */
@@ -41,37 +41,33 @@ export const Card: FC<CardProps> = ({
     onClick,
 }) => {
     const isInteractive = variant === 'interactive';
-    const [isFocused, setIsFocused] = useState(false);
 
-    const baseStyle: CSSProperties = {
-        backgroundColor: 'var(--nh-bg-surface, #2a2a2a)',
-        border: '1px solid var(--nh-border-secondary, #3a3a3a)',
-        borderRadius: '8px',
-        padding: paddingValues[padding] || paddingValues.md,
-        cursor: isInteractive ? 'pointer' : 'default',
-        transition: 'filter 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
-        outline: 'none',
-        boxShadow: isInteractive && isFocused ? '0 0 0 2px var(--nh-accent-primary, #6b5ce7)' : 'none',
-    };
+    const baseClasses = [
+        // Background and border using CSS variables
+        'bg-[var(--nh-bg-surface,#2a2a2a)]',
+        'border border-[var(--nh-border-secondary,#3a3a3a)]',
+        // Shape
+        'rounded-lg',
+        // Transitions - specific properties only to avoid "jelly effect"
+        'transition-[filter,border-color,box-shadow] duration-150 ease-out',
+        // Focus states
+        'outline-none',
+    ].join(' ');
 
-    const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isInteractive) {
-            e.currentTarget.style.filter = 'brightness(1.1)';
-            e.currentTarget.style.borderColor = 'var(--nh-accent-primary, #6b5ce7)';
-        }
-    };
+    const interactiveClasses = isInteractive ? [
+        // Cursor
+        'cursor-pointer',
+        // Hover states
+        'hover:brightness-110 hover:border-[var(--nh-accent-primary,#6b5ce7)]',
+        // Focus states
+        'focus:ring-2 focus:ring-[var(--nh-accent-primary,#6b5ce7)]',
+        // Active states
+        'active:brightness-95',
+    ].join(' ') : '';
 
-    const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isInteractive) {
-            e.currentTarget.style.filter = 'none';
-            e.currentTarget.style.borderColor = 'var(--nh-border-secondary, #3a3a3a)';
-        }
-    };
+    const paddingClass = paddingClasses[padding] || paddingClasses.md;
 
-    const handleFocus = () => setIsFocused(true);
-    const handleBlur = () => setIsFocused(false);
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const handleKeyDown: KeyboardEventHandler<HTMLDivElement> = (e) => {
         if (isInteractive && onClick && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
             onClick(e as unknown as React.MouseEvent<HTMLDivElement>);
@@ -80,13 +76,8 @@ export const Card: FC<CardProps> = ({
 
     return (
         <div
-            style={baseStyle}
-            className={className}
+            className={`${baseClasses} ${interactiveClasses} ${paddingClass} ${className}`}
             onClick={onClick}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             tabIndex={isInteractive ? 0 : undefined}
             role={isInteractive ? 'button' : undefined}
@@ -97,4 +88,3 @@ export const Card: FC<CardProps> = ({
 };
 
 export default Card;
-

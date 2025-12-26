@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { NotehubCore, type IPlugin } from '@notehub/core';
+import { NotehubCore, NotehubProvider, type IPlugin } from '@notehub/core';
 import { Bootloader, type LoadablePlugin, type PluginManifest } from '@notehub/bootloader';
 import { LayoutRenderer } from '@notehub/layout-manager';
 import { Hexagon } from 'lucide-react';
@@ -322,5 +322,9 @@ function App(): React.ReactElement {
     }
 
     // Ready - render the active layout
-    return <LayoutRenderer />;
+    return (
+        <NotehubProvider value={coreInstance!}>
+            <LayoutRenderer />
+        </NotehubProvider>
+    );
 }

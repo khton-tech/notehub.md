@@ -6,6 +6,13 @@ import type { IPlugin } from './types.js';
 export * from './types.js';
 export * from './buses/index.js';
 
+// Re-export API contract types
+export * from './api/contract.js';
+
+// Re-export React context and hooks
+export * from './react/NotehubContext.js';
+
+
 /**
  * Core application class for Notehub.md
  *
