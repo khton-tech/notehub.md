@@ -54,6 +54,19 @@
     ]
   },
   {
+    "id": "nh.portals.button-widget",
+    "name": "Button Widget",
+    "version": "0.0.1",
+    "type": "feature",
+    "description": "Renders interactive buttons from [BUTTON::{TEXT}] syntax",
+    "author": "Notehub Team",
+    "dependencies": [
+      "nh.features.editor",
+      "nh.system.logger",
+      "nh.ui.ck-standard"
+    ]
+  },
+  {
     "id": "nh.system.bootloader",
     "name": "Bootloader",
     "version": "0.0.0",
@@ -83,14 +96,6 @@
     ]
   },
   {
-    "id": "nh.system.logger",
-    "name": "Logger",
-    "version": "0.0.0",
-    "type": "system",
-    "description": "Centralized logging system with level-based filtering and event emission",
-    "dependencies": []
-  },
-  {
     "id": "nh.system.fs-manager",
     "name": "FsManager",
     "version": "0.0.0",
@@ -98,6 +103,14 @@
     "dependencies": [
       "nh.system.logger"
     ]
+  },
+  {
+    "id": "nh.system.logger",
+    "name": "Logger",
+    "version": "0.0.0",
+    "type": "system",
+    "description": "Centralized logging system with level-based filtering and event emission",
+    "dependencies": []
   },
   {
     "id": "nh.system.state-manager",

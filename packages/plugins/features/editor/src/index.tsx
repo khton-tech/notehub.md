@@ -3,6 +3,12 @@ import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { EditorController } from './logic/EditorController';
 import { NotehubEditor } from './components/NotehubEditor';
 
+// Export Portal Bridge infrastructure for other plugins
+export { BridgeService, getBridgeService } from './lib/portal-bridge/BridgeService';
+export { PortalRenderer } from './lib/portal-bridge/PortalRenderer';
+export { ReactWidget } from './cm/widgets/ReactWidget';
+export type { PortalItem } from './lib/portal-bridge/types';
+
 /**
  * EditorPlugin - The Editor Host System (Wave 0)
  * 
@@ -111,6 +117,26 @@ export class EditorPlugin implements IPlugin {
         app.events.on('explorer:file-selected', fileSelectedHandler);
         this.eventCleanups.push(() => app.events.off('explorer:file-selected', fileSelectedHandler));
         this.log('info', 'Subscribed to explorer:file-selected event');
+
+        // Subscribe to editor:register-extension (for portal plugins)
+        const registerExtensionHandler = (payload: any) => {
+            if (payload && payload.id && payload.extension && this.controller) {
+                this.log('info', `Registering extension from plugin: ${payload.id}`);
+                this.controller.registerExtension(payload.id, payload.extension);
+            }
+        };
+        app.events.on('editor:register-extension', registerExtensionHandler);
+        this.eventCleanups.push(() => app.events.off('editor:register-extension', registerExtensionHandler));
+
+        // Subscribe to editor:unregister-extension
+        const unregisterExtensionHandler = (payload: any) => {
+            if (payload && payload.id && this.controller) {
+                this.log('info', `Unregistering extension from plugin: ${payload.id}`);
+                this.controller.unregisterExtension(payload.id);
+            }
+        };
+        app.events.on('editor:unregister-extension', unregisterExtensionHandler);
+        this.eventCleanups.push(() => app.events.off('editor:unregister-extension', unregisterExtensionHandler));
 
         this.log('info', 'Loaded successfully');
     }

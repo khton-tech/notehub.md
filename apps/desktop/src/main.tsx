@@ -95,6 +95,10 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
         case '@notehub/editor':
             return import('@notehub/editor');
 
+        // Portal plugins
+        case '@notehub/button-widget':
+            return import('@notehub/button-widget');
+
         default:
             throw new Error(`Unknown plugin package: ${packageName}`);
     }

@@ -1,5 +1,7 @@
 import type { NotehubCore } from '@notehub/core';
 import type { EditorView } from '@codemirror/view';
+import type { Extension } from '@codemirror/state';
+import { Compartment } from '@codemirror/state';
 
 /**
  * EditorController - Manages editor state and file I/O
@@ -9,6 +11,7 @@ import type { EditorView } from '@codemirror/view';
  * - Implement debounced auto-save (1000ms)
  * - Integrate with fs-manager for file operations
  * - Provide text getter/setter for view integration
+ * - Manage dynamic extensions from portal plugins
  */
 export type EditorStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 
@@ -30,6 +33,12 @@ export class EditorController {
 
     /** Auto-save delay in milliseconds */
     private readonly SAVE_DELAY_MS = 1000;
+
+    /** Compartment for dynamic extensions */
+    private dynamicExtensionsCompartment = new Compartment();
+
+    /** Array of dynamically registered extensions */
+    private dynamicExtensions: Extension[] = [];
 
     constructor(app: NotehubCore) {
         this.app = app;
@@ -207,6 +216,62 @@ export class EditorController {
         this.app.api.invoke('state:set', 'editor:current-file', this.currentFilePath);
         this.app.api.invoke('state:set', 'editor:is-dirty', this.isDirty);
         this.app.api.invoke('state:set', 'editor:status', this.status);
+    }
+
+    /**
+     * Get the dynamic extensions compartment for initial setup
+     */
+    getDynamicExtensionsCompartment(): typeof this.dynamicExtensionsCompartment {
+        return this.dynamicExtensionsCompartment;
+    }
+
+    /**
+     * Get the currently registered dynamic extensions
+     * Used by NotehubEditor to initialize with already-registered extensions
+     */
+    getDynamicExtensions(): Extension[] {
+        return this.dynamicExtensions;
+    }
+
+    /**
+     * Register a dynamic extension (for portal plugins)
+     * 
+     * @param id - Unique identifier for the extension
+     * @param extension - CodeMirror extension to register
+     */
+    registerExtension(id: string, extension: Extension): void {
+        this.log('info', `Registering extension: ${id}`);
+        console.log('[EditorController] registerExtension called, id:', id);
+        console.log('[EditorController] view exists?', !!this.view);
+        console.log('[EditorController] current extensions count:', this.dynamicExtensions.length);
+
+        // Add extension to array
+        this.dynamicExtensions.push(extension);
+        console.log('[EditorController] after push, extensions count:', this.dynamicExtensions.length);
+
+        // Reconfigure the compartment
+        if (this.view) {
+            console.log('[EditorController] Dispatching reconfigure...');
+            this.view.dispatch({
+                effects: this.dynamicExtensionsCompartment.reconfigure(this.dynamicExtensions),
+            });
+            console.log('[EditorController] Dispatch complete');
+        } else {
+            console.warn('[EditorController] ⚠️ View not available, extension will be applied when view is created');
+        }
+    }
+
+    /**
+     * Unregister a dynamic extension
+     * 
+     * @param id - Unique identifier for the extension
+     */
+    unregisterExtension(id: string): void {
+        this.log('info', `Unregistering extension: ${id}`);
+
+        // For now, we'll keep extensions registered since we don't track them by ID
+        // In the future, we can maintain a Map<string, Extension> for proper removal
+        // This is a simple implementation for the demo
     }
 
     /**

@@ -1,0 +1,37 @@
+{
+    "name": "@notehub/button-widget",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "clean": "rimraf dist"
+    },
+    "dependencies": {
+        "@notehub/core": "workspace:*",
+        "@notehub/logger": "workspace:*",
+        "@notehub/editor": "workspace:*",
+        "@notehub/ck-standard": "workspace:*",
+        "@codemirror/view": "^6.23.0",
+        "@codemirror/state": "^6.4.0",
+        "@codemirror/language": "^6.10.0",
+        "@lezer/common": "^1.2.0",
+        "react": "^18.2.0"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.0",
+        "typescript": "^5.3.0",
+        "rimraf": "^5.0.0"
+    }
+}

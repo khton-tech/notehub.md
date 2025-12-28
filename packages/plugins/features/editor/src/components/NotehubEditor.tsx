@@ -6,6 +6,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 import type { EditorController } from '../logic/EditorController';
 import { EditorHeader } from './EditorHeader';
+import { PortalRenderer } from '../lib/portal-bridge/PortalRenderer';
 
 interface NotehubEditorProps {
     controller: EditorController;
@@ -105,6 +106,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({ controller }) => {
                 syntaxHighlighting(defaultHighlightStyle),
                 themeExtension,
                 updateListenerExtension,
+                controller.getDynamicExtensionsCompartment().of(controller.getDynamicExtensions()), // Initialize with already registered extensions
             ],
         });
 
@@ -129,6 +131,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({ controller }) => {
         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
             <EditorHeader filePath={filePath} isDirty={isDirty} />
             <div ref={editorRef} style={{ flex: 1, minHeight: 0 }} />
+            <PortalRenderer />
         </div>
     );
 };

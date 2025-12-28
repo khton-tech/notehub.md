@@ -1,0 +1,13 @@
+{
+    "id": "nh.portals.button-widget",
+    "name": "Button Widget",
+    "version": "0.0.1",
+    "type": "feature",
+    "description": "Renders interactive buttons from [BUTTON::{TEXT}] syntax",
+    "author": "Notehub Team",
+    "dependencies": [
+        "nh.features.editor",
+        "nh.system.logger",
+        "nh.ui.ck-standard"
+    ]
+}
