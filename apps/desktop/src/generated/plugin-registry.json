@@ -1,5 +1,18 @@
 [
   {
+    "id": "nh.features.editor",
+    "name": "Editor",
+    "version": "0.0.0",
+    "type": "feature",
+    "dependencies": [
+      "nh.system.fs-manager",
+      "nh.system.logger",
+      "nh.ui.theme-manager",
+      "nh.ui.layout-manager",
+      "nh.ui.controllers-manager"
+    ]
+  },
+  {
     "id": "nh.features.explorer",
     "name": "Explorer",
     "version": "0.0.1",
@@ -70,6 +83,14 @@
     ]
   },
   {
+    "id": "nh.system.logger",
+    "name": "Logger",
+    "version": "0.0.0",
+    "type": "system",
+    "description": "Centralized logging system with level-based filtering and event emission",
+    "dependencies": []
+  },
+  {
     "id": "nh.system.fs-manager",
     "name": "FsManager",
     "version": "0.0.0",
@@ -77,14 +98,6 @@
     "dependencies": [
       "nh.system.logger"
     ]
-  },
-  {
-    "id": "nh.system.logger",
-    "name": "Logger",
-    "version": "0.0.0",
-    "type": "system",
-    "description": "Centralized logging system with level-based filtering and event emission",
-    "dependencies": []
   },
   {
     "id": "nh.system.state-manager",

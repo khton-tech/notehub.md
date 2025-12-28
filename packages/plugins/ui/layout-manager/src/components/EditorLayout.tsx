@@ -101,12 +101,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
 
             {/* Main Area */}
             <div style={{ gridArea: 'main' }} className="bg-[var(--nh-bg-main)]">
-                <Controller type="empty-slot" />
+                <Controller type="main-zone-renderer" />
             </div>
 
             {/* Status Area */}
             <div style={{ gridArea: 'status' }}>
-                <Controller type="status-bar" props={{ status: 'ready' }} />
+                <Controller type="editor-status-bar" />
             </div>
 
             {/* Overlay to prevent iframe capturing mouse events while resizing */}

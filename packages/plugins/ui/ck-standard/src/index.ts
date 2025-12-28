@@ -1,5 +1,6 @@
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { Button, Label, Card, StatusBar, RibbonButton, EmptySlot } from './components';
+import { EditorStatusBar } from './components/EditorStatusBar';
 
 export * from './components';
 
@@ -28,6 +29,7 @@ export class CKStandardPlugin implements IPlugin {
         app.api.invoke('controller:register', 'label', Label);
         app.api.invoke('controller:register', 'card', Card);
         app.api.invoke('controller:register', 'status-bar', StatusBar);
+        app.api.invoke('controller:register', 'editor-status-bar', EditorStatusBar);
         app.api.invoke('controller:register', 'ribbon-button', RibbonButton);
         app.api.invoke('controller:register', 'empty-slot', EmptySlot);
 

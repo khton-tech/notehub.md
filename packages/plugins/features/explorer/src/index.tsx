@@ -46,6 +46,7 @@ export class ExplorerPlugin implements IPlugin {
             return (
                 <FileTree
                     controller={this.controller}
+                    app={app}
                 />
             );
         };

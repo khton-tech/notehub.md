@@ -1,5 +1,6 @@
 import type { IPlugin, PluginManifest, NotehubCore, ZoneItem } from '@notehub/core';
 import { useSyncExternalStore, type FC } from 'react';
+import { Controller } from '@notehub/controllers-manager';
 import { WelcomeLayout } from './components/WelcomeLayout.js';
 import { EditorLayout } from './components/EditorLayout.js';
 
@@ -182,29 +183,15 @@ export const ZoneRenderer: FC<ZoneRendererProps> = ({ name, className, style }) 
         return null;
     }
 
-    // Get the Controller component from the registry
-    const Controller = appInstance?.api.invoke('controller:get', 'Controller') as FC<{ type: string }> | undefined;
-
-    if (!Controller) {
-        // Fallback: render items directly by invoking controller:get for each
-        return (
-            <div className={className} style={style}>
-                {sortedItems.map((item, index) => {
-                    const Component = appInstance?.api.invoke('controller:get', item.component) as FC | undefined;
-                    if (!Component) {
-                        console.warn(`[ZoneRenderer] Component "${item.component}" not found in controller registry`);
-                        return null;
-                    }
-                    return <Component key={`${item.component}-${index}`} />;
-                })}
-            </div>
-        );
-    }
-
+    // Use Controller component from controllers-manager for dynamic rendering
+    // This avoids async api.invoke calls during render which would return a Promise (object)
     return (
         <div className={className} style={style}>
             {sortedItems.map((item, index) => (
-                <Controller key={`${item.component}-${index}`} type={item.component} />
+                <Controller
+                    key={`${item.component}-${index}`}
+                    type={item.component}
+                />
             ))}
         </div>
     );
@@ -382,6 +369,12 @@ export class LayoutManagerPlugin implements IPlugin {
         // Register built-in layouts
         this.handleRegisterComponent('welcome', WelcomeLayout);
         this.handleRegisterComponent('editor', EditorLayout);
+
+        // Register MainZoneRenderer controller
+        const MainZoneRendererComponent: FC = () => {
+            return <ZoneRenderer name="main" style={{ width: '100%', height: '100%' }} />;
+        };
+        app.api.invoke('controller:register', 'main-zone-renderer', MainZoneRendererComponent);
 
         this.log('info', 'Loaded successfully');
     }

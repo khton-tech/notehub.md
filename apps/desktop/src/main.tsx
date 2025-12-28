@@ -92,6 +92,8 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/workbench');
         case '@notehub/explorer':
             return import('@notehub/explorer');
+        case '@notehub/editor':
+            return import('@notehub/editor');
 
         default:
             throw new Error(`Unknown plugin package: ${packageName}`);

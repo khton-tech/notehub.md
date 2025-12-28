@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import type { NotehubCore } from '@notehub/core';
 import { ExplorerController } from '../logic/ExplorerController';
 import { FileTreeItem } from './FileTreeItem';
 import type { FileNode } from '../types';
 
 interface FileTreeProps {
     controller: ExplorerController;
+    app: NotehubCore;
     defaultPath?: string;
 }
 
@@ -38,7 +40,7 @@ function flattenTree(node: FileNode | null): FileNode[] {
     return result;
 }
 
-export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) => {
+export const FileTree: React.FC<FileTreeProps> = ({ controller, app, defaultPath }) => {
     const [rootNode, setRootNode] = useState<FileNode | null>(controller.getTree());
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
     const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -74,10 +76,9 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         // Update focused index to match selected
         const idx = flatNodes.findIndex(n => n.path === path);
         if (idx !== -1) setFocusedIndex(idx);
-        // Dispatch global event
-        const event = new CustomEvent('explorer:file-selected', { detail: { path } });
-        window.dispatchEvent(event);
-    }, [flatNodes]);
+        // Emit event via EventBus
+        app.events.emit('explorer:file-selected', { path });
+    }, [flatNodes, app]);
 
     const handleCreateNote = () => {
         if (rootNode) {

@@ -311,6 +311,16 @@ export interface NotehubApiMap {
     'explorer:set-root': (path: string) => Promise<void>;
 
     // =========================================================================
+    // Editor Plugin (nh.features.editor)
+    // =========================================================================
+
+    /** Open a file in the editor */
+    'editor:open': (path: string) => Promise<void>;
+
+    /** Save the currently open file */
+    'editor:save': () => Promise<void>;
+
+    // =========================================================================
     // Bootloader Plugin (nh.system.bootloader)
     // Note: Uses dot notation for legacy compatibility
     // =========================================================================
