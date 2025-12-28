@@ -1,0 +1,13 @@
+{
+    "id": "nh.features.editor",
+    "name": "Editor",
+    "version": "0.1.0",
+    "type": "feature",
+    "dependencies": [
+        "nh.system.fs-manager",
+        "nh.system.logger",
+        "nh.ui.theme-manager",
+        "nh.ui.controllers-manager",
+        "nh.ui.layout-manager"
+    ]
+}

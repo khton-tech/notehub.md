@@ -1,5 +1,6 @@
 import type { IPlugin, PluginManifest, NotehubCore, ZoneItem } from '@notehub/core';
 import { useSyncExternalStore, type FC } from 'react';
+import { Controller } from '@notehub/controllers-manager';
 import { WelcomeLayout } from './components/WelcomeLayout.js';
 import { EditorLayout } from './components/EditorLayout.js';
 
@@ -182,25 +183,7 @@ export const ZoneRenderer: FC<ZoneRendererProps> = ({ name, className, style }) 
         return null;
     }
 
-    // Get the Controller component from the registry
-    const Controller = appInstance?.api.invoke('controller:get', 'Controller') as FC<{ type: string }> | undefined;
-
-    if (!Controller) {
-        // Fallback: render items directly by invoking controller:get for each
-        return (
-            <div className={className} style={style}>
-                {sortedItems.map((item, index) => {
-                    const Component = appInstance?.api.invoke('controller:get', item.component) as FC | undefined;
-                    if (!Component) {
-                        console.warn(`[ZoneRenderer] Component "${item.component}" not found in controller registry`);
-                        return null;
-                    }
-                    return <Component key={`${item.component}-${index}`} />;
-                })}
-            </div>
-        );
-    }
-
+    // Render zone items using Controller component
     return (
         <div className={className} style={style}>
             {sortedItems.map((item, index) => (

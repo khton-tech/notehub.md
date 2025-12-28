@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Controller } from '@notehub/controllers-manager';
+import { ZoneRenderer } from '../index.js';
 import type { NotehubCore } from '@notehub/core';
 
 interface EditorLayoutProps {
@@ -100,8 +101,8 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
             </div>
 
             {/* Main Area */}
-            <div style={{ gridArea: 'main' }} className="bg-[var(--nh-bg-main)]">
-                <Controller type="empty-slot" />
+            <div style={{ gridArea: 'main', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="bg-[var(--nh-bg-main)]">
+                <ZoneRenderer name="main.editor" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }} />
             </div>
 
             {/* Status Area */}

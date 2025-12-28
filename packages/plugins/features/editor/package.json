@@ -1,0 +1,39 @@
+{
+    "name": "@notehub/editor",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "clean": "rimraf dist"
+    },
+    "dependencies": {
+        "@codemirror/commands": "^6.3.0",
+        "@codemirror/language": "^6.10.0",
+        "@codemirror/state": "^6.4.0",
+        "@codemirror/view": "^6.24.0",
+        "@lezer/highlight": "^1.2.0"
+    },
+    "peerDependencies": {
+        "@notehub/core": "workspace:*",
+        "react": "^18.0.0",
+        "react-dom": "^18.0.0"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "typescript": "^5.3.0",
+        "rimraf": "^5.0.0"
+    }
+}
