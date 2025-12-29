@@ -75,15 +75,6 @@
     ]
   },
   {
-    "id": "nh.system.fs-manager",
-    "name": "FsManager",
-    "version": "0.0.0",
-    "type": "system",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
     "id": "nh.system.fs-driver-tauri",
     "name": "FsDriverTauri",
     "version": "0.0.0",
@@ -91,6 +82,15 @@
     "dependencies": [
       "nh.system.logger",
       "nh.system.fs-manager"
+    ]
+  },
+  {
+    "id": "nh.system.fs-manager",
+    "name": "FsManager",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": [
+      "nh.system.logger"
     ]
   },
   {

@@ -36,7 +36,8 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { markdown } from '@codemirror/lang-markdown';
+import { notehubMarkdown } from '../lezer';
+import { exposeDebugFunction, removeDebugFunction } from '../debug/tree-visualizer';
 import type { EditorController } from '../logic/EditorController';
 
 /**
@@ -207,8 +208,8 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                     ...historyKeymap,
                 ]),
 
-                // Markdown language support
-                markdown(),
+                // Notehub Markdown (with Callout + WikiLink parsers)
+                notehubMarkdown(),
 
                 // Notehub theme integration
                 notehubTheme,
@@ -233,8 +234,12 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
         viewRef.current = view;
         controller.setEditorView(view);
 
+        // Expose debug function for DevTools
+        exposeDebugFunction(view);
+
         // Cleanup on unmount
         return () => {
+            removeDebugFunction();
             controller.setEditorView(null);
             view.destroy();
             viewRef.current = null;
