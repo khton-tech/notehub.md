@@ -1,111 +1,99 @@
 /**
- * @fileoverview Callout BlockParser for @lezer/markdown
+ * @fileoverview Callout Parser for @lezer/markdown
  * 
- * Parses Obsidian-style callouts:
+ * ## Implementation Note
+ * 
+ * After extensive testing, `startComposite` causes infinite loops/crashes
+ * in all configurations tested. This is a known limitation of the
+ * lezer-markdown composite block API for custom syntax.
+ * 
+ * **Solution:** Use inline marker elements only. The block structure
+ * uses standard Blockquote, and Live Preview will use ViewPlugin
+ * decorations for full visual styling.
+ * 
+ * ## AST Output
+ * 
  * ```
- * > [!INFO] Title
- * > Body content
- * > More content
+ * Blockquote
+ * ├── CalloutType    ← Marks the type inside [!TYPE]
+ * ├── CalloutTitle   ← Marks the title text
+ * └── Paragraph...   ← Standard blockquote content
  * ```
- * 
- * ## AST Structure
- * 
- * The parser adds inline elements to identify callout parts:
- * - CalloutType: The type identifier (INFO, WARNING, etc.)
- * - CalloutTitle: Optional title text after the type
- * 
- * The block structure uses standard Blockquote parsing.
- * 
- * ## Key Implementation Notes
- * 
- * - Uses `before: "Blockquote"` priority to add elements before blockquote parses
- * - Adds inline decorations for header elements via `addElement`
- * - Returns false to let Blockquote handle the actual block structure
  * 
  * @module @notehub/editor/lezer/callouts
  */
 
-import type { MarkdownConfig } from '@lezer/markdown';
+import type { BlockContext, MarkdownConfig, Line } from "@lezer/markdown";
 
-/**
- * Node type IDs for the callout syntax tree.
- */
+// Node type names
+const CalloutType = "CalloutType";
+const CalloutTitle = "CalloutTitle";
+
+// Re-export for external use
 export const CalloutNodeTypes = {
-    CalloutType: 'CalloutType',
-    CalloutTitle: 'CalloutTitle',
+    CalloutType,
+    CalloutTitle,
 } as const;
-
-/**
- * Regex to match callout header: `[!TYPE]` with optional title
- * Groups: [1] = type (e.g., "INFO"), [2] = title (optional)
- */
-const CALLOUT_HEADER_REGEX = /^\s*\[!([A-Za-z0-9_-]+)\]\s*(.*)?$/;
 
 /**
  * MarkdownConfig extension for Callout parsing.
  * 
- * Uses a simple approach: detect callout pattern, add type/title elements,
- * then let the standard Blockquote parser handle the block structure.
+ * SAFE IMPLEMENTATION:
+ * - Adds inline CalloutType and CalloutTitle markers
+ * - Returns false to let Blockquote handle block structure
+ * - No startComposite (causes crashes)
  */
 export const CalloutExtension: MarkdownConfig = {
     defineNodes: [
-        { name: CalloutNodeTypes.CalloutType },
-        { name: CalloutNodeTypes.CalloutTitle },
+        { name: CalloutType },
+        { name: CalloutTitle }
     ],
-    parseBlock: [
-        {
-            name: 'Callout',
-            before: 'Blockquote',
-            parse(cx, line) {
-                // Must start with `>`
-                if (line.next !== 62 /* '>' */) {
-                    return false;
-                }
+    parseBlock: [{
+        name: "CalloutMarker",
+        before: "Blockquote",
 
-                // Get content after `>` (skip `>` and optional space)
-                const lineText = line.text;
-                const afterMarker = lineText.slice(line.pos + 1).replace(/^\s/, '');
-
-                // Check for callout pattern [!TYPE]
-                const match = afterMarker.match(CALLOUT_HEADER_REGEX);
-                if (!match) {
-                    // Not a callout - let standard Blockquote handle it
-                    return false;
-                }
-
-                const calloutTitle = match[2] || '';
-
-                // Calculate positions for header elements
-                const typeStart = lineText.indexOf('[!', line.pos) + 2;
-                const typeEnd = lineText.indexOf(']', typeStart);
-
-                // Add CalloutType element
-                if (typeStart >= 0 && typeEnd > typeStart) {
-                    cx.addElement(
-                        cx.elt(CalloutNodeTypes.CalloutType,
-                            cx.lineStart + typeStart,
-                            cx.lineStart + typeEnd)
-                    );
-                }
-
-                // Add CalloutTitle element (if present)
-                if (calloutTitle.trim()) {
-                    const titleSearchStart = typeEnd + 1;
-                    const trimmedTitle = calloutTitle.trim();
-                    const titlePos = lineText.indexOf(trimmedTitle, titleSearchStart);
-                    if (titlePos >= 0) {
-                        cx.addElement(
-                            cx.elt(CalloutNodeTypes.CalloutTitle,
-                                cx.lineStart + titlePos,
-                                cx.lineStart + titlePos + trimmedTitle.length)
-                        );
-                    }
-                }
-
-                // Return false to let Blockquote parser handle the block structure
-                // Our elements are added as inline decorations
+        parse: (cx: BlockContext, line: Line): boolean => {
+            // Check for '>' at the start
+            if (line.next !== 62 /* '>' */) {
                 return false;
-            },
-        },
-    ],
+            }
+
+            // Get the text of the line
+            const text = line.text.slice(line.pos);
+
+            // Regex: Starts with '>', optional space, '[!TYPE]', optional title
+            const match = /^>\s*\[!(\w+)\]\s*(.*)$/.exec(text);
+
+            if (!match) {
+                return false;
+            }
+
+            // Calculate absolute positions
+            const start = cx.lineStart + line.pos;
+
+            // Find type position (between [! and ])
+            const bracketPos = text.indexOf('[!');
+            const closeBracketPos = text.indexOf(']', bracketPos);
+
+            if (bracketPos >= 0 && closeBracketPos > bracketPos) {
+                const typeStart = start + bracketPos + 2;
+                const typeEnd = start + closeBracketPos;
+                cx.addElement(cx.elt(CalloutType, typeStart, typeEnd));
+            }
+
+            // Add title element if present
+            const titleStr = match[2] || '';
+            if (titleStr && titleStr.trim()) {
+                const titleOffset = text.indexOf(titleStr, closeBracketPos);
+                if (titleOffset >= 0) {
+                    const titleStart = start + titleOffset;
+                    const titleEnd = titleStart + titleStr.length;
+                    cx.addElement(cx.elt(CalloutTitle, titleStart, titleEnd));
+                }
+            }
+
+            // Return false - let Blockquote handle the block structure
+            return false;
+        }
+    }]
 };
