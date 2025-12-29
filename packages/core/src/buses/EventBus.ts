@@ -91,12 +91,13 @@ export class EventBus<TEvents extends EventMap = EventMap> {
     once<K extends keyof TEvents>(
         event: K,
         callback: EventCallback<TEvents[K]>
-    ): void {
+    ): () => void {
         const onceWrapper: EventCallback<TEvents[K]> = (payload) => {
             this.off(event, onceWrapper);
             callback(payload);
         };
         this.on(event, onceWrapper);
+        return () => this.off(event, onceWrapper);
     }
 
     /**

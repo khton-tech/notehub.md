@@ -19,6 +19,16 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status: initialStatus, mes
         message: initialMessage || 'No file open'
     });
 
+    // BUG-017 fix: Sync state when props change externally
+    useEffect(() => {
+        if (initialStatus !== undefined || initialMessage !== undefined) {
+            setState(prev => ({
+                status: initialStatus ?? prev.status,
+                message: initialMessage ?? prev.message
+            }));
+        }
+    }, [initialStatus, initialMessage]);
+
     // Subscribe to editor status events
     useEffect(() => {
         if (!app) return;

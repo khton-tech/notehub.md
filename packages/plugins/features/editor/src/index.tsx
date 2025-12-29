@@ -163,7 +163,7 @@ const EditorController: React.FC = () => {
             return;
         }
 
-        // Only auto-save if we have a current file path (use ref to avoid stale closure)
+        // Only auto-save if we have a current file path
         const path = pathRef.current;
         if (path) {
             const filename = path.split('/').pop() || path.split('\\').pop() || path;
@@ -174,9 +174,13 @@ const EditorController: React.FC = () => {
                 message: `Изменено: ${filename}`
             });
 
-            // Debounced save after 500ms of inactivity
+            // BUG-011 fix: Debounced save - read current path at execution time
+            // to prevent saving to wrong file if user switches during debounce
             saveTimeoutRef.current = setTimeout(() => {
-                saveFile(path, newContent);
+                const currentPath = pathRef.current;
+                if (currentPath) {
+                    saveFile(currentPath, newContent);
+                }
             }, 500);
         } else {
             console.log('[Editor] No file open, skipping save');

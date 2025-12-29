@@ -34,13 +34,16 @@ export class SmartButtonWidget extends BridgeWidget {
      * Create the React button component
      */
     protected renderComponent(): ReactNode {
+        // BUG-006 fix: Capture label in local variable to prevent stale closure
+        const label = this.label;
+
         return (
             <button
                 className="nh-smart-button"
                 onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log(`[SmartButton] Clicked: ${this.label}`);
+                    console.log(`[SmartButton] Clicked: ${label}`);
                 }}
                 style={{
                     display: 'inline-flex',
@@ -66,7 +69,7 @@ export class SmartButtonWidget extends BridgeWidget {
                     (e.target as HTMLButtonElement).style.opacity = '1';
                 }}
             >
-                {this.label}
+                {label}
             </button>
         );
     }

@@ -30,11 +30,11 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
         setIsResizing(true);
     }, []);
 
-    const stopResizing = useCallback(() => {
+    const stopResizing = useCallback(async () => {
         setIsResizing(false);
-        // Save width to state manager
+        // BUG-013 fix: Await to ensure width is persisted before app closes
         if (app) {
-            app.api.invoke('state:set', 'layout.sidebar.width', sidebarWidth);
+            await app.api.invoke('state:set', 'layout.sidebar.width', sidebarWidth);
         }
     }, [app, sidebarWidth]);
 

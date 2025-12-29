@@ -26,28 +26,13 @@ export class WorkbenchPlugin implements IPlugin {
         this.app = app;
         this.log('info', 'Loading...');
 
-        // Subscribe to vault opened event
+        // Subscribe to vault opened event - react to VaultPicker's emission
+        // BUG-005 fix: VaultPicker handles auto-open logic, Workbench only listens
         app.events.on('app:vault-opened', this.handleVaultOpened);
 
         // Register placeholders
         app.api.invoke('controller:register', 'ribbon-placeholder', RibbonPlaceholder);
-        // app.api.invoke('controller:register', 'explorer-placeholder', ExplorerPlaceholder);
         app.api.invoke('controller:register', 'editor-placeholder', EditorPlaceholder);
-
-        // Auto-Login Check
-        try {
-            // Check if config-manager is available and get last opened vault
-            const lastOpened = await app.api.invoke('config:get', 'vault.last-opened') as string;
-            if (lastOpened && lastOpened.trim() !== '') {
-                this.log('info', `Found last opened vault: ${lastOpened}, auto-opening...`);
-                // Verify path exists (optional, but good practice if we had fs access here easily)
-                // For now, just emit the event to simulate opening
-                app.events.emit('app:vault-opened', { path: lastOpened });
-            }
-        } catch (error) {
-            // state:get might fail if state-manager is not loaded or method not registered
-            this.log('warn', 'Failed to check last opened vault or state-manager not ready');
-        }
 
         this.log('info', 'Loaded successfully');
     }

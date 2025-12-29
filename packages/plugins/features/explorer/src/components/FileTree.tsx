@@ -74,10 +74,9 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         // Update focused index to match selected
         const idx = flatNodes.findIndex(n => n.path === path);
         if (idx !== -1) setFocusedIndex(idx);
-        // Dispatch global event
-        const event = new CustomEvent('explorer:file-selected', { detail: { path } });
-        window.dispatchEvent(event);
-    }, [flatNodes]);
+        // Emit through EventBus via controller (BUG-001 fix)
+        controller.emitFileSelected(path);
+    }, [flatNodes, controller]);
 
     const handleCreateNote = () => {
         if (rootNode) {

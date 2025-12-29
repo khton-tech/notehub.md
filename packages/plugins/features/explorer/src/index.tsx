@@ -96,8 +96,11 @@ export class ExplorerPlugin implements IPlugin {
         // 2. Unregister the controller component
         app.api.invoke('controller:unregister', 'explorer-tree');
 
-        // 3. Clear controller reference
-        this.controller = null;
+        // 3. Dispose controller (stops fs:watch, clears state) - BUG-002 fix
+        if (this.controller) {
+            this.controller.dispose();
+            this.controller = null;
+        }
 
         // 4. Clear app reference
         this.app = null;

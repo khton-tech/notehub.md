@@ -25,7 +25,6 @@ export class VaultPickerPlugin implements IPlugin {
 
     private app: NotehubCore | null = null;
     private service: VaultService | null = null;
-    private vaultOpenedHandler: ((payload: unknown) => void) | null = null;
 
     /**
      * Log a message via the Logger plugin
@@ -60,12 +59,14 @@ export class VaultPickerPlugin implements IPlugin {
 
             if (isValid) {
                 this.log('info', 'Last vault is valid, auto-opening...');
-                // Don't await - let it run asynchronously to not block plugin loading
-                this.service.openVault(lastOpened).catch((err) => {
+                // BUG-004 fix: Await to ensure vault is fully opened before plugin load completes
+                try {
+                    await this.service.openVault(lastOpened);
+                    return;
+                } catch (err) {
                     this.log('error', `Failed to auto-open vault: ${err}`);
-                    this.showWelcomeScreen();
-                });
-                return;
+                    // Fall through to show welcome screen
+                }
             } else {
                 this.log('warn', 'Last vault is invalid or missing, showing welcome screen');
             }
@@ -108,14 +109,8 @@ export class VaultPickerPlugin implements IPlugin {
     /**
      * Unload the plugin
      */
-    async unload(app: NotehubCore): Promise<void> {
+    async unload(_app: NotehubCore): Promise<void> {
         this.log('info', 'Unloading...');
-
-        // Remove event listener
-        if (this.vaultOpenedHandler) {
-            app.events.off('app:vault-opened', this.vaultOpenedHandler);
-            this.vaultOpenedHandler = null;
-        }
 
         this.service = null;
         this.app = null;

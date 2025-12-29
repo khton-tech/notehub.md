@@ -244,4 +244,29 @@ export class ExplorerController {
         if (!this.rootPath) return null;
         return this.nodes.get(this.rootPath) || null;
     }
+
+    /**
+     * Emit file selection event through EventBus
+     * This should be used instead of window.dispatchEvent
+     */
+    emitFileSelected(path: string): void {
+        this.app.events.emit('explorer:file-selected', { path });
+    }
+
+    /**
+     * Cleanup resources - must be called on plugin unload
+     */
+    dispose(): void {
+        // Stop watching file system
+        if (this.unwatch) {
+            this.unwatch();
+            this.unwatch = null;
+        }
+
+        // Clear all state
+        this.nodes.clear();
+        this.expandedPaths.clear();
+        this.listeners.clear();
+        this.rootPath = null;
+    }
 }

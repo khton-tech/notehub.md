@@ -213,10 +213,12 @@ let portalIdCounter = 0;
 
 /**
  * Generate a unique portal ID
+ * BUG-014 fix: Added random component to prevent collision at millisecond precision
  * @param prefix - Optional prefix for the ID
  */
 export function generatePortalId(prefix: string = 'portal'): string {
-    return `${prefix}-${++portalIdCounter}-${Date.now().toString(36)}`;
+    const random = Math.random().toString(36).substring(2, 6);
+    return `${prefix}-${++portalIdCounter}-${Date.now().toString(36)}-${random}`;
 }
 
 // ============================================================================

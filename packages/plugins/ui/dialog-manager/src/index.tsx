@@ -324,8 +324,13 @@ export class DialogManagerPlugin implements IPlugin {
         this.log('info', 'Loaded successfully');
     }
 
-    async unload(_app: NotehubCore): Promise<void> {
+    async unload(app: NotehubCore): Promise<void> {
         this.log('info', 'Unloading...');
+
+        // Unregister API methods (BUG-003 fix)
+        app.api.unregister('dialog:alert');
+        app.api.unregister('dialog:confirm');
+        app.api.unregister('dialog:prompt');
 
         // Cleanup dialog container
         if (this.dialogRoot) {
