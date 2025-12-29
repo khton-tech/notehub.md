@@ -1,5 +1,6 @@
-import type { FC } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { useNotehub } from '@notehub/core';
 
 /**
  * Controller component props
@@ -12,14 +13,10 @@ export interface ControllerProps {
 }
 
 /**
- * Singleton reference to the controller registry for component access
- */
-let controllerRegistryInstance: Map<string, React.FC<any>> | null = null;
-
-/**
  * Controller Component
  *
  * Renders a registered controller component by type.
+ * BUG-009 fix: Uses useNotehub() instead of module-level singleton.
  * Falls back to null with console warning if controller is not found.
  *
  * @example
@@ -30,10 +27,30 @@ let controllerRegistryInstance: Map<string, React.FC<any>> | null = null;
  * ```
  */
 export const Controller: FC<ControllerProps> = ({ type, ...props }) => {
-    const ControllerComponent = controllerRegistryInstance?.get(type);
+    const [ControllerComponent, setControllerComponent] = useState<React.FC<any> | null>(null);
+
+    // useNotehub MUST be called unconditionally (React hooks rules)
+    const app = useNotehub();
+
+    useEffect(() => {
+        if (!app) return;
+
+        // Get controller via API - no singleton needed
+        const fetchController = async () => {
+            const component = await app.api.invoke('controller:get', type) as React.FC<any> | undefined;
+
+            if (component) {
+                setControllerComponent(() => component);
+            } else {
+                console.warn(`[ControllersManager] Controller "${type}" not found in registry`);
+                setControllerComponent(null);
+            }
+        };
+
+        fetchController();
+    }, [app, type]);
 
     if (!ControllerComponent) {
-        console.warn(`[ControllersManager] Controller "${type}" not found in registry`);
         return null;
     }
 
@@ -45,6 +62,9 @@ export const Controller: FC<ControllerProps> = ({ type, ...props }) => {
  *
  * Provides a centralized registry for UI controllers (atomic components).
  * Other plugins can register custom controllers via the API.
+ *
+ * BUG-009 fix: Removed module-level singleton. Controller component now uses
+ * useNotehub() + api.invoke() for proper isolation.
  *
  * API Methods:
  * - `controller:register` - Register a controller component
@@ -135,9 +155,6 @@ export class ControllersManagerPlugin implements IPlugin {
         this.app = app;
         this.log('info', 'Loading...');
 
-        // Set singleton reference for Controller component access
-        controllerRegistryInstance = this.controllers;
-
         // Register API methods
         app.api.register('controller:register', this.handleRegister);
         app.api.register('controller:unregister', this.handleUnregister);
@@ -151,9 +168,6 @@ export class ControllersManagerPlugin implements IPlugin {
      */
     async unload(app: NotehubCore): Promise<void> {
         this.log('info', 'Unloading...');
-
-        // Clear singleton reference
-        controllerRegistryInstance = null;
 
         // Unregister API methods
         app.api.unregister('controller:register');

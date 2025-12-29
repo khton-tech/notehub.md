@@ -68,18 +68,6 @@ function findPatterns(text: string): PatternMatch[] {
 // ============================================================================
 
 /**
- * Check if the cursor position overlaps with a given range
- * Returns true if the cursor is inside or adjacent to the range
- */
-function cursorIntersectsRange(
-    cursorPos: number,
-    from: number,
-    to: number
-): boolean {
-    return cursorPos >= from && cursorPos <= to;
-}
-
-/**
  * Check if any selection intersects with the given range
  */
 function selectionIntersectsRange(

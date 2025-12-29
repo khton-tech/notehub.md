@@ -1,28 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Controller } from '@notehub/controllers-manager';
 import { ZoneRenderer } from '../index.js';
-import type { NotehubCore } from '@notehub/core';
+import { useNotehub } from '@notehub/core';
 
 interface EditorLayoutProps {
-    app?: NotehubCore;
     [key: string]: unknown;
 }
 
-export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
+/**
+ * EditorLayout - Main editor screen layout
+ * BUG-010 fix: Uses useNotehub() hook instead of props.app
+ */
+export const EditorLayout: React.FC<EditorLayoutProps> = () => {
+    const app = useNotehub();
     const [sidebarWidth, setSidebarWidth] = useState(250);
     const [isResizing, setIsResizing] = useState(false);
 
     // Load width from state manager
     useEffect(() => {
-        if (app) {
-            const loadWidth = async () => {
-                const savedWidth = await app.api.invoke('state:get', 'layout.sidebar.width');
-                if (typeof savedWidth === 'number') {
-                    setSidebarWidth(savedWidth);
-                }
-            };
-            loadWidth();
-        }
+        const loadWidth = async () => {
+            const savedWidth = await app.api.invoke('state:get', 'layout.sidebar.width');
+            if (typeof savedWidth === 'number') {
+                setSidebarWidth(savedWidth);
+            }
+        };
+        loadWidth();
     }, [app]);
 
     // Handle resizing
@@ -33,9 +35,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
     const stopResizing = useCallback(async () => {
         setIsResizing(false);
         // BUG-013 fix: Await to ensure width is persisted before app closes
-        if (app) {
-            await app.api.invoke('state:set', 'layout.sidebar.width', sidebarWidth);
-        }
+        await app.api.invoke('state:set', 'layout.sidebar.width', sidebarWidth);
     }, [app, sidebarWidth]);
 
     const resize = useCallback((e: MouseEvent) => {

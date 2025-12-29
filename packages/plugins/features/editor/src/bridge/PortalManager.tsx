@@ -145,7 +145,10 @@ export const PortalProvider: FC<PortalProviderProps> = ({ children }) => {
     }, [portals]);
 
     // Listen for CustomEvents from CodeMirror widgets
-    React.useEffect(() => {
+    // IMPORTANT: Use useLayoutEffect to subscribe BEFORE first paint
+    // This fixes race condition where CodeMirror dispatches events during render
+    // but useEffect would run AFTER render, missing those events
+    React.useLayoutEffect(() => {
         const handleMount = (e: Event) => {
             const detail = (e as CustomEvent<PortalMountEventDetail>).detail;
             mount(detail.id, detail.dom, detail.component);

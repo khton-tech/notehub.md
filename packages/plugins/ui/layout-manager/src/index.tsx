@@ -95,8 +95,8 @@ function getZoneSnapshot(): number {
     return zoneVersion;
 }
 
-/** Reference to kernel (module-level for component access) */
-let appInstance: NotehubCore | null = null;
+// BUG-010 fix: Removed module-level appInstance
+// Layouts now use useNotehub() hook directly
 
 // =============== LayoutRenderer Component ===============
 
@@ -133,8 +133,8 @@ export const LayoutRenderer: FC = () => {
         return null;
     }
 
-    // Inject app instance into layout component
-    return <Component {...currentLayout.props} app={appInstance} />;
+    // BUG-010 fix: No longer inject app - layouts use useNotehub() directly
+    return <Component {...currentLayout.props} />;
 };
 
 // =============== ZoneRenderer Component ===============
@@ -348,7 +348,6 @@ export class LayoutManagerPlugin implements IPlugin {
      */
     async load(app: NotehubCore): Promise<void> {
         this.app = app;
-        appInstance = app;
         this.log('info', 'Loading...');
 
         // Register Layout API methods
@@ -407,10 +406,7 @@ export class LayoutManagerPlugin implements IPlugin {
         layoutSubscribers.clear();
         zoneSubscribers.clear();
 
-        // 6. Clear module-level app instance reference
-        appInstance = null;
-
-        // 7. Clear instance reference
+        // 6. Clear instance reference
         this.app = null;
 
         this.log('info', 'Unloaded - all state cleared');
