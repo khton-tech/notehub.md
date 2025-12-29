@@ -1,0 +1,279 @@
+/**
+ * @fileoverview NotehubEditor - CodeMirror 6 React Wrapper
+ * 
+ * This module provides a React component that wraps CodeMirror 6,
+ * integrating it with the Notehub theme system via CSS variables.
+ * 
+ * ## Theme Integration
+ * 
+ * The editor inherits colors from the Notehub theme manager:
+ * - `--nh-bg-main` → Editor background
+ * - `--nh-text-primary` → Text and caret color
+ * - `--nh-accent-primary` → Selection and cursor
+ * - `--nh-text-muted` → Line numbers
+ * - `--nh-font-family-mono` → Editor font
+ * 
+ * ## Lifecycle
+ * 
+ * - **Mount**: Creates EditorView, registers with controller
+ * - **Update**: Syncs content when file changes (avoids cursor jump)
+ * - **Unmount**: Destroys EditorView, clears controller reference
+ * 
+ * ## Extensions Included
+ * 
+ * - Line numbers
+ * - Active line highlighting
+ * - Selection drawing
+ * - Undo/redo history (Ctrl+Z, Ctrl+Shift+Z)
+ * - Default keybindings
+ * - Markdown syntax highlighting
+ * 
+ * @module @notehub/editor/components/NotehubEditor
+ * @author Notehub Team
+ */
+
+import React, { useEffect, useRef, useCallback } from 'react';
+import { EditorState } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
+import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { markdown } from '@codemirror/lang-markdown';
+import type { EditorController } from '../logic/EditorController';
+
+/**
+ * Props for the NotehubEditor component
+ */
+interface NotehubEditorProps {
+    /** Controller managing file operations and state */
+    controller: EditorController;
+    /** Initial/current content to display */
+    content: string;
+    /** Current file path (used as key for content change detection) */
+    filePath?: string;
+}
+
+/**
+ * CodeMirror theme that inherits from Notehub CSS variables.
+ * Uses dark mode compatible styling.
+ * @internal
+ */
+const notehubTheme = EditorView.theme({
+    // Root editor element
+    '&': {
+        height: '100%',
+        fontSize: '14px',
+        fontFamily: 'var(--nh-font-family-mono, "JetBrains Mono", Consolas, monospace)',
+    },
+
+    // Scroller container
+    '.cm-scroller': {
+        overflow: 'auto',
+        fontFamily: 'inherit',
+    },
+
+    // Content area
+    '.cm-content': {
+        caretColor: 'var(--nh-text-primary, #e0e0e0)',
+        color: 'var(--nh-text-primary, #e0e0e0)',
+        padding: '16px 0',
+    },
+
+    // Cursor styling
+    '.cm-cursor, .cm-dropCursor': {
+        borderLeftColor: 'var(--nh-accent-primary, #4a90e2)',
+        borderLeftWidth: '2px',
+    },
+
+    // Selection styling
+    '.cm-selectionBackground, ::selection': {
+        backgroundColor: 'var(--nh-accent-primary, #4a90e2) !important',
+        opacity: '0.3',
+    },
+    '&.cm-focused .cm-selectionBackground': {
+        backgroundColor: 'var(--nh-accent-primary, #4a90e2)',
+        opacity: '0.3',
+    },
+
+    // Active line highlight
+    '.cm-activeLine': {
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    },
+
+    // Gutter (line numbers) styling
+    '.cm-gutters': {
+        backgroundColor: 'var(--nh-bg-main, #1a1a1a)',
+        color: 'var(--nh-text-muted, #666)',
+        border: 'none',
+        paddingRight: '8px',
+    },
+    '.cm-lineNumbers .cm-gutterElement': {
+        paddingLeft: '16px',
+        paddingRight: '8px',
+        minWidth: '3em',
+    },
+
+    // Line content padding
+    '.cm-line': {
+        padding: '0 16px',
+    },
+}, { dark: true });
+
+/**
+ * Base theme for scrollbar and background styling.
+ * Separated from main theme for clarity.
+ * @internal
+ */
+const baseTheme = EditorView.baseTheme({
+    // Background color
+    '&': {
+        backgroundColor: 'var(--nh-bg-main, #1a1a1a)',
+    },
+
+    // Custom scrollbar styling (WebKit browsers)
+    '.cm-scroller::-webkit-scrollbar': {
+        width: '8px',
+        height: '8px',
+    },
+    '.cm-scroller::-webkit-scrollbar-track': {
+        background: 'transparent',
+    },
+    '.cm-scroller::-webkit-scrollbar-thumb': {
+        background: 'var(--nh-border-subtle, #333)',
+        borderRadius: '4px',
+    },
+    '.cm-scroller::-webkit-scrollbar-thumb:hover': {
+        background: 'var(--nh-border-secondary, #444)',
+    },
+});
+
+/**
+ * NotehubEditor - CodeMirror 6 React wrapper component
+ * 
+ * Renders a fully-featured Markdown editor with:
+ * - Theme integration via CSS variables
+ * - Document change notifications to controller
+ * - Content sync when file changes
+ * - Proper cleanup on unmount
+ * 
+ * @example
+ * ```tsx
+ * <NotehubEditor
+ *     controller={editorController}
+ *     content={fileContent}
+ *     filePath={currentFilePath}
+ * />
+ * ```
+ * 
+ * @component
+ */
+export const NotehubEditor: React.FC<NotehubEditorProps> = ({
+    controller,
+    content,
+    filePath
+}) => {
+    /** Ref to the container div where CodeMirror will mount */
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    /** Ref to the EditorView instance */
+    const viewRef = useRef<EditorView | null>(null);
+
+    /**
+     * Stable callback for handling content changes.
+     * Notifies the controller when the document is modified.
+     */
+    const handleChange = useCallback(() => {
+        controller.markDirty();
+    }, [controller]);
+
+    /**
+     * Initialize CodeMirror on mount.
+     * Creates the EditorState, EditorView, and registers extensions.
+     */
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        // Create editor state with initial content and extensions
+        const state = EditorState.create({
+            doc: content,
+            extensions: [
+                // Core functionality
+                lineNumbers(),
+                highlightActiveLine(),
+                drawSelection(),
+                history(),
+
+                // Keymaps for editing
+                keymap.of([
+                    ...defaultKeymap,
+                    ...historyKeymap,
+                ]),
+
+                // Markdown language support
+                markdown(),
+
+                // Notehub theme integration
+                notehubTheme,
+                baseTheme,
+
+                // Document change listener
+                EditorView.updateListener.of((update) => {
+                    if (update.docChanged) {
+                        handleChange();
+                    }
+                }),
+            ],
+        });
+
+        // Create editor view and mount to container
+        const view = new EditorView({
+            state,
+            parent: containerRef.current,
+        });
+
+        // Store view reference and register with controller
+        viewRef.current = view;
+        controller.setEditorView(view);
+
+        // Cleanup on unmount
+        return () => {
+            controller.setEditorView(null);
+            view.destroy();
+            viewRef.current = null;
+        };
+    }, []); // Only run on mount/unmount
+
+    /**
+     * Sync content when file changes.
+     * Only updates if content actually differs to prevent cursor jump.
+     */
+    useEffect(() => {
+        const view = viewRef.current;
+        if (!view) return;
+
+        // Only update if content actually differs
+        const currentContent = view.state.doc.toString();
+        if (currentContent !== content) {
+            // Replace entire document content
+            const transaction = view.state.update({
+                changes: {
+                    from: 0,
+                    to: view.state.doc.length,
+                    insert: content,
+                },
+            });
+            view.dispatch(transaction);
+        }
+    }, [content, filePath]);
+
+    return (
+        <div
+            ref={containerRef}
+            className="notehub-editor"
+            style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'var(--nh-bg-main)',
+                overflow: 'hidden',
+            }}
+        />
+    );
+};

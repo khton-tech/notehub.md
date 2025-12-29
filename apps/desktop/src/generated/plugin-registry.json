@@ -1,5 +1,20 @@
 [
   {
+    "id": "nh.features.editor",
+    "name": "Editor",
+    "version": "0.0.1",
+    "type": "features",
+    "description": "Markdown Editor for Notehub",
+    "dependencies": [
+      "nh.system.fs-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.dialog-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager"
+    ]
+  },
+  {
     "id": "nh.features.explorer",
     "name": "Explorer",
     "version": "0.0.1",
@@ -60,6 +75,15 @@
     ]
   },
   {
+    "id": "nh.system.fs-manager",
+    "name": "FsManager",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
     "id": "nh.system.fs-driver-tauri",
     "name": "FsDriverTauri",
     "version": "0.0.0",
@@ -67,15 +91,6 @@
     "dependencies": [
       "nh.system.logger",
       "nh.system.fs-manager"
-    ]
-  },
-  {
-    "id": "nh.system.fs-manager",
-    "name": "FsManager",
-    "version": "0.0.0",
-    "type": "system",
-    "dependencies": [
-      "nh.system.logger"
     ]
   },
   {
