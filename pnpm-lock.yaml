@@ -151,6 +151,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.39.7
         version: 6.39.7
+      '@lezer/markdown':
+        specifier: ^1.6.0
+        version: 1.6.2
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core

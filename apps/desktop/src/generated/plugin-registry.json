@@ -29,6 +29,19 @@
     ]
   },
   {
+    "id": "nh.features.workbench",
+    "name": "Workbench",
+    "version": "0.0.0",
+    "type": "features",
+    "dependencies": [
+      "nh.ui.layout-manager",
+      "nh.ui.theme-manager",
+      "nh.ui.ck-standard",
+      "nh.system.state-manager",
+      "nh.features.explorer"
+    ]
+  },
+  {
     "id": "nh.features.vault-picker",
     "name": "VaultPicker",
     "version": "0.0.0",
@@ -40,19 +53,6 @@
       "nh.system.logger",
       "nh.ui.controllers-manager",
       "nh.ui.layout-manager"
-    ]
-  },
-  {
-    "id": "nh.features.workbench",
-    "name": "Workbench",
-    "version": "0.0.0",
-    "type": "features",
-    "dependencies": [
-      "nh.ui.layout-manager",
-      "nh.ui.theme-manager",
-      "nh.ui.ck-standard",
-      "nh.system.state-manager",
-      "nh.features.explorer"
     ]
   },
   {

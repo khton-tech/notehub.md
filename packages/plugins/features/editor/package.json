@@ -15,6 +15,7 @@
         "@codemirror/language": "^6.12.1",
         "@codemirror/state": "^6.5.3",
         "@codemirror/view": "^6.39.7",
+        "@lezer/markdown": "^1.6.0",
         "@notehub/core": "workspace:*",
         "@notehub/fs-manager": "workspace:*",
         "@notehub/icon-manager": "workspace:*",
