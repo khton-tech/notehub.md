@@ -244,4 +244,13 @@ export class ExplorerController {
         if (!this.rootPath) return null;
         return this.nodes.get(this.rootPath) || null;
     }
+
+    /**
+     * Select a file and emit via EventBus
+     * This replaces the DOM CustomEvent approach to use the core EventBus
+     */
+    selectFile(path: string): void {
+        this.app.events.emit('explorer:file-selected', { path });
+    }
 }
+
