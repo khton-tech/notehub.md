@@ -43,14 +43,21 @@ interface TreeNode {
 
 /**
  * Check if the cursor selection overlaps with a given range.
+ * Only considers overlap if the editor has focus (user is actively editing).
  * 
- * @param state - Editor state
+ * @param view - Editor view (to check focus)
  * @param from - Start of range
  * @param to - End of range
- * @returns true if any selection overlaps
+ * @returns true if any selection overlaps AND editor has focus
  */
-function cursorOverlapsRange(state: EditorState, from: number, to: number): boolean {
-    for (const range of state.selection.ranges) {
+function cursorOverlapsRange(view: EditorView, from: number, to: number): boolean {
+    // If editor doesn't have focus, cursor position doesn't matter
+    // This ensures decorations are shown on initial load
+    if (!view.hasFocus) {
+        return false;
+    }
+
+    for (const range of view.state.selection.ranges) {
         // Check if selection overlaps with [from, to]
         if (range.from <= to && range.to >= from) {
             return true;
@@ -131,22 +138,35 @@ function buildDecorations(view: EditorView): DecorationSet {
     const decorations: Range<Decoration>[] = [];
     const processedLines = new Set<number>();
 
+    console.log('[LivePreview] buildDecorations called, doc length:', state.doc.length);
+
     // Force synchronous tree parsing for visible ranges
     // This ensures the tree is ready before we iterate
     for (const { from: _from, to } of view.visibleRanges) {
-        ensureSyntaxTree(state, to, 100); // 100ms timeout
+        const tree = ensureSyntaxTree(state, to, 100); // 100ms timeout
+        console.log('[LivePreview] ensureSyntaxTree result:', tree ? 'got tree' : 'null', 'to:', to);
     }
+
+    let foundNodes = 0;
 
     // Iterate syntax tree looking for CalloutType nodes
     for (const { from, to } of view.visibleRanges) {
+        console.log('[LivePreview] Iterating visible range:', from, '-', to);
         syntaxTree(state).iterate({
             from,
             to,
             enter: (node) => {
+                // Log all node types for debugging
+                if (node.name === 'CalloutType' || node.name === 'CalloutTitle' || node.name === 'Blockquote') {
+                    console.log('[LivePreview] Found node:', node.name, 'at', node.from, '-', node.to);
+                }
+
                 // Only process CalloutType nodes
                 if (node.name !== 'CalloutType') {
                     return;
                 }
+
+                foundNodes++;
 
                 const calloutTypeNode = node.node;
 
@@ -160,7 +180,7 @@ function buildDecorations(view: EditorView): DecorationSet {
                 processedLines.add(headerLine.from);
 
                 // Check cursor intersection with header line
-                const cursorInside = cursorOverlapsRange(state, headerLine.from, headerLine.to);
+                const cursorInside = cursorOverlapsRange(view, headerLine.from, headerLine.to);
 
                 if (!cursorInside) {
                     // Cursor outside: replace header with widget
@@ -207,6 +227,8 @@ function buildDecorations(view: EditorView): DecorationSet {
         });
     }
 
+    console.log('[LivePreview] buildDecorations result:', foundNodes, 'CalloutType nodes found,', decorations.length, 'decorations created');
+
     // Sort decorations by position (required by CodeMirror)
     decorations.sort((a, b) => a.from - b.from);
 
@@ -242,10 +264,12 @@ export const livePreviewPlugin = ViewPlugin.fromClass(
         decorations: DecorationSet;
 
         constructor(view: EditorView) {
+            console.log('[LivePreview] Plugin constructor called');
             this.decorations = buildDecorations(view);
         }
 
         update(update: ViewUpdate) {
+            console.log('[LivePreview] Plugin update called, docChanged:', update.docChanged);
             // Always rebuild decorations on any update
             // This ensures decorations are ready immediately after tree parsing
             this.decorations = buildDecorations(update.view);
