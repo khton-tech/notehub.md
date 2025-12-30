@@ -38,6 +38,7 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } f
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import type { EditorController } from '../logic/EditorController';
+import { EditorPortalRenderer } from '../bridge';
 
 /**
  * Props for the NotehubEditor component
@@ -265,15 +266,18 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
     }, [content, filePath]);
 
     return (
-        <div
-            ref={containerRef}
-            className="notehub-editor"
-            style={{
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'var(--nh-bg-main)',
-                overflow: 'hidden',
-            }}
-        />
+        <>
+            <div
+                ref={containerRef}
+                className="notehub-editor"
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'var(--nh-bg-main)',
+                    overflow: 'hidden',
+                }}
+            />
+            <EditorPortalRenderer />
+        </>
     );
 };
