@@ -15,12 +15,14 @@
         "@codemirror/language": "^6.12.1",
         "@codemirror/state": "^6.5.3",
         "@codemirror/view": "^6.39.7",
+        "@lezer/common": "^1.2.1",
         "@notehub/core": "workspace:*",
         "@notehub/fs-manager": "workspace:*",
         "@notehub/icon-manager": "workspace:*",
         "@notehub/theme-manager": "workspace:*",
         "react": "^18.2.0",
-        "react-dom": "^18.2.0"
+        "react-dom": "^18.2.0",
+        "lucide-react": "^0.469.0"
     },
     "devDependencies": {
         "@types/react": "^18.2.0",

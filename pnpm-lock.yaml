@@ -151,6 +151,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.39.7
         version: 6.39.7
+      '@lezer/common':
+        specifier: ^1.2.1
+        version: 1.5.0
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core
@@ -163,6 +166,9 @@ importers:
       '@notehub/theme-manager':
         specifier: workspace:*
         version: link:../../ui/theme-manager
+      lucide-react:
+        specifier: ^0.469.0
+        version: 0.469.0(react@18.3.1)
       react:
         specifier: ^18.2.0
         version: 18.3.1

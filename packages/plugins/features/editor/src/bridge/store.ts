@@ -1,18 +1,18 @@
 /**
- * @fileoverview Portal Store - Micro-state manager for React/CodeMirror bridge
- * 
- * Implements the subscription pattern for rendering React components
- * inside CodeMirror widgets using portals (RFC-005).
- * 
- * ## Pattern
- * 
- * 1. CodeMirror widget calls `mount()` with a container element
- * 2. React renderer subscribes via `useSyncExternalStore`
- * 3. Renderer uses `createPortal()` to render into container
- * 4. Widget calls `unmount()` on destroy
- * 
- * @module @notehub/editor/bridge/store
- */
+* @fileoverview Portal Store - Micro-state manager for React/CodeMirror bridge
+* 
+* Implements the subscription pattern for rendering React components
+* inside CodeMirror widgets using portals (RFC-005).
+* 
+* ## Pattern
+* 
+* 1. CodeMirror widget calls `mount()` with a container element
+* 2. React renderer subscribes via `useSyncExternalStore`
+* 3. Renderer uses `createPortal()` to render into container
+* 4. Widget calls `unmount()` on destroy
+* 
+* @module @notehub/editor/bridge/store
+*/
 
 import type { FC } from 'react';
 

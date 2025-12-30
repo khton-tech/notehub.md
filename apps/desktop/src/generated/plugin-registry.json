@@ -29,6 +29,20 @@
     ]
   },
   {
+    "id": "nh.features.vault-picker",
+    "name": "VaultPicker",
+    "version": "0.0.0",
+    "type": "feature",
+    "dependencies": [
+      "nh.system.fs-manager",
+      "nh.system.config-manager",
+      "nh.system.state-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.layout-manager"
+    ]
+  },
+  {
     "id": "nh.features.workbench",
     "name": "Workbench",
     "version": "0.0.0",
@@ -42,17 +56,59 @@
     ]
   },
   {
-    "id": "nh.features.vault-picker",
-    "name": "VaultPicker",
+    "id": "nh.system.bootloader",
+    "name": "Bootloader",
     "version": "0.0.0",
-    "type": "feature",
+    "type": "system",
     "dependencies": [
-      "nh.system.fs-manager",
-      "nh.system.config-manager",
-      "nh.system.state-manager",
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.system.config-manager",
+    "name": "ConfigManager",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": [
       "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.layout-manager"
+      "nh.system.fs-manager"
+    ]
+  },
+  {
+    "id": "nh.system.fs-manager",
+    "name": "FsManager",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.system.fs-driver-tauri",
+    "name": "FsDriverTauri",
+    "version": "0.0.0",
+    "type": "system",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.system.fs-manager"
+    ]
+  },
+  {
+    "id": "nh.system.logger",
+    "name": "Logger",
+    "version": "0.0.0",
+    "type": "system",
+    "description": "Centralized logging system with level-based filtering and event emission",
+    "dependencies": []
+  },
+  {
+    "id": "nh.system.state-manager",
+    "name": "StateManager",
+    "version": "0.0.0",
+    "type": "system",
+    "description": "Runtime session state storage (non-persistent)",
+    "dependencies": [
+      "nh.system.logger"
     ]
   },
   {
@@ -116,62 +172,6 @@
     "dependencies": [
       "nh.system.logger",
       "nh.system.config-manager"
-    ]
-  },
-  {
-    "id": "nh.system.bootloader",
-    "name": "Bootloader",
-    "version": "0.0.0",
-    "type": "system",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
-    "id": "nh.system.config-manager",
-    "name": "ConfigManager",
-    "version": "0.0.0",
-    "type": "system",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.system.fs-manager"
-    ]
-  },
-  {
-    "id": "nh.system.fs-driver-tauri",
-    "name": "FsDriverTauri",
-    "version": "0.0.0",
-    "type": "system",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.system.fs-manager"
-    ]
-  },
-  {
-    "id": "nh.system.fs-manager",
-    "name": "FsManager",
-    "version": "0.0.0",
-    "type": "system",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
-    "id": "nh.system.logger",
-    "name": "Logger",
-    "version": "0.0.0",
-    "type": "system",
-    "description": "Centralized logging system with level-based filtering and event emission",
-    "dependencies": []
-  },
-  {
-    "id": "nh.system.state-manager",
-    "name": "StateManager",
-    "version": "0.0.0",
-    "type": "system",
-    "description": "Runtime session state storage (non-persistent)",
-    "dependencies": [
-      "nh.system.logger"
     ]
   }
 ]

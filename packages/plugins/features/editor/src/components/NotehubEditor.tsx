@@ -39,6 +39,7 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import type { EditorController } from '../logic/EditorController';
 import { EditorPortalRenderer } from '../bridge';
+import { calloutLivePreview } from '../cm/live-preview/view-plugin';
 
 /**
  * Props for the NotehubEditor component
@@ -129,6 +130,19 @@ const baseTheme = EditorView.baseTheme({
         backgroundColor: 'var(--nh-bg-main, #1a1a1a)',
     },
 
+    // Callout styling
+    '.cm-callout-header-widget': {
+        display: 'block',
+        marginLeft: '-16px',
+        marginRight: '-16px',
+    },
+    '.cm-callout-body': {
+        backgroundColor: 'var(--nh-callout-body-bg, rgba(139, 148, 158, 0.05))',
+        borderLeft: '3px solid var(--nh-callout-default, #8b949e)',
+        paddingLeft: '13px',
+        marginLeft: '-16px',
+    },
+
     // Custom scrollbar styling (WebKit browsers)
     '.cm-scroller::-webkit-scrollbar': {
         width: '8px',
@@ -210,6 +224,9 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
 
                 // Markdown language support
                 markdown(),
+
+                // Live preview for callouts
+                calloutLivePreview,
 
                 // Notehub theme integration
                 notehubTheme,
