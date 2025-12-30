@@ -154,6 +154,9 @@ importers:
       '@lezer/markdown':
         specifier: ^1.6.0
         version: 1.6.2
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../../ui/ck-standard
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core

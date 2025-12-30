@@ -20,6 +20,7 @@
         "@notehub/fs-manager": "workspace:*",
         "@notehub/icon-manager": "workspace:*",
         "@notehub/theme-manager": "workspace:*",
+        "@notehub/ck-standard": "workspace:*",
         "lucide-react": "^0.469.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0"

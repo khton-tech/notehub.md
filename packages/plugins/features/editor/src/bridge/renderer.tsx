@@ -19,16 +19,31 @@ import { portalStore, type PortalEntry } from './store';
 
 /**
  * Individual portal renderer - renders a single React component into its container.
- * Memoized to prevent unnecessary re-renders when other portals change.
+ * Custom comparison to ensure re-render when props change.
  */
-const PortalItem = memo<{ entry: PortalEntry }>(({ entry }) => {
-    const { component: Component, props, container } = entry;
+const PortalItem = memo<{ entry: PortalEntry }>(
+    ({ entry }) => {
+        const { component: Component, props, container } = entry;
+        console.log('[PortalItem] Rendering portal:', entry.id, 'props:', props);
 
-    return createPortal(
-        <Component {...props} />,
-        container
-    );
-});
+        return createPortal(
+            <Component {...props} />,
+            container
+        );
+    },
+    // Custom comparison: re-render if id changes or props change
+    (prevProps, nextProps) => {
+        const same = prevProps.entry.id === nextProps.entry.id &&
+            JSON.stringify(prevProps.entry.props) === JSON.stringify(nextProps.entry.props);
+        console.log('[PortalItem] memo check:', {
+            id: prevProps.entry.id,
+            prevProps: prevProps.entry.props,
+            nextProps: nextProps.entry.props,
+            same
+        });
+        return same;
+    }
+);
 
 PortalItem.displayName = 'PortalItem';
 

@@ -51,7 +51,7 @@ function generateId(): string {
  */
 export abstract class ReactBridgeWidget<P = any> extends WidgetType {
     /** Unique identifier for this widget instance */
-    protected readonly id: string;
+    protected id: string;
 
     /** React component to render */
     protected readonly component: FC<P>;
@@ -87,6 +87,7 @@ export abstract class ReactBridgeWidget<P = any> extends WidgetType {
         const container = document.createElement('span');
         container.className = 'cm-react-widget';
         container.style.display = 'inline-block';
+        container.dataset.portalId = this.id;
 
         // Store reference
         this.container = container;
@@ -105,12 +106,24 @@ export abstract class ReactBridgeWidget<P = any> extends WidgetType {
      * @param view - The EditorView instance  
      * @returns true to prevent CM6 from recreating the DOM
      */
-    updateDOM(_dom: HTMLElement, _view: EditorView): boolean {
-        // Update props in portal store
-        portalStore.update(this.id, this.props);
+    updateDOM(dom: HTMLElement, _view: EditorView): boolean {
+        // Check if we can reuse the existing portal
+        const existingId = dom.dataset.portalId;
+        if (existingId) {
+            // Adopt the existing ID
+            this.id = existingId;
+            this.container = dom;
 
-        // Return true to tell CM6 we handled the update
-        return true;
+            console.log(`[ReactBridgeWidget] Updating existing portal: ${this.id}`);
+            // Update props in portal store
+            portalStore.update(this.id, this.props);
+
+            // Return true to tell CM6 we handled the update
+            return true;
+        }
+
+        console.log('[ReactBridgeWidget] updateDOM failed - no existing ID found, forcing recreate');
+        return false;
     }
 
     /**
