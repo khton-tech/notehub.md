@@ -38,6 +38,8 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } f
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { notehubMarkdown } from '../lezer';
 import { exposeDebugFunction, removeDebugFunction } from '../debug/tree-visualizer';
+import { EditorPortalRenderer } from '../bridge';
+import { livePreviewExtension } from '../cm/live-preview';
 import type { EditorController } from '../logic/EditorController';
 
 /**
@@ -215,6 +217,9 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 notehubTheme,
                 baseTheme,
 
+                // Live Preview (callout decorations)
+                ...livePreviewExtension,
+
                 // Document change listener
                 EditorView.updateListener.of((update) => {
                     if (update.docChanged) {
@@ -270,15 +275,18 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
     }, [content, filePath]);
 
     return (
-        <div
-            ref={containerRef}
-            className="notehub-editor"
-            style={{
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'var(--nh-bg-main)',
-                overflow: 'hidden',
-            }}
-        />
+        <>
+            <div
+                ref={containerRef}
+                className="notehub-editor"
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'var(--nh-bg-main)',
+                    overflow: 'hidden',
+                }}
+            />
+            <EditorPortalRenderer />
+        </>
     );
 };
