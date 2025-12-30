@@ -138,35 +138,22 @@ function buildDecorations(view: EditorView): DecorationSet {
     const decorations: Range<Decoration>[] = [];
     const processedLines = new Set<number>();
 
-    console.log('[LivePreview] buildDecorations called, doc length:', state.doc.length);
-
     // Force synchronous tree parsing for visible ranges
     // This ensures the tree is ready before we iterate
     for (const { from: _from, to } of view.visibleRanges) {
-        const tree = ensureSyntaxTree(state, to, 100); // 100ms timeout
-        console.log('[LivePreview] ensureSyntaxTree result:', tree ? 'got tree' : 'null', 'to:', to);
+        ensureSyntaxTree(state, to, 100); // 100ms timeout
     }
-
-    let foundNodes = 0;
 
     // Iterate syntax tree looking for CalloutType nodes
     for (const { from, to } of view.visibleRanges) {
-        console.log('[LivePreview] Iterating visible range:', from, '-', to);
         syntaxTree(state).iterate({
             from,
             to,
             enter: (node) => {
-                // Log all node types for debugging
-                if (node.name === 'CalloutType' || node.name === 'CalloutTitle' || node.name === 'Blockquote') {
-                    console.log('[LivePreview] Found node:', node.name, 'at', node.from, '-', node.to);
-                }
-
                 // Only process CalloutType nodes
                 if (node.name !== 'CalloutType') {
                     return;
                 }
-
-                foundNodes++;
 
                 const calloutTypeNode = node.node;
 
@@ -227,8 +214,6 @@ function buildDecorations(view: EditorView): DecorationSet {
         });
     }
 
-    console.log('[LivePreview] buildDecorations result:', foundNodes, 'CalloutType nodes found,', decorations.length, 'decorations created');
-
     // Sort decorations by position (required by CodeMirror)
     decorations.sort((a, b) => a.from - b.from);
 
@@ -264,12 +249,10 @@ export const livePreviewPlugin = ViewPlugin.fromClass(
         decorations: DecorationSet;
 
         constructor(view: EditorView) {
-            console.log('[LivePreview] Plugin constructor called');
             this.decorations = buildDecorations(view);
         }
 
         update(update: ViewUpdate) {
-            console.log('[LivePreview] Plugin update called, docChanged:', update.docChanged);
             // Always rebuild decorations on any update
             // This ensures decorations are ready immediately after tree parsing
             this.decorations = buildDecorations(update.view);
