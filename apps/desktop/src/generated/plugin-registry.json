@@ -1,5 +1,19 @@
 [
   {
+    "id": "nh.features.explorer",
+    "name": "Explorer",
+    "version": "0.0.1",
+    "type": "features",
+    "description": "File Explorer for Notehub",
+    "dependencies": [
+      "nh.system.fs-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager"
+    ]
+  },
+  {
     "id": "nh.features.editor",
     "name": "Editor",
     "version": "0.0.1",
@@ -10,20 +24,6 @@
       "nh.system.logger",
       "nh.ui.controllers-manager",
       "nh.ui.dialog-manager",
-      "nh.ui.icon-manager",
-      "nh.ui.theme-manager"
-    ]
-  },
-  {
-    "id": "nh.features.explorer",
-    "name": "Explorer",
-    "version": "0.0.1",
-    "type": "features",
-    "description": "File Explorer for Notehub",
-    "dependencies": [
-      "nh.system.fs-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
       "nh.ui.icon-manager",
       "nh.ui.theme-manager"
     ]

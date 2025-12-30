@@ -1,17 +1,11 @@
 /**
- * @fileoverview Live Preview ViewPlugin - Transforms AST to visual decorations
+ * @fileoverview Live Preview ViewPlugin for Notehub
  * 
- * This ViewPlugin iterates the syntax tree to find callout markers and
- * creates visual decorations when the cursor is outside the header range.
+ * Handles dynamic decorators for:
+ * - Callouts (Headers and Body styling)
+ * - Block styling (Quotes, Code blocks)
  * 
- * ## Logic:
- * 1. Search for `CalloutType` nodes directly (flat AST structure)
- * 2. When found, identify the header line containing CalloutType
- * 3. If cursor is outside header → apply Decoration.replace with CalloutHeaderWidget
- * 4. Find parent Blockquote and apply .cm-callout-body to subsequent lines
- * 
- * @module @notehub/editor/cm/live-preview/view-plugin
- * @author Notehub Team
+ * @module @notehub/editor/cm/live-preview
  */
 
 import {
@@ -19,75 +13,77 @@ import {
     Decoration,
     EditorView,
     type ViewUpdate,
-    type DecorationSet,
+    type DecorationSet
 } from '@codemirror/view';
 import { syntaxTree, ensureSyntaxTree } from '@codemirror/language';
 import { RangeSetBuilder, type EditorState, type Range } from '@codemirror/state';
 import { CalloutHeaderWidget } from '../widgets/CalloutWidget';
 
-/**
- * Simple node interface matching the shape returned by syntaxTree iterate.
- */
+// ----------------------------------------------------------------------------
+// Types & Interfaces
+// ----------------------------------------------------------------------------
+
 interface TreeNode {
-    name: string;
     from: number;
     to: number;
     node: {
         from: number;
         to: number;
         name: string;
-        nextSibling: TreeNode['node'] | null;
         parent: TreeNode['node'] | null;
+        nextSibling: TreeNode['node'] | null;
     };
 }
 
-/**
- * Check if the cursor selection overlaps with a given range.
- * Only considers overlap if the editor has focus (user is actively editing).
- * 
- * @param view - Editor view (to check focus)
- * @param from - Start of range
- * @param to - End of range
- * @returns true if any selection overlaps AND editor has focus
- */
-function cursorOverlapsRange(view: EditorView, from: number, to: number): boolean {
-    // If editor doesn't have focus, cursor position doesn't matter
-    // This ensures decorations are shown on initial load
-    if (!view.hasFocus) {
-        return false;
-    }
+// Colors from CalloutHeader for consistent styling
+const DEFAULT_COLORS = { bg: 'rgba(158, 158, 158, 0.15)', border: '#9e9e9e' };
 
-    for (const range of view.state.selection.ranges) {
-        // Check if selection overlaps with [from, to]
-        if (range.from <= to && range.to >= from) {
-            return true;
-        }
-    }
-    return false;
-}
+const TYPE_COLORS: Record<string, { bg: string; border: string }> = {
+    // Info (Blue)
+    INFO: { bg: 'rgba(74, 144, 226, 0.15)', border: '#4a90e2' },
+    NOTE: { bg: 'rgba(74, 144, 226, 0.15)', border: '#4a90e2' },
+
+    // Tips (Green)
+    TIP: { bg: 'rgba(76, 175, 80, 0.15)', border: '#4caf50' },
+    SUCCESS: { bg: 'rgba(76, 175, 80, 0.15)', border: '#4caf50' },
+    CHECK: { bg: 'rgba(76, 175, 80, 0.15)', border: '#4caf50' },
+    DONE: { bg: 'rgba(76, 175, 80, 0.15)', border: '#4caf50' },
+
+    // Warnings (Orange)
+    WARNING: { bg: 'rgba(255, 152, 0, 0.15)', border: '#ff9800' },
+    WARN: { bg: 'rgba(255, 152, 0, 0.15)', border: '#ff9800' },
+
+    // Danger (Red)
+    DANGER: { bg: 'rgba(244, 67, 54, 0.15)', border: '#f44336' },
+    ERROR: { bg: 'rgba(244, 67, 54, 0.15)', border: '#f44336' },
+    BUG: { bg: 'rgba(244, 67, 54, 0.15)', border: '#f44336' },
+
+    // Abstract (Cyan)
+    ABSTRACT: { bg: 'rgba(0, 188, 212, 0.15)', border: '#00bcd4' },
+    SUMMARY: { bg: 'rgba(0, 188, 212, 0.15)', border: '#00bcd4' },
+
+    // Question (Purple)
+    QUESTION: { bg: 'rgba(156, 39, 176, 0.15)', border: '#9c27b0' },
+    FAQ: { bg: 'rgba(156, 39, 176, 0.15)', border: '#9c27b0' },
+
+    // Quote (Gray)
+    QUOTE: { bg: 'rgba(158, 158, 158, 0.15)', border: '#9e9e9e' },
+};
+
+// ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
 
 /**
- * Extract callout type string from the document.
- * 
- * @param state - Editor state
- * @param from - Start position
- * @param to - End position
- * @returns Callout type string (e.g., "INFO", "WARNING")
+ * Clean callout type string (remove [! and ])
+ * @example "[!INFO]" -> "INFO"
  */
 function getCalloutType(state: EditorState, from: number, to: number): string {
-    return state.doc.sliceString(from, to);
+    const raw = state.doc.sliceString(from, to);
+    return raw.replace(/^\[!|\]$/g, '');
 }
 
-/**
- * Extract callout title from the document.
- * Looks for a sibling CalloutTitle node.
- * 
- * @param state - Editor state
- * @param node - The node with nextSibling property
- * @returns Title string or empty
- */
 function getCalloutTitle(state: EditorState, node: TreeNode['node']): string {
-    // Look for CalloutTitle as a sibling after CalloutType
     let sibling = node.nextSibling;
     while (sibling) {
         if (sibling.name === 'CalloutTitle') {
@@ -98,181 +94,232 @@ function getCalloutTitle(state: EditorState, node: TreeNode['node']): string {
     return '';
 }
 
-/**
- * Find the line range for a given position.
- * 
- * @param state - Editor state
- * @param pos - Position in document
- * @returns Object with from and to positions for the line
- */
-function getLineRange(state: EditorState, pos: number): { from: number; to: number } {
+function getLineRange(state: EditorState, pos: number) {
     const line = state.doc.lineAt(pos);
     return { from: line.from, to: line.to };
 }
 
-/**
- * Find the parent Blockquote node.
- * 
- * @param node - Starting node
- * @returns Blockquote node or null
- */
-function findParentBlockquote(node: TreeNode['node']): TreeNode['node'] | null {
-    let current: TreeNode['node'] | null = node;
-    while (current) {
-        if (current.name === 'Blockquote') {
-            return current;
-        }
-        current = current.parent;
+function cursorOverlapsRange(view: EditorView, from: number, to: number): boolean {
+    if (!view.hasFocus) {
+        return false;
     }
-    return null;
+    for (const range of view.state.selection.ranges) {
+        if (range.from <= to && range.to >= from) {
+            return true;
+        }
+    }
+    return false;
 }
+
+// ----------------------------------------------------------------------------
+// Core Logic
+// ----------------------------------------------------------------------------
 
 /**
  * Build decorations for callouts in the visible range.
- * 
- * @param view - Editor view
- * @returns DecorationSet with callout decorations
  */
 function buildDecorations(view: EditorView): DecorationSet {
     const { state } = view;
-    const decorations: Range<Decoration>[] = [];
+    const decorations: Array<Range<Decoration>> = [];
     const processedLines = new Set<number>();
 
-    // Force synchronous tree parsing for visible ranges
-    // This ensures the tree is ready before we iterate
+    // Ensure syntax tree is available
     for (const { from: _from, to } of view.visibleRanges) {
-        ensureSyntaxTree(state, to, 100); // 100ms timeout
+        ensureSyntaxTree(state, to, 100);
     }
 
-    // Iterate syntax tree looking for CalloutType nodes
+    const tree = syntaxTree(state);
+
+    // Iterate over visible ranges to find decorations
     for (const { from, to } of view.visibleRanges) {
-        syntaxTree(state).iterate({
+        tree.iterate({
             from,
             to,
             enter: (node) => {
-                // Only process CalloutType nodes
                 if (node.name !== 'CalloutType') {
                     return;
                 }
 
                 const calloutTypeNode = node.node;
-
-                // Get the header line range
                 const headerLine = getLineRange(state, calloutTypeNode.from);
 
-                // Skip if already processed (avoid duplicates)
                 if (processedLines.has(headerLine.from)) {
                     return;
                 }
-                processedLines.add(headerLine.from);
 
-                // Check cursor intersection with header line
+                processedLines.add(headerLine.from);
                 const cursorInside = cursorOverlapsRange(view, headerLine.from, headerLine.to);
+                const typeRaw = getCalloutType(state, calloutTypeNode.from, calloutTypeNode.to);
+                const title = getCalloutTitle(state, calloutTypeNode);
+
+                // Colors
+                const normalizedType = typeRaw.toUpperCase();
+                const colors = TYPE_COLORS[normalizedType] || DEFAULT_COLORS;
+
+                // Common Styles (Inline to defeat specificity)
+                const commonStyle = `
+                    background-color: ${colors.bg};
+                    border-left: 3px solid ${colors.border};
+                    border-right: 1px solid ${colors.border};
+                    margin-left: 4px;
+                    margin-right: 4px;
+                    padding-left: 16px;
+                    padding-right: 16px;
+                    box-sizing: border-box;
+                `.replace(/\s+/g, ' ');
+
+                // --- 1. Process Body First to determine hasBody state ---
+                const bodyDecorations: Array<Range<Decoration>> = [];
+                let hasBody = false;
+
+                let currentLineNum = state.doc.lineAt(headerLine.from).number + 1;
+                const totalLines = state.doc.lines;
+                let isFirstBodyLine = true;
+
+                while (currentLineNum <= totalLines) {
+                    const line = state.doc.line(currentLineNum);
+                    const lineText = line.text;
+                    const trimmed = lineText.trimStart();
+
+                    if (!trimmed.startsWith('>')) {
+                        break;
+                    }
+
+                    hasBody = true;
+                    processedLines.add(line.from);
+                    const cursorOnBodyLine = cursorOverlapsRange(view, line.from, line.to);
+
+                    if (!cursorOnBodyLine) {
+                        const markerMatch = lineText.match(/^\s*(>\s?)/);
+                        if (markerMatch && markerMatch[1]) {
+                            const markerIndex = lineText.indexOf(markerMatch[1]);
+                            const markerStart = line.from + markerIndex;
+                            const markerEnd = markerStart + markerMatch[1].length;
+                            bodyDecorations.push(Decoration.replace({}).range(markerStart, markerEnd));
+                        }
+                    }
+
+                    let isLastLine = true;
+                    if (currentLineNum < totalLines) {
+                        const nextLine = state.doc.line(currentLineNum + 1);
+                        if (nextLine.text.trimStart().startsWith('>')) {
+                            isLastLine = false;
+                        }
+                    }
+
+                    // Dynamic Body Style
+                    let bodyStyle = `${commonStyle} border-top: none;`;
+
+                    if (isFirstBodyLine) {
+                        bodyStyle += ' padding-top: 8px;';
+                        isFirstBodyLine = false;
+                    }
+
+                    if (isLastLine) {
+                        bodyStyle += `
+                            border-bottom: 1px solid ${colors.border};
+                            border-bottom-left-radius: 4px;
+                            border-bottom-right-radius: 4px;
+                            margin-bottom: 0.5em;
+                            padding-bottom: 12px;
+                        `.replace(/\s+/g, ' ');
+                    }
+
+                    bodyDecorations.push(
+                        Decoration.line({
+                            class: 'cm-callout-body',
+                            attributes: { style: bodyStyle }
+                        }).range(line.from)
+                    );
+
+                    currentLineNum++;
+                }
+
+                // --- 2. Process Header with explicit state knowledge ---
+
+                let headerStyle = `
+                    ${commonStyle}
+                    border-top: 1px solid ${colors.border};
+                    border-top-left-radius: 4px;
+                    border-top-right-radius: 4px;
+                    padding-top: 12px;
+                    padding-bottom: 12px;
+                `.replace(/\s+/g, ' ');
+
+                if (!hasBody) {
+                    // Closed box look
+                    headerStyle += `
+                        border-bottom: 1px solid ${colors.border};
+                        border-bottom-left-radius: 4px;
+                        border-bottom-right-radius: 4px;
+                        margin-bottom: 0.5em;
+                    `.replace(/\s+/g, ' ');
+                } else {
+                    // Open bottom to merge
+                    headerStyle += `
+                        border-bottom: none;
+                        border-bottom-left-radius: 0;
+                        border-bottom-right-radius: 0;
+                    `.replace(/\s+/g, ' ');
+                }
+
+                decorations.push(
+                    Decoration.line({
+                        class: 'cm-callout-header-wrapper',
+                        attributes: { style: headerStyle }
+                    }).range(headerLine.from)
+                );
 
                 if (!cursorInside) {
-                    // Cursor outside: replace header with widget
-                    const type = getCalloutType(state, calloutTypeNode.from, calloutTypeNode.to);
-                    const title = getCalloutTitle(state, calloutTypeNode);
-
-                    const widget = new CalloutHeaderWidget(type, title);
-
-                    // Replace the entire header line content (keep newline)
+                    const widget = new CalloutHeaderWidget(typeRaw, title);
                     decorations.push(
                         Decoration.replace({
                             widget,
                             inclusive: true,
-                            // Note: block: true is NOT allowed in ViewPlugins
                         }).range(headerLine.from, headerLine.to)
                     );
                 }
 
-                // Find parent Blockquote for body styling
-                const blockquote = findParentBlockquote(calloutTypeNode);
-                if (blockquote) {
-                    // Get all lines after the header within the blockquote
-                    const headerLineNum = state.doc.lineAt(headerLine.from).number;
-                    const blockquoteEndLine = state.doc.lineAt(blockquote.to).number;
-
-                    for (let lineNum = headerLineNum + 1; lineNum <= blockquoteEndLine; lineNum++) {
-                        const line = state.doc.line(lineNum);
-
-                        // Skip if already processed
-                        if (processedLines.has(line.from)) {
-                            continue;
-                        }
-                        processedLines.add(line.from);
-
-                        // Add line decoration for callout body
-                        decorations.push(
-                            Decoration.line({
-                                class: 'cm-callout-body',
-                            }).range(line.from)
-                        );
-                    }
-                }
+                // Append buffered body decorations
+                decorations.push(...bodyDecorations);
             },
         });
     }
 
-    // Sort decorations by position (required by CodeMirror)
-    decorations.sort((a, b) => a.from - b.from);
+    decorations.sort((a, b) => {
+        if (a.from !== b.from) return a.from - b.from;
+        return a.value.startSide - b.value.startSide;
+    });
 
-    // Build the RangeSet
     const builder = new RangeSetBuilder<Decoration>();
-    for (const deco of decorations) {
-        builder.add(deco.from, deco.to, deco.value);
+    for (const decoration of decorations) {
+        builder.add(decoration.from, decoration.to, decoration.value);
     }
-
     return builder.finish();
 }
 
-/**
- * CSS styles for callout body lines.
- */
-const calloutBodyTheme = EditorView.baseTheme({
-    '.cm-callout-body': {
-        backgroundColor: 'rgba(74, 144, 226, 0.05)',
-        borderLeft: '3px solid rgba(74, 144, 226, 0.3)',
-        paddingLeft: '12px',
-        marginLeft: '-3px',
-    },
-});
+// ----------------------------------------------------------------------------
+// Plugin Implementation
+// ----------------------------------------------------------------------------
 
-/**
- * Live Preview ViewPlugin
- * 
- * Transforms callout AST nodes into visual decorations.
- * When cursor is outside the header, replaces raw markdown with styled widget.
- */
-export const livePreviewPlugin = ViewPlugin.fromClass(
-    class LivePreviewPlugin {
-        decorations: DecorationSet;
+class LivePreviewPlugin {
+    decorations: DecorationSet;
 
-        constructor(view: EditorView) {
-            this.decorations = buildDecorations(view);
-        }
+    constructor(view: EditorView) {
+        this.decorations = buildDecorations(view);
+    }
 
-        update(update: ViewUpdate) {
-            // Always rebuild decorations on any update
-            // This ensures decorations are ready immediately after tree parsing
+    update(update: ViewUpdate) {
+        if (update.docChanged || update.selectionSet || update.viewportChanged) {
             this.decorations = buildDecorations(update.view);
         }
-    },
-    {
-        decorations: (v) => v.decorations,
-
-        // Make replaced widgets atomic (cursor skips over them)
-        provide: (plugin) => EditorView.atomicRanges.of((view) => {
-            return view.plugin(plugin)?.decorations ?? Decoration.none;
-        }),
     }
-);
+}
 
-/**
- * Combined extension for live preview.
- * Includes the ViewPlugin and base theme.
- */
+export const livePreviewPlugin = ViewPlugin.fromClass(LivePreviewPlugin, {
+    decorations: (v) => v.decorations,
+});
+
 export const livePreviewExtension = [
-    livePreviewPlugin,
-    calloutBodyTheme,
+    livePreviewPlugin
 ];

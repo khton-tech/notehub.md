@@ -131,14 +131,12 @@ export const CalloutHeader: React.FC<CalloutHeaderProps> = ({ type, title }) => 
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '8px 12px',
-                backgroundColor: colors.bg,
-                borderLeft: `3px solid ${colors.border}`,
-                borderTopLeftRadius: '4px',
-                borderTopRightRadius: '4px',
+                width: '100%',
+                boxSizing: 'border-box',
                 fontFamily: 'var(--nh-font-family-mono, "JetBrains Mono", monospace)',
                 fontSize: '14px',
                 lineHeight: '1.4',
+                color: colors.text, // Text color remains managed here
             }}
         >
             <Icon
