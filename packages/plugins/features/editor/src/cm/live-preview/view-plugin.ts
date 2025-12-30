@@ -135,16 +135,80 @@ function buildDecorations(view: EditorView): DecorationSet {
         tree.iterate({
             from,
             to,
-            enter: (node) => {
+            enter: (node): void | boolean => {
+                // --- Handle Headings (ATXHeading1-6) ---
+                const headingMatch = node.name.match(/^ATXHeading([1-6])$/);
+                if (headingMatch) {
+                    const headingLevel = headingMatch[1];
+                    const headingNode = node.node;
+                    const headingLine = getLineRange(state, headingNode.from);
+
+                    if (processedLines.has(headingLine.from)) {
+                        return false;
+                    }
+                    processedLines.add(headingLine.from);
+
+                    const cursorInside = cursorOverlapsRange(view, headingLine.from, headingLine.to);
+
+                    // Find HeaderMark child node (contains ### and space)
+                    let headerMarkFrom = -1;
+                    let headerMarkTo = -1;
+
+                    headingNode.cursor().iterate((child) => {
+                        if (child.name === 'HeaderMark') {
+                            headerMarkFrom = child.from;
+                            headerMarkTo = child.to;
+                        }
+                    });
+
+                    // Include trailing space after HeaderMark if present
+                    if (headerMarkTo > 0 && headerMarkTo < headingLine.to) {
+                        const afterMark = state.doc.sliceString(headerMarkTo, headerMarkTo + 1);
+                        if (afterMark === ' ') {
+                            headerMarkTo += 1;
+                        }
+                    }
+
+                    if (cursorInside) {
+                        // Cursor inside: Apply heading style to entire line (including marker)
+                        decorations.push(
+                            Decoration.mark({ class: `cm-heading-${headingLevel}` }).range(headingLine.from, headingLine.to)
+                        );
+                        // Add muted color styling just for the marker
+                        if (headerMarkFrom >= 0 && headerMarkTo > headerMarkFrom) {
+                            decorations.push(
+                                Decoration.mark({ class: 'cm-heading-marker' }).range(headerMarkFrom, headerMarkTo)
+                            );
+                        }
+                    } else {
+                        // Cursor outside: Hide the marker
+                        if (headerMarkFrom >= 0 && headerMarkTo > headerMarkFrom) {
+                            decorations.push(
+                                Decoration.replace({}).range(headerMarkFrom, headerMarkTo)
+                            );
+                        }
+                        // Apply heading style to content
+                        if (headerMarkTo > 0 && headerMarkTo < headingLine.to) {
+                            decorations.push(
+                                Decoration.mark({ class: `cm-heading-${headingLevel}` }).range(headerMarkTo, headingLine.to)
+                            );
+                        }
+                    }
+
+                    return false; // Don't descend into heading children
+                }
+
+                // --- Handle Callouts ---
                 if (node.name !== 'CalloutType') {
                     return;
                 }
+                // Note: from here on for callouts we don't return, letting iterate continue
 
                 const calloutTypeNode = node.node;
                 const headerLine = getLineRange(state, calloutTypeNode.from);
 
                 if (processedLines.has(headerLine.from)) {
-                    return;
+                    return false;
                 }
 
                 processedLines.add(headerLine.from);
@@ -282,6 +346,8 @@ function buildDecorations(view: EditorView): DecorationSet {
 
                 // Append buffered body decorations
                 decorations.push(...bodyDecorations);
+
+                return false; // Processed this callout, don't descend
             },
         });
     }

@@ -178,7 +178,42 @@ const inlineStylesTheme = EditorView.baseTheme({
         marginRight: '0.5em',
         verticalAlign: 'middle',
         accentColor: 'var(--nh-accent-primary)',
-    }
+    },
+
+    // Heading Marker (the ### when cursor is inside)
+    '.cm-heading-marker': {
+        color: 'var(--nh-text-muted, #666)',
+        fontWeight: 'normal',
+    },
+
+    // Heading Levels (1-6)
+    '.cm-heading-1': {
+        fontSize: '2em',
+        fontWeight: 'bold',
+        color: 'var(--nh-text-primary)',
+    },
+    '.cm-heading-2': {
+        fontSize: '1.6em',
+        fontWeight: 'bold',
+        color: 'var(--nh-text-primary)',
+    },
+    '.cm-heading-3': {
+        fontSize: '1.3em',
+        fontWeight: 'bold',
+    },
+    '.cm-heading-4': {
+        fontSize: '1.15em',
+        fontWeight: 'bold',
+    },
+    '.cm-heading-5': {
+        fontSize: '1.05em',
+        fontWeight: 'bold',
+    },
+    '.cm-heading-6': {
+        fontSize: '1em',
+        fontWeight: 'bold',
+        color: 'var(--nh-text-muted, #999)',
+    },
 });
 
 
