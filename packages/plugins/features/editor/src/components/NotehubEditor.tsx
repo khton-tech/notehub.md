@@ -40,6 +40,7 @@ import { notehubMarkdown } from '../lezer';
 import { exposeDebugFunction, removeDebugFunction } from '../debug/tree-visualizer';
 import { EditorPortalRenderer } from '../bridge';
 import { livePreviewExtension } from '../cm/live-preview';
+import { inlineStylesExtension } from '../cm/inline-styles';
 import type { EditorController } from '../logic/EditorController';
 
 /**
@@ -149,6 +150,24 @@ const baseTheme = EditorView.baseTheme({
 });
 
 /**
+ * Theme for inline markdown styles (bold, italic, code, strikethrough).
+ * @internal
+ */
+const inlineStylesTheme = EditorView.baseTheme({
+    '.cm-md-bold': { fontWeight: 'bold', color: 'var(--nh-text-primary)' },
+    '.cm-md-italic': { fontStyle: 'italic' },
+    '.cm-md-code': {
+        fontFamily: 'monospace',
+        backgroundColor: 'var(--nh-bg-secondary)',
+        borderRadius: '4px',
+        padding: '0.1em 0.3em',
+        color: 'var(--nh-accent-primary)',
+    },
+    '.cm-md-strikethrough': { textDecoration: 'line-through' }
+});
+
+
+/**
  * NotehubEditor - CodeMirror 6 React wrapper component
  * 
  * Renders a fully-featured Markdown editor with:
@@ -216,9 +235,11 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 // Notehub theme integration
                 notehubTheme,
                 baseTheme,
+                inlineStylesTheme,
 
                 // Live Preview (callout decorations)
                 ...livePreviewExtension,
+                ...inlineStylesExtension,
 
                 // Document change listener
                 EditorView.updateListener.of((update) => {
