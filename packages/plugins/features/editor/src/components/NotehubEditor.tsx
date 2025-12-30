@@ -41,6 +41,7 @@ import { exposeDebugFunction, removeDebugFunction } from '../debug/tree-visualiz
 import { EditorPortalRenderer } from '../bridge';
 import { livePreviewExtension } from '../cm/live-preview';
 import { inlineStylesExtension } from '../cm/inline-styles';
+import { listsExtension } from '../cm/lists';
 import type { EditorController } from '../logic/EditorController';
 
 /**
@@ -163,8 +164,23 @@ const inlineStylesTheme = EditorView.baseTheme({
         padding: '0.1em 0.3em',
         color: 'var(--nh-accent-primary)',
     },
-    '.cm-md-strikethrough': { textDecoration: 'line-through' }
+    '.cm-md-strikethrough': { textDecoration: 'line-through' },
+    '.cm-list-bullet': {
+        fontSize: '1.2em',
+        lineHeight: '1',
+        verticalAlign: 'middle',
+    },
+    '.cm-list-mark-ordered': {
+        color: 'var(--nh-text-muted, #666)',
+    },
+    '.nh-checkbox-widget': {
+        cursor: 'pointer',
+        marginRight: '0.5em',
+        verticalAlign: 'middle',
+        accentColor: 'var(--nh-accent-primary)',
+    }
 });
+
 
 
 /**
@@ -237,9 +253,10 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 baseTheme,
                 inlineStylesTheme,
 
-                // Live Preview (callout decorations)
+                // Live Preview (callout decorations + lists)
                 ...livePreviewExtension,
                 ...inlineStylesExtension,
+                ...listsExtension,
 
                 // Document change listener
                 EditorView.updateListener.of((update) => {

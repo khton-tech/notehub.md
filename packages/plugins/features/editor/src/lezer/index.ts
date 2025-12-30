@@ -23,7 +23,7 @@
  */
 
 import { markdown } from '@codemirror/lang-markdown';
-import type { MarkdownConfig } from '@lezer/markdown';
+import { GFM, type MarkdownConfig } from '@lezer/markdown';
 import type { Extension } from '@codemirror/state';
 import { CalloutExtension } from './callouts';
 import { WikiLinkExtension } from './wikilinks';
@@ -32,10 +32,12 @@ import { WikiLinkExtension } from './wikilinks';
  * Combined Notehub markdown extensions.
  * 
  * Includes:
+ * - GFM (Task lists, strikethrough, tables, autolinks)
  * - Callout parser (block-level)
  * - WikiLink parser (inline-level)
  */
 export const notehubMarkdownExtensions: MarkdownConfig[] = [
+    ...GFM,
     CalloutExtension,
     WikiLinkExtension,
 ];
