@@ -23,7 +23,7 @@
  * @module @notehub/editor/lezer/callouts
  */
 
-import type { BlockContext, MarkdownConfig, Line } from "@lezer/markdown";
+import type { MarkdownConfig } from "@lezer/markdown";
 
 // Node type names
 const CalloutType = "CalloutType";
@@ -48,52 +48,55 @@ export const CalloutExtension: MarkdownConfig = {
         { name: CalloutType },
         { name: CalloutTitle }
     ],
-    parseBlock: [{
+    parseInline: [{
         name: "CalloutMarker",
-        before: "Blockquote",
+        parse: (cx, next, pos) => {
+            // Looking for '[!TYPE]'
+            if (next !== 91 /* '[' */) return -1;
 
-        parse: (cx: BlockContext, line: Line): boolean => {
-            // Check for '>' at the start
-            if (line.next !== 62 /* '>' */) {
-                return false;
-            }
+            // Peek ahead to see if it matches [!...
+            if (cx.char(pos + 1) !== 33 /* '!' */) return -1;
 
-            // Get the text of the line
-            const text = line.text.slice(line.pos);
+            // Simple regex match from current position
+            // Note: Inline parsing sees text content (block markers like > are already handled)
+            const text = cx.slice(pos, cx.end);
+            const match = /^\[!(\w+)\]/.exec(text);
 
-            // Regex: Starts with '>', optional space, '[!TYPE]', optional title
-            const match = /^>\s*\[!(\w+)\]\s*(.*)$/.exec(text);
+            if (!match) return -1;
 
-            if (!match) {
-                return false;
-            }
+            // Found a callout marker!
+            const fullMatch = match[0]; // [!INFO]
 
-            // Calculate absolute positions
-            const start = cx.lineStart + line.pos;
+            // Add CalloutType node
+            const typeStart = cx.elt(CalloutType, pos, pos + fullMatch.length);
+            cx.addElement(typeStart);
 
-            // Find type position (between [! and ])
-            const bracketPos = text.indexOf('[!');
-            const closeBracketPos = text.indexOf(']', bracketPos);
+            // Check for title
+            // The title is everything after the marker until end of line
+            const afterMarker = pos + fullMatch.length;
+            const remaining = text.slice(fullMatch.length);
 
-            if (bracketPos >= 0 && closeBracketPos > bracketPos) {
-                const typeStart = start + bracketPos + 2;
-                const typeEnd = start + closeBracketPos;
-                cx.addElement(cx.elt(CalloutType, typeStart, typeEnd));
-            }
+            // Skip spaces
+            const titleStartOffset = remaining.search(/\S/);
 
-            // Add title element if present
-            const titleStr = match[2] || '';
-            if (titleStr && titleStr.trim()) {
-                const titleOffset = text.indexOf(titleStr, closeBracketPos);
-                if (titleOffset >= 0) {
-                    const titleStart = start + titleOffset;
-                    const titleEnd = titleStart + titleStr.length;
+            if (titleStartOffset >= 0) {
+                const titleStart = afterMarker + titleStartOffset;
+
+                // Stop at newline or end of context
+                let titleEnd = cx.end;
+                const newlineIndex = remaining.indexOf('\n');
+                if (newlineIndex !== -1) {
+                    titleEnd = Math.min(titleEnd, pos + fullMatch.length + newlineIndex);
+                }
+
+                if (titleEnd > titleStart) {
                     cx.addElement(cx.elt(CalloutTitle, titleStart, titleEnd));
                 }
+                return titleEnd; // Consumed up to end of title
             }
 
-            // Return false - let Blockquote handle the block structure
-            return false;
-        }
+            return afterMarker; // Consumed marker
+        },
+        before: "Link" // Run before Link parser to capture [!TYPE] before it becomes a link
     }]
 };
