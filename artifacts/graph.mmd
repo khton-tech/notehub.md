@@ -15,12 +15,14 @@ flowchart LR
     nh_system_fs-manager["FsManager"]
     nh_system_logger["Logger"]
     nh_system_state-manager["StateManager"]
+    nh_features_editor --> nh_system_config-manager
     nh_features_editor --> nh_system_fs-manager
     nh_features_editor --> nh_system_logger
     nh_features_editor --> nh_ui_controllers-manager
     nh_features_editor --> nh_ui_dialog-manager
     nh_features_editor --> nh_ui_icon-manager
     nh_features_editor --> nh_ui_theme-manager
+    nh_features_explorer --> nh_system_config-manager
     nh_features_explorer --> nh_system_fs-manager
     nh_features_explorer --> nh_system_logger
     nh_features_explorer --> nh_ui_controllers-manager
@@ -32,6 +34,7 @@ flowchart LR
     nh_features_vault-picker --> nh_system_logger
     nh_features_vault-picker --> nh_ui_controllers-manager
     nh_features_vault-picker --> nh_ui_layout-manager
+    nh_features_workbench --> nh_system_config-manager
     nh_features_workbench --> nh_ui_layout-manager
     nh_features_workbench --> nh_ui_theme-manager
     nh_features_workbench --> nh_ui_ck-standard

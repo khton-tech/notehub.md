@@ -6,6 +6,7 @@
     "type": "features",
     "description": "Markdown Editor for Notehub",
     "dependencies": [
+      "nh.system.config-manager",
       "nh.system.fs-manager",
       "nh.system.logger",
       "nh.ui.controllers-manager",
@@ -21,6 +22,7 @@
     "type": "features",
     "description": "File Explorer for Notehub",
     "dependencies": [
+      "nh.system.config-manager",
       "nh.system.fs-manager",
       "nh.system.logger",
       "nh.ui.controllers-manager",
@@ -48,6 +50,7 @@
     "version": "0.0.0",
     "type": "features",
     "dependencies": [
+      "nh.system.config-manager",
       "nh.ui.layout-manager",
       "nh.ui.theme-manager",
       "nh.ui.ck-standard",

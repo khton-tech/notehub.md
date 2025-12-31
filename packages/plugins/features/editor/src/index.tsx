@@ -38,6 +38,7 @@ import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { Icon } from '@notehub/icon-manager';
 import { EditorController } from './logic/EditorController';
 import { NotehubEditor } from './components/NotehubEditor';
+import type { EditorSettings } from './logic/EditorConfig';
 
 /**
  * Payload structure for file selection events
@@ -84,6 +85,7 @@ function createEditorSlotComponent(controller: EditorController, app: NotehubCor
     return function EditorSlotWrapper() {
         const [content, setContent] = useState<string>('');
         const [filePath, setFilePath] = useState<string | null>(null);
+        const [settings, setSettings] = useState<EditorSettings>(() => controller.getSettings());
 
         useEffect(() => {
             /**
@@ -99,9 +101,13 @@ function createEditorSlotComponent(controller: EditorController, app: NotehubCor
             // Subscribe to editor:file-opened events from the EventBus
             app.events.on('editor:file-opened', handleFileOpened);
 
-            // Cleanup subscription on unmount
+            // Subscribe to settings changes
+            const unsubscribeSettings = controller.subscribeSettings(setSettings);
+
+            // Cleanup subscriptions on unmount
             return () => {
                 app.events.off('editor:file-opened', handleFileOpened);
+                unsubscribeSettings();
             };
         }, []);
 
@@ -137,6 +143,7 @@ function createEditorSlotComponent(controller: EditorController, app: NotehubCor
                 controller={controller}
                 content={content}
                 filePath={filePath}
+                settings={settings}
             />
         );
     };
@@ -261,6 +268,9 @@ export class EditorPlugin implements IPlugin {
 
         // Create the controller for managing file state and operations
         this.controller = new EditorController(app);
+
+        // Load settings from config-manager
+        await this.controller.loadSettings();
 
         // Create the slot component with controller in closure
         const EditorSlotComponent = createEditorSlotComponent(this.controller, app);

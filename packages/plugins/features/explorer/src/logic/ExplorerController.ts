@@ -2,6 +2,8 @@ import { NotehubCore } from '@notehub/core';
 import type { FsEvent, DirEntry } from '@notehub/fs-manager';
 import type { FileNode } from '../types';
 
+/** Config key for show-hidden setting */
+const EXPLORER_CONFIG_KEY_SHOW_HIDDEN = 'explorer.show-hidden';
 export class ExplorerController {
     private app: NotehubCore;
     // private fs: IFileSystem | null = null; // Unused
@@ -16,28 +18,59 @@ export class ExplorerController {
 
     constructor(app: NotehubCore) {
         this.app = app;
+
+        // Subscribe to config changes
+        this.app.events.on('config:updated', (payload) => {
+            const { key, value } = payload as { key: string; value: unknown };
+            if (key === EXPLORER_CONFIG_KEY_SHOW_HIDDEN) {
+                this.handleShowHiddenChange(value);
+            }
+        });
+    }
+
+    // ========== Settings ==========
+
+    /** Whether to show hidden files (starting with .) */
+    private showHidden: boolean = false;
+
+    /**
+     * Handle show-hidden setting change
+     * @param value - New value from config:updated event
+     */
+    private handleShowHiddenChange(value: unknown): void {
+        if (typeof value === 'boolean' && value !== this.showHidden) {
+            this.showHidden = value;
+            // Reload all currently loaded directories to apply new filter
+            if (this.rootPath) {
+                this.reloadAll();
+            }
+        }
+    }
+
+    /**
+     * Reload all expanded directories
+     */
+    private async reloadAll(): Promise<void> {
+        for (const path of this.expandedPaths) {
+            await this.loadDir(path);
+        }
     }
 
     /**
      * Initialize controller
      */
     async init() {
-        // Get FS instance
-        // We assume FS is available via some API or context, 
-        // typically plugins depend on services.
-        // For now, we might need to invoke FS methods via API bus if not directly accessible,
-        // but typically system plugins register services.
-        // Let's assume we can get it or use API.
-        // actually, in this architecture, we should probably communicate via API unless we strictly bind.
-        // However, existing pattern seems to use direct calls if possible or API.
-        // Let's rely on API calls for FS operations to be safe and decoupled, 
-        // OR assuming we can get the service instance if registered.
-
-        // Wait, the prompt said "Dependencies: `nh.system.fs-manager`".
-        // In the `fs-driver-tauri` implementation, it registers itself with `fs:register-driver`.
-        // `fs-manager` likely exposes `fs:methods`.
-
-        // Let's use `this.app.api.invoke` for FS operations.
+        // Load show-hidden setting from config
+        try {
+            const showHidden = await this.app.api.invoke<boolean>(
+                'config:get',
+                EXPLORER_CONFIG_KEY_SHOW_HIDDEN,
+                false
+            );
+            this.showHidden = showHidden ?? false;
+        } catch {
+            this.showHidden = false;
+        }
     }
 
     subscribe(listener: () => void) {
@@ -86,8 +119,10 @@ export class ExplorerController {
             // Let's assume we can use `this.app.api.invoke('fs:read-dir', path)`
             const entries: DirEntry[] = await this.app.api.invoke('fs:read-dir', path);
 
-            // Filter out hidden files/folders (starting with .)
-            const visibleEntries = entries.filter(e => !e.name.startsWith('.'));
+            // Filter hidden files/folders based on showHidden setting
+            const visibleEntries = this.showHidden
+                ? entries
+                : entries.filter(e => !e.name.startsWith('.'));
 
             // sort: folders first, then files
             visibleEntries.sort((a, b) => {

@@ -33,7 +33,7 @@
  */
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Compartment } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { notehubMarkdown } from '../lezer';
@@ -43,6 +43,33 @@ import { livePreviewExtension } from '../cm/live-preview';
 import { inlineStylesExtension } from '../cm/inline-styles';
 import { listsExtension } from '../cm/lists';
 import type { EditorController } from '../logic/EditorController';
+import type { EditorSettings } from '../logic/EditorConfig';
+import { EDITOR_CONFIG_DEFAULTS } from '../logic/EditorConfig';
+
+// ========== CodeMirror Compartments ==========
+// Compartments allow dynamic reconfiguration of extensions at runtime.
+// They must be module-level singletons to preserve identity across renders.
+
+/** Compartment for toggling line numbers on/off */
+const lineNumbersCompartment = new Compartment();
+
+/** Compartment for toggling line wrapping on/off */
+const lineWrappingCompartment = new Compartment();
+
+/** Compartment for dynamic font size changes */
+const fontSizeCompartment = new Compartment();
+
+/**
+ * Create a theme extension with dynamic font size.
+ * @param fontSize - Font size in pixels
+ * @returns CodeMirror theme extension
+ */
+function createFontSizeTheme(fontSize: number) {
+    return EditorView.theme({
+        '&': { fontSize: `${fontSize}px` },
+        '.cm-content': { fontSize: `${fontSize}px` },
+    });
+}
 
 /**
  * Props for the NotehubEditor component
@@ -54,6 +81,8 @@ interface NotehubEditorProps {
     content: string;
     /** Current file path (used as key for content change detection) */
     filePath?: string;
+    /** Editor settings for dynamic reconfiguration */
+    settings?: EditorSettings;
 }
 
 /**
@@ -241,7 +270,8 @@ const inlineStylesTheme = EditorView.baseTheme({
 export const NotehubEditor: React.FC<NotehubEditorProps> = ({
     controller,
     content,
-    filePath
+    filePath,
+    settings = EDITOR_CONFIG_DEFAULTS
 }) => {
     /** Ref to the container div where CodeMirror will mount */
     const containerRef = useRef<HTMLDivElement>(null);
@@ -268,8 +298,12 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
         const state = EditorState.create({
             doc: content,
             extensions: [
+                // Configurable extensions via Compartments
+                lineNumbersCompartment.of(settings.showLineNumbers ? lineNumbers() : []),
+                lineWrappingCompartment.of(settings.wordWrap ? EditorView.lineWrapping : []),
+                fontSizeCompartment.of(createFontSizeTheme(settings.fontSize)),
+
                 // Core functionality
-                lineNumbers(),
                 highlightActiveLine(),
                 drawSelection(),
                 history(),
@@ -346,6 +380,31 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
             view.dispatch(transaction);
         }
     }, [content, filePath]);
+
+    /**
+     * Reconfigure compartments when settings change.
+     * Dispatches effects to dynamically update line numbers, word wrap, and font size.
+     */
+    useEffect(() => {
+        const view = viewRef.current;
+        if (!view) return;
+
+        // Collect all reconfiguration effects
+        const effects = [
+            lineNumbersCompartment.reconfigure(
+                settings.showLineNumbers ? lineNumbers() : []
+            ),
+            lineWrappingCompartment.reconfigure(
+                settings.wordWrap ? EditorView.lineWrapping : []
+            ),
+            fontSizeCompartment.reconfigure(
+                createFontSizeTheme(settings.fontSize)
+            ),
+        ];
+
+        // Dispatch all effects in a single transaction
+        view.dispatch({ effects });
+    }, [settings.showLineNumbers, settings.wordWrap, settings.fontSize]);
 
     return (
         <>

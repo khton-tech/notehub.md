@@ -36,6 +36,8 @@
 
 import type { NotehubCore } from '@notehub/core';
 import type { EditorView } from '@codemirror/view';
+import type { EditorSettings } from './EditorConfig';
+import { EDITOR_CONFIG_KEYS, EDITOR_CONFIG_DEFAULTS } from './EditorConfig';
 
 /**
  * Status values for the editor lifecycle.
@@ -116,12 +118,28 @@ export class EditorController {
     /** Debounce delay in milliseconds (1 second) */
     private readonly SAVE_DEBOUNCE_MS = 1000;
 
+    // ========== Settings State ==========
+
+    /** Current editor settings from config-manager */
+    private currentSettings: EditorSettings = { ...EDITOR_CONFIG_DEFAULTS };
+
+    /** Listeners for settings changes (UI re-render trigger) */
+    private settingsListeners: Set<(settings: EditorSettings) => void> = new Set();
+
     /**
      * Create a new EditorController
      * @param app - The NotehubCore instance for API and event access
      */
     constructor(app: NotehubCore) {
         this.app = app;
+
+        // Subscribe to config changes
+        this.app.events.on('config:updated', (payload) => {
+            const { key, value } = payload as { key: string; value: unknown };
+            if (key.startsWith('editor.')) {
+                this.handleSettingChange(key, value);
+            }
+        });
     }
 
     // ========== Private Helpers ==========
@@ -149,6 +167,51 @@ export class EditorController {
             message
         };
         this.app.events.emit('app:status-report', report);
+    }
+
+    /**
+     * Handle a setting change from config:updated event
+     * @param key - The config key that changed
+     * @param value - The new value
+     * @private
+     */
+    private handleSettingChange(key: string, value: unknown): void {
+        let changed = false;
+
+        switch (key) {
+            case EDITOR_CONFIG_KEYS.SHOW_LINE_NUMBERS:
+                if (typeof value === 'boolean') {
+                    this.currentSettings.showLineNumbers = value;
+                    changed = true;
+                }
+                break;
+            case EDITOR_CONFIG_KEYS.WORD_WRAP:
+                if (typeof value === 'boolean') {
+                    this.currentSettings.wordWrap = value;
+                    changed = true;
+                }
+                break;
+            case EDITOR_CONFIG_KEYS.FONT_SIZE:
+                if (typeof value === 'number') {
+                    this.currentSettings.fontSize = value;
+                    changed = true;
+                }
+                break;
+        }
+
+        if (changed) {
+            this.log('info', `Setting changed: ${key} = ${value}`);
+            this.notifySettingsListeners();
+        }
+    }
+
+    /**
+     * Notify all settings listeners of a change
+     * @private
+     */
+    private notifySettingsListeners(): void {
+        const settings = { ...this.currentSettings };
+        this.settingsListeners.forEach(listener => listener(settings));
     }
 
     // ========== Public API: State Access ==========
@@ -188,6 +251,61 @@ export class EditorController {
      */
     getIsDirty(): boolean {
         return this.isDirty;
+    }
+
+    // ========== Public API: Settings ==========
+
+    /**
+     * Load settings from config-manager.
+     * Should be called during plugin initialization.
+     */
+    async loadSettings(): Promise<void> {
+        try {
+            const showLineNumbers = await this.app.api.invoke<boolean>(
+                'config:get',
+                EDITOR_CONFIG_KEYS.SHOW_LINE_NUMBERS,
+                EDITOR_CONFIG_DEFAULTS.showLineNumbers
+            );
+            const wordWrap = await this.app.api.invoke<boolean>(
+                'config:get',
+                EDITOR_CONFIG_KEYS.WORD_WRAP,
+                EDITOR_CONFIG_DEFAULTS.wordWrap
+            );
+            const fontSize = await this.app.api.invoke<number>(
+                'config:get',
+                EDITOR_CONFIG_KEYS.FONT_SIZE,
+                EDITOR_CONFIG_DEFAULTS.fontSize
+            );
+
+            this.currentSettings = {
+                showLineNumbers: showLineNumbers ?? EDITOR_CONFIG_DEFAULTS.showLineNumbers,
+                wordWrap: wordWrap ?? EDITOR_CONFIG_DEFAULTS.wordWrap,
+                fontSize: fontSize ?? EDITOR_CONFIG_DEFAULTS.fontSize,
+            };
+
+            this.log('info', `Settings loaded: ${JSON.stringify(this.currentSettings)}`);
+        } catch (error) {
+            this.log('warn', `Failed to load settings, using defaults: ${error}`);
+            this.currentSettings = { ...EDITOR_CONFIG_DEFAULTS };
+        }
+    }
+
+    /**
+     * Get current editor settings.
+     * @returns A copy of the current settings
+     */
+    getSettings(): EditorSettings {
+        return { ...this.currentSettings };
+    }
+
+    /**
+     * Subscribe to settings changes.
+     * @param listener - Callback invoked when settings change
+     * @returns Unsubscribe function
+     */
+    subscribeSettings(listener: (settings: EditorSettings) => void): () => void {
+        this.settingsListeners.add(listener);
+        return () => this.settingsListeners.delete(listener);
     }
 
     // ========== Public API: File Operations ==========
