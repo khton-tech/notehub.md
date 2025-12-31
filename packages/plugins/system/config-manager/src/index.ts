@@ -37,6 +37,7 @@ export class ConfigManagerPlugin implements IPlugin {
         // Register API methods
         app.api.register('config:get', this.get.bind(this));
         app.api.register('config:set', this.set.bind(this));
+        app.api.register('config:delete', this.delete.bind(this));
         app.api.register('config:reload', this.reload.bind(this));
 
         // Resolve config path
@@ -63,6 +64,7 @@ export class ConfigManagerPlugin implements IPlugin {
 
         app.api.unregister('config:get');
         app.api.unregister('config:set');
+        app.api.unregister('config:delete');
         app.api.unregister('config:reload');
 
         this.config = {};
@@ -84,6 +86,14 @@ export class ConfigManagerPlugin implements IPlugin {
         await this.save();
         if (this.app) {
             this.app.events.emit('config:updated', { key, value });
+        }
+    }
+
+    private async delete(key: string): Promise<void> {
+        delete this.config[key];
+        await this.save();
+        if (this.app) {
+            this.app.events.emit('config:deleted', { key });
         }
     }
 

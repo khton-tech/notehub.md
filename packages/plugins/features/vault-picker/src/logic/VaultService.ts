@@ -159,4 +159,28 @@ export class VaultService {
             return false;
         }
     }
+
+    /**
+     * Close the current vault
+     *
+     * Clears the last-opened state and emits vault-closed event
+     */
+    async closeVault(): Promise<void> {
+        this.log('info', 'Closing vault...');
+
+        try {
+            // Clear last-opened to prevent auto-login on next reload
+            // Uses config:delete since openVault saves via config:set
+            await this.app.api.invoke('config:delete', 'vault.last-opened');
+
+            // Emit vault closed event
+            this.app.events.emit('app:vault-closed', {});
+
+            this.log('info', 'Vault closed');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `Failed to close vault: ${errorMessage}`);
+            throw error;
+        }
+    }
 }

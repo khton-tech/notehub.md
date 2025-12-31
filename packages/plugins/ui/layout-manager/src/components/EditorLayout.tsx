@@ -73,7 +73,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
         }}>
             {/* Ribbon Area */}
             <div style={{ gridArea: 'ribbon' }} className="border-r border-[#444] bg-[var(--nh-bg-sidebar)] flex flex-col items-center py-2 gap-2">
-                <Controller type="ribbon-placeholder" />
+                <div className="flex-1 w-full">
+                    <Controller type="ribbon-placeholder" />
+                </div>
+                <div className="mt-auto w-full flex flex-col items-center pb-2">
+                    <Controller type="ribbon-bottom" app={app} />
+                </div>
             </div>
 
             {/* Sidebar Area */}
