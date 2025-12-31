@@ -154,6 +154,9 @@ export interface NotehubApiMap {
     /** Reload configuration from disk */
     'config:reload': () => Promise<void>;
 
+    /** Delete a configuration value (and persist change) */
+    'config:delete': (key: string) => Promise<void>;
+
     // =========================================================================
     // State Manager Plugin (nh.system.state-manager)
     // =========================================================================
@@ -323,6 +326,13 @@ export interface NotehubApiMap {
 
     /** Get the bootloader instance for advanced usage */
     'bootloader.getInstance': () => unknown | null;
+
+    // =========================================================================
+    // Vault Picker Plugin (nh.features.vault-picker)
+    // =========================================================================
+
+    /** Close the current vault and return to welcome screen */
+    'vault:close': () => Promise<void>;
 }
 
 // ============================================================================

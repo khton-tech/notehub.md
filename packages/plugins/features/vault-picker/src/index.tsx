@@ -44,10 +44,19 @@ export class VaultPickerPlugin implements IPlugin {
         this.service = new VaultService(app);
         this.log('info', 'Loading...');
 
+        // Register vault:close API
+        app.api.register('vault:close', () => this.service?.closeVault());
+
         // Set up Phase 2 transition listener
         // Handled by Workbench plugin now
         // this.vaultOpenedHandler = (payload: unknown) => { ... }
         // app.events.on('app:vault-opened', this.vaultOpenedHandler);
+
+        // Listen for vault close to show welcome screen again
+        app.events.on('app:vault-closed', () => {
+            this.log('info', 'Vault closed, showing welcome screen');
+            this.showWelcomeScreen();
+        });
 
         // Check for last opened vault
         const lastOpened = await this.service.getLastOpenedVault();
