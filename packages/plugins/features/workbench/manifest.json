@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "features",
   "dependencies": [
+    "nh.system.config-manager",
     "nh.ui.layout-manager",
     "nh.ui.theme-manager",
     "nh.ui.ck-standard",

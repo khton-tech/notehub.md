@@ -30,6 +30,13 @@ interface PluginModule {
  */
 let coreInstance: NotehubCore | null = null;
 
+// Expose for DevTools debugging
+declare global {
+    interface Window {
+        __NOTEHUB__: NotehubCore | null;
+    }
+}
+
 /**
  * Get the core instance (for use in components if needed)
  */
@@ -135,6 +142,7 @@ async function initApp(onStatusUpdate: (status: string) => void): Promise<Notehu
     // Create core kernel
     const core = new NotehubCore();
     coreInstance = core;
+    window.__NOTEHUB__ = core; // Expose for DevTools debugging
 
     // ===== PHASE 1: Load Plugin Registry =====
     onStatusUpdate('Loading Plugin Registry...');
