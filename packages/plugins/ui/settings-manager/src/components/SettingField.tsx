@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, type FC, type ChangeEvent } from 'react';
 import type { NotehubCore } from '@notehub/core';
+import { Toggle, Select } from '@notehub/ck-standard';
 import type { SettingsItem } from '../types';
 
 // ============================================================================
@@ -92,16 +93,6 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
         }
     }, [handleChange]);
 
-    const handleSelectChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
-        // Try to parse as JSON to handle non-string values
-        try {
-            const parsed = JSON.parse(e.target.value);
-            handleChange(parsed);
-        } catch {
-            handleChange(e.target.value);
-        }
-    }, [handleChange]);
-
     const handleColorChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
         handleChange(e.target.value);
     }, [handleChange]);
@@ -120,30 +111,11 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
         switch (item.type) {
             case 'toggle':
                 return (
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={Boolean(value)}
-                        onClick={handleToggle}
-                        className={`
-                            relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full
-                            border-2 border-transparent transition-colors duration-200 ease-in-out
-                            focus:outline-none focus:ring-2 focus:ring-[var(--nh-accent-primary)] focus:ring-offset-2
-                            focus:ring-offset-[var(--nh-bg-surface)]
-                            ${value
-                                ? 'bg-[var(--nh-accent-primary)]'
-                                : 'bg-[var(--nh-border-secondary)]'
-                            }
-                        `}
-                    >
-                        <span
-                            className={`
-                                pointer-events-none inline-block h-5 w-5 transform rounded-full
-                                bg-white shadow-lg ring-0 transition duration-200 ease-in-out
-                                ${value ? 'translate-x-5' : 'translate-x-0'}
-                            `}
-                        />
-                    </button>
+                    <Toggle
+                        checked={Boolean(value)}
+                        onChange={handleToggle}
+                        aria-label={item.label}
+                    />
                 );
 
             case 'text':
@@ -189,27 +161,22 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
 
             case 'select':
                 return (
-                    <select
-                        value={JSON.stringify(value)}
-                        onChange={handleSelectChange}
-                        className="
-                            w-full max-w-xs px-3 py-1.5 text-sm rounded-md
-                            bg-[var(--nh-bg-main)] border border-[var(--nh-border-secondary)]
-                            text-[var(--nh-text-primary)]
-                            focus:outline-none focus:border-[var(--nh-accent-primary)]
-                            focus:ring-1 focus:ring-[var(--nh-accent-primary)]
-                            transition-colors cursor-pointer
-                        "
-                    >
-                        {item.options?.map((option, index) => (
-                            <option
-                                key={`${item.key}-option-${index}`}
-                                value={JSON.stringify(option.value)}
-                            >
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
+                    <Select
+                        value={String(value ?? '')}
+                        onChange={(newValue: string) => {
+                            // Try to parse as JSON to handle non-string values
+                            try {
+                                const parsed = JSON.parse(newValue);
+                                handleChange(parsed);
+                            } catch {
+                                handleChange(newValue);
+                            }
+                        }}
+                        options={(item.options ?? []).map(opt => ({
+                            label: opt.label,
+                            value: JSON.stringify(opt.value)
+                        }))}
+                    />
                 );
 
             case 'color':

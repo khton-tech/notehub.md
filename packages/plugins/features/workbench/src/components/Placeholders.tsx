@@ -1,9 +1,15 @@
 import React from 'react';
-import { Files, Search, Settings, Box, FileText } from 'lucide-react';
+import { Files, Search, Box, FileText } from 'lucide-react';
 import { RibbonButton, Label } from '@notehub/ck-standard';
+import type { NotehubCore } from '@notehub/core';
+import { SettingsButton } from './SettingsButton';
 
 // Ribbon Placeholder
-export const RibbonPlaceholder: React.FC = () => {
+interface RibbonPlaceholderProps {
+    app?: NotehubCore;
+}
+
+export const RibbonPlaceholder: React.FC<RibbonPlaceholderProps> = ({ app }) => {
     return (
         <div className="flex flex-col items-center gap-2 w-full py-2">
             <RibbonButton isActive={true} label="Explorer">
@@ -14,9 +20,7 @@ export const RibbonPlaceholder: React.FC = () => {
             </RibbonButton>
 
             <div className="mt-auto flex flex-col gap-2">
-                <RibbonButton label="Settings">
-                    <Settings size={20} />
-                </RibbonButton>
+                <SettingsButton app={app} />
             </div>
         </div>
     );

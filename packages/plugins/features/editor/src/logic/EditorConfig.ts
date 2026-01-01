@@ -68,7 +68,7 @@ export function registerEditorSettings(app: NotehubCore): void {
     app.api.invoke('settings:register-tab', {
         id: 'editor',
         label: 'Editor',
-        icon: 'edit-3',
+        icon: 'edit',
         order: 10
     });
 

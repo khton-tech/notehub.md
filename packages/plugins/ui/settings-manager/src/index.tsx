@@ -18,6 +18,7 @@ import type {
 import { createRoot, type Root } from 'react-dom/client';
 import { SettingsRegistry } from './logic/SettingsRegistry';
 import { SettingsModal } from './components/SettingsModal';
+import { SettingsLayout } from './components/SettingsLayout';
 import type { SettingsStructure } from './types';
 
 // Re-export types for consumers
@@ -140,6 +141,10 @@ export class SettingsManagerPlugin implements IPlugin {
         app.events.on('command:settings:open', () => {
             this.openModal();
         });
+
+        // Register settings layout
+        app.api.invoke('layout:register-component', 'settings', SettingsLayout);
+        this.log('info', 'Registered settings layout');
 
         this.log('info', 'Loaded successfully');
     }
