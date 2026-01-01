@@ -190,7 +190,7 @@ export class ConfigManagerPlugin implements IPlugin {
 
     private isGlobalKey(key: string): boolean {
         // Heuristic for global keys
-        return key.startsWith('vault.') || key.startsWith('window.') || key === 'theme.current';
+        return key.startsWith('vault.') || key.startsWith('window.');
     }
 
     /**

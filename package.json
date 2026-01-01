@@ -10,7 +10,8 @@
         "gen:plugin": "tsx scripts/create-plugin.ts",
         "predev": "tsx scripts/link-plugins.ts",
         "dev:desktop": "pnpm predev && pnpm --filter @notehub/desktop tauri dev",
-        "dev:desktop:debug": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri dev"
+        "dev:desktop:debug": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri dev",
+        "desktop:build": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri build"
     },
     "devDependencies": {
         "@types/prompts": "^2.4.9",
