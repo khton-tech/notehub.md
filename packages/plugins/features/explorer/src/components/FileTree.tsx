@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ExplorerController } from '../logic/ExplorerController';
 import { FileTreeItem } from './FileTreeItem';
 import type { FileNode } from '../types';
-import { Button, Card } from '@notehub/ck-standard';
+import { Menu, MenuItem, MenuSeparator } from '@notehub/ck-standard';
 import { Icon } from '@notehub/icon-manager';
 import { useNotehub } from '@notehub/core';
 
@@ -62,6 +62,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
             });
             setActiveFilePath(controller.activeFilePath);
             setRenamingPath(controller.renamingPath);
+            setSelectedPath(controller.selectedPath);
         });
 
         return () => {
@@ -76,12 +77,11 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
     }, [controller]);
 
     const handleSelect = useCallback((path: string) => {
-        setSelectedPath(path);
         // Update focused index to match selected
         const idx = flatNodes.findIndex(n => n.path === path);
         if (idx !== -1) setFocusedIndex(idx);
-        // Emit via EventBus through controller
-        controller.selectFile(path);
+        // Delegate selection logic to controller
+        controller.selectItem(path);
     }, [flatNodes, controller]);
 
     const handleRenameSubmit = useCallback((oldPath: string, newName: string) => {
@@ -94,14 +94,14 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
 
     const handleCreateNote = () => {
         if (rootNode) {
-            controller.createNote(rootNode.path);
+            controller.createNote();
             setShowNewMenu(false);
         }
     };
 
     const handleCreateFolder = () => {
         if (rootNode) {
-            controller.createFolder(rootNode.path);
+            controller.createFolder();
             setShowNewMenu(false);
         }
     };
@@ -137,6 +137,8 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 const focusedNode = flatNodes[focusedIndex];
                 if (focusedNode) {
                     if (focusedNode.kind === 'directory') {
+                        // Enter on directory toggles expanded state AND selects it
+                        handleSelect(focusedNode.path);
                         handleToggle(focusedNode.path);
                     } else {
                         handleSelect(focusedNode.path);
@@ -202,7 +204,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         <div className="w-full h-full flex flex-col select-none">
             {/* Header / Toolbar */}
             <div
-                className="flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-color)] bg-[var(--nh-bg-secondary)]"
+                className="flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-subtle,#333333)] bg-[var(--nh-bg-secondary,#2a2a2a)]"
                 onContextMenu={handleRootContextMenu}
             >
                 <span className="text-xs font-bold uppercase tracking-wider text-[var(--nh-text-muted)] truncate select-none" title={rootNode.name}>
@@ -211,7 +213,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
 
                 <div className="relative">
                     <button
-                        className="p-1 rounded hover:bg-[var(--nh-bg-hover)] text-[var(--nh-text-secondary)] transition-colors"
+                        className="p-1 rounded hover:bg-[var(--nh-bg-hover,#3a3a3a)] text-[var(--nh-text-secondary,#a0a0a0)] transition-colors"
                         onClick={() => setShowNewMenu(!showNewMenu)}
                         title="Create New..."
                     >
@@ -221,29 +223,17 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                     {/* Popup Menu */}
                     {showNewMenu && (
                         <div className="absolute right-0 top-full mt-1 z-50">
-                            <Card className="w-48 p-1 flex flex-col gap-0.5 shadow-xl border-[var(--nh-border-color)]">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="justify-start px-2 h-8 text-xs font-normal w-full whitespace-nowrap"
-                                    onClick={handleCreateNote}
-                                >
-                                    <Icon name="file" size={16} className="mr-3 text-[var(--nh-text-secondary)]" />
+                            <Menu className="w-40 bg-[var(--nh-bg-surface,#2a2a2a)] border-[var(--nh-border-subtle,#333333)]">
+                                <MenuItem onClick={handleCreateNote} icon={<Icon name="file" size={14} />}>
                                     New Note
-                                </Button>
+                                </MenuItem>
 
-                                <div className="h-px bg-[var(--nh-border-color)] mx-1 my-0.5" />
+                                <MenuSeparator className="bg-[var(--nh-border-subtle,#333333)]" />
 
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="justify-start px-2 h-8 text-xs font-normal w-full whitespace-nowrap"
-                                    onClick={handleCreateFolder}
-                                >
-                                    <Icon name="folder" size={16} className="mr-3 text-[var(--nh-text-secondary)]" />
+                                <MenuItem onClick={handleCreateFolder} icon={<Icon name="folder" size={14} />}>
                                     New Folder
-                                </Button>
-                            </Card>
+                                </MenuItem>
+                            </Menu>
                         </div>
                     )}
                 </div>

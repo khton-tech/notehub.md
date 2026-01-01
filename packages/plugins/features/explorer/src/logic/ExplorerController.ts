@@ -16,6 +16,9 @@ export class ExplorerController {
     // Active file tracking (sync with editor)
     private _activeFilePath: string | null = null;
 
+    // Selected item tracking
+    private _selectedPath: string | null = null;
+
     // Renaming state
     private _renamingPath: string | null = null;
 
@@ -47,6 +50,11 @@ export class ExplorerController {
     /** Get path of item currently being renamed */
     get renamingPath(): string | null {
         return this._renamingPath;
+    }
+
+    /** Get currently selected path */
+    get selectedPath(): string | null {
+        return this._selectedPath;
     }
 
     /** Get root path */
@@ -101,6 +109,8 @@ export class ExplorerController {
             const path = typeof payload === 'string' ? payload : payload?.path;
             if (path && path !== this._activeFilePath) {
                 this._activeFilePath = path;
+                // Also select the file in the tree
+                this._selectedPath = path;
                 this.notify();
             }
         };
@@ -384,7 +394,20 @@ export class ExplorerController {
         }
     }
 
-    async createNote(parentPath: string) {
+    async createNote(contextPath?: string) {
+        let parentPath = contextPath || this._selectedPath || this.rootPath;
+        if (!parentPath) return;
+
+        // If path is a file, use its parent
+        const node = this.nodes.get(parentPath);
+        if (node && node.kind === 'file') {
+            const separator = parentPath.includes('\\') ? '\\' : '/';
+            const lastIndex = parentPath.lastIndexOf(separator);
+            if (lastIndex !== -1) {
+                parentPath = parentPath.substring(0, lastIndex);
+            }
+        }
+
         try {
             const name = await this.app.api.invoke('dialog:prompt', 'New Note', 'Enter note name:', 'Untitled') as string | null;
             if (!name) return;
@@ -393,6 +416,7 @@ export class ExplorerController {
             const fullPath = `${parentPath}/${finalName}`.replace(/\\/g, '/').replace(/\/\//g, '/');
 
             await this.app.api.invoke('fs:write-text-file', fullPath, '');
+            // Reveal the new file
             await this.loadDir(parentPath);
         } catch (error) {
             console.error('Failed to create note', error);
@@ -400,7 +424,20 @@ export class ExplorerController {
         }
     }
 
-    async createFolder(parentPath: string) {
+    async createFolder(contextPath?: string) {
+        let parentPath = contextPath || this._selectedPath || this.rootPath;
+        if (!parentPath) return;
+
+        // If path is a file, use its parent
+        const node = this.nodes.get(parentPath);
+        if (node && node.kind === 'file') {
+            const separator = parentPath.includes('\\') ? '\\' : '/';
+            const lastIndex = parentPath.lastIndexOf(separator);
+            if (lastIndex !== -1) {
+                parentPath = parentPath.substring(0, lastIndex);
+            }
+        }
+
         try {
             const name = await this.app.api.invoke('dialog:prompt', 'New Folder', 'Enter folder name:', 'New Folder') as string | null;
             if (!name) return;
@@ -423,7 +460,19 @@ export class ExplorerController {
     /**
      * Select a file and emit via EventBus
      */
-    selectFile(path: string): void {
-        this.app.events.emit('explorer:file-selected', { path });
+    /**
+     * Select an item
+     */
+    selectItem(path: string): void {
+        this._selectedPath = path;
+
+        const node = this.nodes.get(path);
+
+        // Only emit file-selected if it's a file
+        if (node && node.kind !== 'directory') {
+            this.app.events.emit('explorer:file-selected', { path });
+        }
+
+        this.notify();
     }
 }

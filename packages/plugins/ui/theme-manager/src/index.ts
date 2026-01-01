@@ -13,6 +13,10 @@ export interface ThemePalette {
     'bg-sidebar': string;
     /** Surface/card background color */
     'bg-surface': string;
+    /** Secondary background (inputs, dropdowns) */
+    'bg-secondary': string;
+    /** Hover background state */
+    'bg-hover': string;
     /** Primary accent color (purple for main actions) */
     'accent-primary': string;
     /** Secondary accent color (gray for secondary actions) */
@@ -51,6 +55,8 @@ const DEEP_SPACE_THEME: ThemePalette = {
     'bg-main': '#1a1a1a',
     'bg-sidebar': '#232323',
     'bg-surface': '#2a2a2a',
+    'bg-secondary': '#2a2a2a',
+    'bg-hover': '#3a3a3a',
     // Accents - Purple primary, gray secondary
     'accent-primary': '#6b5ce7',
     'accent-secondary': '#3a3a3a',
@@ -80,6 +86,8 @@ const LIGHT_THEME: ThemePalette = {
     'bg-main': '#ffffff',
     'bg-sidebar': '#f3f4f6', // gray-100
     'bg-surface': '#ffffff',
+    'bg-secondary': '#f9fafb', // gray-50
+    'bg-hover': '#f3f4f6', // gray-100
     // Accents
     'accent-primary': '#6b5ce7',
     'accent-secondary': '#e2e8f0', // gray-200

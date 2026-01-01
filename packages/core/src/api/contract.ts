@@ -86,6 +86,8 @@ export interface ThemePalette {
     'bg-main': string;
     'bg-sidebar': string;
     'bg-surface': string;
+    'bg-secondary': string;
+    'bg-hover': string;
     'accent-primary': string;
     'accent-secondary': string;
     'border-accent': string;

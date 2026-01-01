@@ -68,11 +68,18 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
         e.stopPropagation();
         if (isRenaming) return;
 
+        // Click on item body always selects it
+        onSelect(node.path);
+
+        // For directories, also toggle expansion
         if (isDirectory) {
             onToggle(node.path);
-        } else {
-            onSelect(node.path);
         }
+    };
+
+    const handleToggleClick = (e: MouseEvent) => {
+        e.stopPropagation();
+        onToggle(node.path);
     };
 
     const handleContextMenu = (e: MouseEvent) => {
@@ -139,45 +146,55 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
 
     const icon = getIcon();
 
-    // Build class names
-    const itemClasses = [
-        'flex items-center py-1 cursor-pointer text-[13px] min-h-[28px]',
-        'hover:bg-[var(--nh-bg-hover)] transition-colors duration-100',
-        'rounded-sm mx-1',
+    // Base class names - reset to match screenshot request
+
+    // Reset basic classes to match screenshot request
+    const baseItemClasses = [
+        'group relative flex items-center py-1 cursor-pointer text-[13px] min-h-[28px] pr-2',
+        'transition-colors duration-100',
     ];
 
-    if (isActive && !isSelected) {
-        // Active file (open in editor) - subtle highlight with accent border
-        itemClasses.push(
-            'bg-[var(--nh-accent-primary)]/10',
-            'border-l-2 border-[var(--nh-accent-primary)]',
-            'text-[var(--nh-text-primary)]'
+    if (isSelected) {
+        // Selected item - full highlight with indicator
+        baseItemClasses.push(
+            'text-white',
+            'bg-[var(--nh-accent-primary,#6b5ce7)]/10'
         );
-    } else if (isSelected) {
-        // Selected item - full accent background
-        itemClasses.push(
-            'bg-[var(--nh-accent-primary)]',
-            'text-white'
+    } else if (isActive) {
+        // Active file (open) but NOT selected in tree - subtle text highlight only
+        baseItemClasses.push(
+            'text-[var(--nh-accent-primary,#6b5ce7)]',
+            'hover:bg-[var(--nh-bg-hover,#3a3a3a)]' // Still allow hover
         );
     } else {
-        itemClasses.push('text-[var(--nh-text-secondary)]');
+        baseItemClasses.push(
+            'text-[var(--nh-text-secondary,#a0a0a0)]',
+            'hover:bg-[var(--nh-bg-hover,#3a3a3a)]'
+        );
     }
 
     if (isFocused && !isSelected) {
-        itemClasses.push('ring-1 ring-inset ring-[var(--nh-accent-primary)]/50');
+        baseItemClasses.push('ring-1 ring-inset ring-[var(--nh-accent-primary)]/50');
     }
 
     return (
         <div className="select-none" role="treeitem" aria-selected={isSelected}>
             <div
-                className={itemClasses.join(' ')}
+                className={baseItemClasses.join(' ')}
                 style={style}
                 onClick={handleClick}
                 onContextMenu={handleContextMenu}
             >
+                {/* Active/Selected Indicator */}
+                {(isSelected) && (
+                    <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[var(--nh-accent-primary,#6b5ce7)] rounded-r-[2px]" />
+                )}
                 {/* Chevron for directories */}
                 {isDirectory && (
-                    <div className="w-[16px] flex items-center justify-center shrink-0">
+                    <div
+                        className="w-[16px] flex items-center justify-center shrink-0 hover:text-white cursor-pointer transition-colors px-0.5 z-10"
+                        onClick={handleToggleClick}
+                    >
                         <Icon
                             name={node.isExpanded ? 'chevron-down' : 'chevron-right'}
                             size={14}
