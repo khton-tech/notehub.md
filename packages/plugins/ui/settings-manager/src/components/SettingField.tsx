@@ -7,9 +7,9 @@
  * @module @notehub/settings-manager/components/SettingField
  */
 
-import { useState, useEffect, useCallback, useRef, type FC, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type FC } from 'react';
 import type { NotehubCore } from '@notehub/core';
-import { Toggle, Select, Input } from '@notehub/ck-standard';
+import { Toggle, Select, Input, ColorPicker } from '@notehub/ck-standard';
 import { Check } from 'lucide-react';
 import type { SettingsItem } from '../types';
 
@@ -134,9 +134,7 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
         }
     }, [handleChange]);
 
-    const handleColorChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-        handleChange(e.target.value);
-    }, [handleChange]);
+
 
     // ========================================================================
     // Render Input by Type
@@ -187,37 +185,32 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
                     <Select
                         value={String(value ?? '')}
                         onChange={(newValue: string) => {
-                            // Try to parse as JSON to handle non-string values
+                            // If original option was not a string, try to parse
+                            // This is heuristic; ideally we track types better
                             try {
-                                const parsed = JSON.parse(newValue);
-                                handleChange(parsed);
+                                if (newValue.startsWith('{') || newValue.startsWith('[')) {
+                                    const parsed = JSON.parse(newValue);
+                                    handleChange(parsed);
+                                } else {
+                                    handleChange(newValue);
+                                }
                             } catch {
                                 handleChange(newValue);
                             }
                         }}
                         options={(item.options ?? []).map(opt => ({
                             label: opt.label,
-                            value: JSON.stringify(opt.value)
+                            value: typeof opt.value === 'string' ? opt.value : JSON.stringify(opt.value)
                         }))}
                     />
                 );
 
             case 'color':
                 return (
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="color"
-                            value={String(value ?? '#000000')}
-                            onChange={handleColorChange}
-                            className="
-                                w-10 h-8 rounded cursor-pointer border border-[var(--nh-border-subtle)]
-                                bg-transparent
-                            "
-                        />
-                        <span className="text-xs text-[var(--nh-text-muted)] font-mono">
-                            {String(value ?? '#000000')}
-                        </span>
-                    </div>
+                    <ColorPicker
+                        value={String(value ?? '#000000')}
+                        onChange={handleTextChange}
+                    />
                 );
 
             default:

@@ -19,10 +19,11 @@
         "clean": "rimraf dist"
     },
     "dependencies": {
-        "@notehub/core": "workspace:*"
+        "@notehub/core": "workspace:*",
+        "colord": "^2.9.3"
     },
     "devDependencies": {
-        "typescript": "^5.3.0",
-        "rimraf": "^5.0.0"
+        "rimraf": "^5.0.0",
+        "typescript": "^5.3.0"
     }
 }

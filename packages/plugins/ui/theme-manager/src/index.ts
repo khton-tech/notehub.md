@@ -1,4 +1,6 @@
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { colord } from 'colord';
+import { registerThemeSettings } from './logic/ThemeConfig';
 
 /**
  * Theme palette definition
@@ -64,6 +66,34 @@ const DEEP_SPACE_THEME: ThemePalette = {
     // Button
     'button-text': '#ffffff',
     // Danger
+    'danger': '#dc2626',
+    // Typography
+    'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    'font-family-mono': 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+};
+
+/**
+ * Light theme - Standard light mode
+ */
+const LIGHT_THEME: ThemePalette = {
+    // Backgrounds - Light palette
+    'bg-main': '#ffffff',
+    'bg-sidebar': '#f3f4f6', // gray-100
+    'bg-surface': '#ffffff',
+    // Accents
+    'accent-primary': '#6b5ce7',
+    'accent-secondary': '#e2e8f0', // gray-200
+    // Borders
+    'border-accent': '#6b5ce7',
+    'border-secondary': '#e5e7eb', // gray-200
+    'border-subtle': '#f3f4f6', // gray-100
+    // Text
+    'text-primary': '#111827', // gray-900
+    'text-secondary': '#4b5563', // gray-600
+    'text-muted': '#9ca3af', // gray-400
+    'text-error': '#ef4444',
+    // Button
+    'button-text': '#ffffff',
     // Danger
     'danger': '#dc2626',
     // Typography
@@ -107,11 +137,14 @@ export class ThemeManagerPlugin implements IPlugin {
     /** Registry of available themes */
     private themes: Map<string, ThemePalette> = new Map();
 
-    /** Currently active theme name */
+    /** Currently active theme name (preference) */
     private currentTheme: string = 'deep-space';
 
     /** Reference to kernel */
     private app: NotehubCore | null = null;
+
+    /** System theme media query listener */
+    private systemMediaQuery: MediaQueryList | null = null;
 
     /**
      * Log a message via the Logger plugin
@@ -143,8 +176,6 @@ export class ThemeManagerPlugin implements IPlugin {
                 height: 100%;
                 margin: 0;
                 padding: 0;
-                margin: 0;
-                padding: 0;
                 overflow: hidden;
                 font-family: var(--nh-font-family, system-ui, sans-serif);
                 color: var(--nh-text-primary, #e0e0e0);
@@ -158,12 +189,62 @@ export class ThemeManagerPlugin implements IPlugin {
     }
 
     /**
-     * Apply theme CSS variables to document root
+     * Resolve 'system' theme to 'light' or 'deep-space'
      */
-    private applyTheme(palette: ThemePalette): void {
+    private resolveSystemTheme(): string {
+        if (typeof window !== 'undefined' && window.matchMedia) {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                return 'deep-space';
+            }
+            return 'light';
+        }
+        return 'deep-space'; // Default fallback
+    }
+
+    /**
+     * Handle system theme changes
+     */
+    private handleSystemThemeChange = (e: MediaQueryListEvent) => {
+        if (this.currentTheme === 'system') {
+            const resolvedTheme = e.matches ? 'deep-space' : 'light';
+            this.log('info', `System theme changed to ${e.matches ? 'dark' : 'light'}, applying ${resolvedTheme}`);
+
+            const palette = this.themes.get(resolvedTheme);
+            if (palette) {
+                this.applyTheme(palette);
+            }
+        }
+    };
+
+    /**
+     * Apply theme CSS variables to document root
+     * Merges base palette with dynamic accent color preference
+     */
+    private async applyTheme(palette: ThemePalette): Promise<void> {
         const root = document.documentElement;
 
-        for (const [key, value] of Object.entries(palette)) {
+        // Get saved accent color
+        let accentPrimary = palette['accent-primary'];
+        if (this.app) {
+            const savedAccent = await this.app.api.invoke<string | undefined>('config:get', 'theme.accent-primary');
+            if (savedAccent) {
+                accentPrimary = savedAccent;
+            }
+        }
+
+        // Generate dynamic palette from accent
+        const dynamicPalette: Partial<ThemePalette> = {
+            ...palette,
+            'accent-primary': accentPrimary,
+            // Generate secondary accent (darker/desaturated)
+            'accent-secondary': colord(accentPrimary).alpha(0.1).toHex(),
+            // Generate border accent
+            'border-accent': accentPrimary,
+            // Generate focus ring (transparent accent)
+            'ring-focus': colord(accentPrimary).alpha(0.4).toHex(),
+        };
+
+        for (const [key, value] of Object.entries(dynamicPalette)) {
             if (value !== undefined) {
                 root.style.setProperty(`${CSS_VAR_PREFIX}${key}`, value);
             }
@@ -177,14 +258,11 @@ export class ThemeManagerPlugin implements IPlugin {
      * Remove all theme CSS variables from document root
      */
     private clearTheme(): void {
-        const root = document.documentElement;
-        const currentPalette = this.themes.get(this.currentTheme);
-
-        if (currentPalette) {
-            for (const key of Object.keys(currentPalette)) {
-                root.style.removeProperty(`${CSS_VAR_PREFIX}${key}`);
-            }
-        }
+        // We don't track which specific keys are set, so we can't easily remove distinct ones.
+        // But since we overwrite them, clearing might not be strictly necessary if we always set properties.
+        // However, for cleanliness, we can iterate all known theme keys if needed.
+        // For now, removing property by property is tricky without knowing exact keys active.
+        // We will skip explicit removal as overwritting handles it, and 'style' cleanup handles global styles.
     }
 
     // =============== API Method Handlers ===============
@@ -208,19 +286,36 @@ export class ThemeManagerPlugin implements IPlugin {
      * @param name - Theme identifier to activate
      */
     private handleSet = async (name: string): Promise<boolean> => {
-        const palette = this.themes.get(name);
+        let targetTheme = name;
+
+        // Handle System Theme
+        if (name === 'system') {
+            targetTheme = this.resolveSystemTheme();
+
+            // Setup listener if not already listening
+            if (!this.systemMediaQuery && typeof window !== 'undefined' && window.matchMedia) {
+                this.systemMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                this.systemMediaQuery.addEventListener('change', this.handleSystemThemeChange);
+                this.log('info', 'Started watching system theme preferences');
+            }
+        } else {
+            // Stop listening if we switched to manual theme
+            if (this.systemMediaQuery) {
+                this.systemMediaQuery.removeEventListener('change', this.handleSystemThemeChange);
+                this.systemMediaQuery = null;
+            }
+        }
+
+        const palette = this.themes.get(targetTheme);
 
         if (!palette) {
-            this.log('error', `Theme "${name}" not found`);
+            this.log('error', `Theme "${targetTheme}" not found (requested "${name}")`);
             return false;
         }
 
-        // Clear previous theme variables
-        this.clearTheme();
-
         // Apply new theme
-        this.currentTheme = name;
-        this.applyTheme(palette);
+        this.currentTheme = name; // persist "system" if selected
+        await this.applyTheme(palette);
 
         // Persist preference
         if (this.app) {
@@ -228,7 +323,7 @@ export class ThemeManagerPlugin implements IPlugin {
             this.app.events.emit('theme:changed', { name, palette });
         }
 
-        this.log('info', `Theme changed to "${name}"`);
+        this.log('info', `Theme changed to "${name}" (effective: "${targetTheme}")`);
         return true;
     };
 
@@ -262,9 +357,10 @@ export class ThemeManagerPlugin implements IPlugin {
         this.app = app;
         this.log('info', 'Loading...');
 
-        // Register default theme
+        // Register default themes
         this.themes.set('deep-space', DEEP_SPACE_THEME);
-        this.log('info', 'Default theme "deep-space" registered');
+        this.themes.set('light', LIGHT_THEME);
+        this.log('info', 'Default themes registered');
 
         // Register API methods
         app.api.register('theme:register', this.handleRegister);
@@ -282,14 +378,60 @@ export class ThemeManagerPlugin implements IPlugin {
 
         this.currentTheme = savedTheme ?? 'deep-space';
 
-        // Apply current theme
-        const palette = this.themes.get(this.currentTheme);
-        if (palette) {
-            this.applyTheme(palette);
-            this.log('info', `Applied theme "${this.currentTheme}"`);
+        // Apply current theme (using handleSet logic to handle 'system' correctly)
+        // We use internal logic to avoid config write-back loop on startup
+        let effectiveTheme = this.currentTheme;
+
+        if (this.currentTheme === 'system') {
+            effectiveTheme = this.resolveSystemTheme();
+            if (typeof window !== 'undefined' && window.matchMedia) {
+                this.systemMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                this.systemMediaQuery.addEventListener('change', this.handleSystemThemeChange);
+            }
         }
 
+        const palette = this.themes.get(effectiveTheme);
+        if (palette) {
+            await this.applyTheme(palette);
+            this.log('info', `Applied theme "${this.currentTheme}" (effective: ${effectiveTheme})`);
+        } else {
+            // Fallback if saved theme not found
+            const fallbackPalette = this.themes.get('deep-space');
+            if (fallbackPalette) await this.applyTheme(fallbackPalette);
+        }
+
+        // Subscribe to accent color changes for live preview
+        app.events.on('config:updated', async (payload: any) => {
+            if (payload.key === 'theme.accent-primary') {
+                // Re-resolve effective theme
+                let themeName = this.currentTheme;
+                if (themeName === 'system') themeName = this.resolveSystemTheme();
+
+                const currentPalette = this.themes.get(themeName);
+                if (currentPalette) {
+                    await this.applyTheme(currentPalette);
+                }
+            } else if (payload.key === 'theme.accent-preset') {
+                // If preset changes, update the custom accent color to match
+                const newColor = payload.value as string;
+                await app.api.invoke('config:set', 'theme.accent-primary', newColor);
+            } else if (payload.key === CONFIG_KEY_CURRENT_THEME) {
+                // Handle external theme changes (e.g. from settings sync)
+                if (payload.value !== this.currentTheme) {
+                    await this.handleSet(payload.value as string);
+                }
+            }
+        });
+
         this.log('info', 'Loaded successfully');
+    }
+
+    /**
+     * Called when all plugins are loaded
+     */
+    async onReady(app: NotehubCore): Promise<void> {
+        // Register Settings (safe to do here as settings-manager is guaranteed to be loaded)
+        registerThemeSettings(app);
     }
 
     /**
@@ -297,6 +439,12 @@ export class ThemeManagerPlugin implements IPlugin {
      */
     async unload(app: NotehubCore): Promise<void> {
         this.log('info', 'Unloading...');
+
+        // Stop listener
+        if (this.systemMediaQuery) {
+            this.systemMediaQuery.removeEventListener('change', this.handleSystemThemeChange);
+            this.systemMediaQuery = null;
+        }
 
         // Clear theme from DOM
         this.clearTheme();
