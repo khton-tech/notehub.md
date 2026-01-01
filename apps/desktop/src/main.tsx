@@ -89,10 +89,13 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/ck-standard');
         case '@notehub/dialog-manager':
             return import('@notehub/dialog-manager');
+        case '@notehub/context-menu':
+            return import('@notehub/context-menu');
         case '@notehub/layout-manager':
             return import('@notehub/layout-manager');
         case '@notehub/settings-manager':
             return import('@notehub/settings-manager');
+
 
         // Feature plugins
         case '@notehub/vault-picker':
@@ -272,8 +275,16 @@ function App(): React.ReactElement {
     const [isReady, setIsReady] = useState(false);
     const [status, setStatus] = useState('Initializing...');
     const [error, setError] = useState<string | null>(null);
+    const initStartedRef = React.useRef(false);
 
     useEffect(() => {
+        // Guard against React StrictMode double-invocation
+        if (initStartedRef.current) {
+            console.log('[Desktop] Init already started, skipping duplicate call');
+            return;
+        }
+        initStartedRef.current = true;
+
         // Minimum loading time to prevent flash
         const startTime = Date.now();
 
@@ -290,6 +301,7 @@ function App(): React.ReactElement {
                 setError(err instanceof Error ? err.message : String(err));
             });
     }, []);
+
 
     // Error state
     if (error) {

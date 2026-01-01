@@ -187,6 +187,18 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
             return () => { };
         }
     }
+
+    async removeFile(path: string): Promise<void> {
+        await tauriFs.remove(path);
+    }
+
+    async removeDir(path: string, options?: { recursive?: boolean }): Promise<void> {
+        await tauriFs.remove(path, { recursive: options?.recursive ?? false });
+    }
+
+    async rename(oldPath: string, newPath: string): Promise<void> {
+        await tauriFs.rename(oldPath, newPath);
+    }
 }
 
 // Default export for dynamic loading

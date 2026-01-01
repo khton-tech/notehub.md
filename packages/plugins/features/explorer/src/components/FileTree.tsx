@@ -2,14 +2,15 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ExplorerController } from '../logic/ExplorerController';
 import { FileTreeItem } from './FileTreeItem';
 import type { FileNode } from '../types';
+import { Button, Card } from '@notehub/ck-standard';
+import { Icon } from '@notehub/icon-manager';
+import { useNotehub } from '@notehub/core';
+
 
 interface FileTreeProps {
     controller: ExplorerController;
     defaultPath?: string;
 }
-
-import { Button, Card } from '@notehub/ck-standard';
-import { Icon } from '@notehub/icon-manager';
 
 /**
  * Flatten the tree to get an array of visible nodes for keyboard navigation
@@ -39,9 +40,12 @@ function flattenTree(node: FileNode | null): FileNode[] {
 }
 
 export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) => {
+    const app = useNotehub();
     const [rootNode, setRootNode] = useState<FileNode | null>(controller.getTree());
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
     const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+    const [activeFilePath, setActiveFilePath] = useState<string | null>(controller.activeFilePath);
+    const [renamingPath, setRenamingPath] = useState<string | null>(controller.renamingPath);
     const [showNewMenu, setShowNewMenu] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +60,8 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 const newVal = controller.getTree();
                 return newVal ? { ...newVal } : null;
             });
+            setActiveFilePath(controller.activeFilePath);
+            setRenamingPath(controller.renamingPath);
         });
 
         return () => {
@@ -78,6 +84,14 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         controller.selectFile(path);
     }, [flatNodes, controller]);
 
+    const handleRenameSubmit = useCallback((oldPath: string, newName: string) => {
+        controller.submitRename(oldPath, newName);
+    }, [controller]);
+
+    const handleRenameCancel = useCallback(() => {
+        controller.cancelRename();
+    }, [controller]);
+
     const handleCreateNote = () => {
         if (rootNode) {
             controller.createNote(rootNode.path);
@@ -89,6 +103,18 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         if (rootNode) {
             controller.createFolder(rootNode.path);
             setShowNewMenu(false);
+        }
+    };
+
+    const handleRootContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (rootNode) {
+            app.api.invoke(
+                'context-menu:trigger' as any,
+                e.nativeEvent,
+                'explorer-root',
+                { path: rootNode.path }
+            );
         }
     };
 
@@ -134,6 +160,24 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 }
                 break;
             }
+            case 'F2': {
+                // Start rename on F2
+                e.preventDefault();
+                const focusedNode = flatNodes[focusedIndex];
+                if (focusedNode) {
+                    controller.setRenaming(focusedNode.path);
+                }
+                break;
+            }
+            case 'Delete': {
+                // Delete on Delete key
+                e.preventDefault();
+                const focusedNode = flatNodes[focusedIndex];
+                if (focusedNode) {
+                    controller.deleteItem(focusedNode.path);
+                }
+                break;
+            }
             case 'Home':
                 e.preventDefault();
                 setFocusedIndex(0);
@@ -143,7 +187,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 setFocusedIndex(flatNodes.length - 1);
                 break;
         }
-    }, [flatNodes, focusedIndex, handleToggle, handleSelect]);
+    }, [flatNodes, focusedIndex, handleToggle, handleSelect, controller]);
 
     // Get focused path
     const focusedPath = focusedIndex >= 0 && focusedIndex < flatNodes.length
@@ -157,7 +201,10 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
     return (
         <div className="w-full h-full flex flex-col select-none">
             {/* Header / Toolbar */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-color)] bg-[var(--nh-bg-secondary)]">
+            <div
+                className="flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-color)] bg-[var(--nh-bg-secondary)]"
+                onContextMenu={handleRootContextMenu}
+            >
                 <span className="text-xs font-bold uppercase tracking-wider text-[var(--nh-text-muted)] truncate select-none" title={rootNode.name}>
                     {rootNode.name}
                 </span>
@@ -208,6 +255,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 className="flex-1 overflow-y-auto overflow-x-hidden py-1 outline-none"
                 onClick={() => setShowNewMenu(false)}
                 onKeyDown={handleKeyDown}
+                onContextMenu={handleRootContextMenu}
                 tabIndex={0}
                 role="tree"
                 aria-label="File explorer"
@@ -221,6 +269,10 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                         onSelect={handleSelect}
                         selectedPath={selectedPath}
                         focusedPath={focusedPath}
+                        activeFilePath={activeFilePath}
+                        renamingPath={renamingPath}
+                        onRenameSubmit={handleRenameSubmit}
+                        onRenameCancel={handleRenameCancel}
                     />
                 ))}
 
@@ -233,4 +285,3 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         </div>
     );
 };
-

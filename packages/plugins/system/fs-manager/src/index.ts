@@ -21,6 +21,9 @@ export * from './types.js';
  * - `fs:read-dir` - List directory contents
  * - `fs:exists` - Check if path exists
  * - `fs:pick-directory` - Open native directory picker dialog
+ * - `fs:remove-file` - Remove a file
+ * - `fs:remove-dir` - Remove a directory
+ * - `fs:rename` - Rename/move a file or directory
  */
 export class FsManagerPlugin implements IPlugin {
     readonly manifest: PluginManifest = {
@@ -51,7 +54,7 @@ export class FsManagerPlugin implements IPlugin {
         this.log('info', 'Loading...');
 
         // Register driver registration API
-        app.api.register('fs:register-driver', this.registerDriver.bind(this));
+        (app.api.register as any)('fs:register-driver', this.registerDriver.bind(this));
 
         // Register proxy methods
         app.api.register('fs:read-file', this.readFile.bind(this));
@@ -63,6 +66,9 @@ export class FsManagerPlugin implements IPlugin {
         app.api.register('fs:exists', this.exists.bind(this));
         app.api.register('fs:pick-directory', this.pickDirectory.bind(this));
         app.api.register('fs:watch', this.watch.bind(this));
+        (app.api.register as any)('fs:remove-file', this.removeFile.bind(this));
+        (app.api.register as any)('fs:remove-dir', this.removeDir.bind(this));
+        (app.api.register as any)('fs:rename', this.rename.bind(this));
 
         this.log('info', 'Loaded - awaiting driver registration');
     }
@@ -84,6 +90,9 @@ export class FsManagerPlugin implements IPlugin {
         app.api.unregister('fs:exists');
         app.api.unregister('fs:pick-directory');
         app.api.unregister('fs:watch');
+        app.api.unregister('fs:remove-file');
+        app.api.unregister('fs:remove-dir');
+        app.api.unregister('fs:rename');
 
         this.driver = null;
         this.driverName = '';
@@ -155,6 +164,18 @@ export class FsManagerPlugin implements IPlugin {
 
     private async watch(path: string, onChange: (event: import('./types.js').FsEvent) => void): Promise<() => void> {
         return this.ensureDriver().watch(path, onChange);
+    }
+
+    private async removeFile(path: string): Promise<void> {
+        return this.ensureDriver().removeFile(path);
+    }
+
+    private async removeDir(path: string, options?: { recursive?: boolean }): Promise<void> {
+        return this.ensureDriver().removeDir(path, options);
+    }
+
+    private async rename(oldPath: string, newPath: string): Promise<void> {
+        return this.ensureDriver().rename(oldPath, newPath);
     }
 }
 

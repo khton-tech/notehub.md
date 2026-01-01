@@ -13,6 +13,7 @@
         "@notehub/bootloader": "workspace:*",
         "@notehub/ck-standard": "workspace:*",
         "@notehub/config-manager": "workspace:*",
+        "@notehub/context-menu": "workspace:*",
         "@notehub/controllers-manager": "workspace:*",
         "@notehub/core": "workspace:*",
         "@notehub/dialog-manager": "workspace:*",

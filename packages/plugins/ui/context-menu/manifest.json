@@ -1,0 +1,10 @@
+{
+    "id": "nh.ui.context-menu",
+    "name": "ContextMenu",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+        "nh.ui.icon-manager",
+        "nh.ui.ck-standard"
+    ]
+}
