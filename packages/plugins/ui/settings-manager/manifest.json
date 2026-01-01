@@ -1,0 +1,12 @@
+{
+    "id": "nh.ui.settings-manager",
+    "name": "SettingsManager",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+        "nh.system.config-manager",
+        "nh.ui.ck-standard",
+        "nh.ui.icon-manager",
+        "nh.ui.dialog-manager"
+    ]
+}

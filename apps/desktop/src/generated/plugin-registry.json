@@ -7,6 +7,7 @@
     "description": "Markdown Editor for Notehub",
     "dependencies": [
       "nh.system.config-manager",
+      "nh.ui.settings-manager",
       "nh.system.fs-manager",
       "nh.system.logger",
       "nh.ui.controllers-manager",
@@ -23,6 +24,7 @@
     "description": "File Explorer for Notehub",
     "dependencies": [
       "nh.system.config-manager",
+      "nh.ui.settings-manager",
       "nh.system.fs-manager",
       "nh.system.logger",
       "nh.ui.controllers-manager",
@@ -109,6 +111,18 @@
       "nh.ui.icon-manager",
       "nh.ui.controllers-manager",
       "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.settings-manager",
+    "name": "SettingsManager",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.config-manager",
+      "nh.ui.ck-standard",
+      "nh.ui.icon-manager",
+      "nh.ui.dialog-manager"
     ]
   },
   {

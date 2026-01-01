@@ -50,3 +50,74 @@ export const EDITOR_CONFIG_DEFAULTS: EditorSettings = {
     wordWrap: true,
     fontSize: 16,
 };
+
+// ============================================================================
+// Settings Manager Integration
+// ============================================================================
+
+import type { NotehubCore } from '@notehub/core';
+
+/**
+ * Register editor settings with settings-manager.
+ * This makes settings appear in the Settings modal UI.
+ * 
+ * @param app - NotehubCore instance
+ */
+export function registerEditorSettings(app: NotehubCore): void {
+    // Register Editor tab
+    app.api.invoke('settings:register-tab', {
+        id: 'editor',
+        label: 'Editor',
+        icon: 'edit-3',
+        order: 10
+    });
+
+    // Register Typography group
+    app.api.invoke('settings:register-group', {
+        id: 'editor-typography',
+        tabId: 'editor',
+        label: 'Typography',
+        order: 10
+    });
+
+    // Register Display group
+    app.api.invoke('settings:register-group', {
+        id: 'editor-display',
+        tabId: 'editor',
+        label: 'Display',
+        order: 20
+    });
+
+    // Register setting items
+    app.api.invoke('settings:register-items', [
+        {
+            key: EDITOR_CONFIG_KEYS.FONT_SIZE,
+            type: 'number',
+            label: 'Font Size',
+            description: 'Editor font size in pixels',
+            groupId: 'editor-typography',
+            order: 10,
+            min: 8,
+            max: 32,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.fontSize
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.SHOW_LINE_NUMBERS,
+            type: 'toggle',
+            label: 'Show Line Numbers',
+            description: 'Display line numbers in the gutter',
+            groupId: 'editor-display',
+            order: 10,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.showLineNumbers
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.WORD_WRAP,
+            type: 'toggle',
+            label: 'Word Wrap',
+            description: 'Wrap long lines to fit the editor width',
+            groupId: 'editor-display',
+            order: 20,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.wordWrap
+        }
+    ]);
+}

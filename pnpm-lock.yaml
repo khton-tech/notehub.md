@@ -65,6 +65,9 @@ importers:
       '@notehub/logger':
         specifier: workspace:*
         version: link:../../packages/plugins/system/logger
+      '@notehub/settings-manager':
+        specifier: workspace:*
+        version: link:../../packages/plugins/ui/settings-manager
       '@notehub/state-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/system/state-manager
@@ -502,6 +505,37 @@ importers:
       '@types/react':
         specifier: ^18.2.0
         version: 18.3.27
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/plugins/ui/settings-manager:
+    dependencies:
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../ck-standard
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+      lucide-react:
+        specifier: ^0.469.0
+        version: 0.469.0(react@18.3.1)
+      react:
+        specifier: ^18.0.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.0.0
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.2.0
+        version: 18.3.7(@types/react@18.3.27)
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10
