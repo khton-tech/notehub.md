@@ -7,3 +7,5 @@ export { EmptySlot } from './EmptySlot';
 export { Checkbox } from './Checkbox';
 export { Toggle, type ToggleProps } from './Toggle';
 export { Select, type SelectProps, type SelectOption } from './Select';
+export { Input, type InputProps } from './Input';
+

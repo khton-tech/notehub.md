@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
-import { Button, Label, Card, StatusBar, RibbonButton, EmptySlot, type StatusBarProps, Toggle, Select } from './components';
+import { Button, Label, Card, StatusBar, RibbonButton, EmptySlot, type StatusBarProps, Toggle, Select, Input } from './components';
 
 export * from './components';
 
@@ -80,6 +80,7 @@ export class CKStandardPlugin implements IPlugin {
         app.api.invoke('controller:register', 'empty-slot', EmptySlot);
         app.api.invoke('controller:register', 'toggle', Toggle);
         app.api.invoke('controller:register', 'select', Select);
+        app.api.invoke('controller:register', 'input', Input);
 
         this.log('info', 'Loaded successfully');
     }

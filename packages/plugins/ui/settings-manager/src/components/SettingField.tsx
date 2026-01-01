@@ -7,9 +7,10 @@
  * @module @notehub/settings-manager/components/SettingField
  */
 
-import { useState, useEffect, useCallback, type FC, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type FC, type ChangeEvent } from 'react';
 import type { NotehubCore } from '@notehub/core';
-import { Toggle, Select } from '@notehub/ck-standard';
+import { Toggle, Select, Input } from '@notehub/ck-standard';
+import { Check } from 'lucide-react';
 import type { SettingsItem } from '../types';
 
 // ============================================================================
@@ -31,33 +32,51 @@ interface SettingFieldProps {
  * SettingField - Renders the appropriate input for a setting item
  * 
  * Features:
- * - Reads initial value from config:get
+ * - Reads initial value from config:get (async)
  * - Subscribes to config:updated events
  * - Renders toggle, text, number, select, or color inputs
  * - Calls config:set on change
+ * - Shows save indicator after value change
  */
 export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
     const [value, setValue] = useState<unknown>(item.defaultValue);
     const [isLoading, setIsLoading] = useState(true);
+    const [showSaved, setShowSaved] = useState(false);
+    const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ========================================================================
-    // Load initial value and subscribe to updates
+    // Load value on mount and subscribe to updates
     // ========================================================================
 
     useEffect(() => {
-        // Load initial value from config
-        const loadValue = () => {
-            const configValue = app.api.invoke('config:get', item.key, item.defaultValue);
-            setValue(configValue);
-            setIsLoading(false);
+        let isMounted = true;
+
+        // Load current value asynchronously
+        const loadValue = async () => {
+            try {
+                const configValue = await app.api.invoke('config:get', item.key);
+                if (isMounted) {
+                    if (configValue !== undefined) {
+                        setValue(configValue);
+                    } else {
+                        setValue(item.defaultValue);
+                    }
+                    setIsLoading(false);
+                }
+            } catch (error) {
+                if (isMounted) {
+                    setValue(item.defaultValue);
+                    setIsLoading(false);
+                }
+            }
         };
 
         loadValue();
 
-        // Subscribe to config updates
+        // Subscribe to config updates (for external changes)
         const handleConfigUpdate = (payload: unknown) => {
             const event = payload as { key: string; value: unknown };
-            if (event.key === item.key) {
+            if (event.key === item.key && isMounted) {
                 setValue(event.value);
             }
         };
@@ -65,7 +84,11 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
         app.events.on('config:updated', handleConfigUpdate);
 
         return () => {
+            isMounted = false;
             app.events.off('config:updated', handleConfigUpdate);
+            if (savedTimeoutRef.current) {
+                clearTimeout(savedTimeoutRef.current);
+            }
         };
     }, [app, item.key, item.defaultValue]);
 
@@ -75,21 +98,39 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
 
     const handleChange = useCallback(async (newValue: unknown) => {
         setValue(newValue);
+
+        // Show saving indicator
+        setShowSaved(false);
+
         await app.api.invoke('config:set', item.key, newValue);
+
+        // Show saved indicator
+        setShowSaved(true);
+
+        // Clear saved indicator after 2 seconds
+        if (savedTimeoutRef.current) {
+            clearTimeout(savedTimeoutRef.current);
+        }
+        savedTimeoutRef.current = setTimeout(() => {
+            setShowSaved(false);
+        }, 2000);
     }, [app, item.key]);
 
     const handleToggle = useCallback(() => {
         handleChange(!value);
     }, [value, handleChange]);
 
-    const handleTextChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-        handleChange(e.target.value);
+    const handleTextChange = useCallback((newValue: string) => {
+        handleChange(newValue);
     }, [handleChange]);
 
-    const handleNumberChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-        const numValue = parseFloat(e.target.value);
+    const handleNumberChange = useCallback((newValue: string) => {
+        const numValue = parseFloat(newValue);
         if (!isNaN(numValue)) {
             handleChange(numValue);
+        } else if (newValue === '') {
+            // Allow empty input temporarily
+            setValue('');
         }
     }, [handleChange]);
 
@@ -104,7 +145,7 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
     const renderInput = () => {
         if (isLoading) {
             return (
-                <div className="h-6 w-20 bg-[var(--nh-bg-main)] rounded animate-pulse" />
+                <div className="h-6 w-20 bg-[var(--nh-bg-secondary)] rounded animate-pulse" />
             );
         }
 
@@ -120,42 +161,24 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
 
             case 'text':
                 return (
-                    <input
+                    <Input
                         type="text"
                         value={String(value ?? '')}
                         onChange={handleTextChange}
                         placeholder={item.placeholder}
-                        className="
-                            w-full max-w-xs px-3 py-1.5 text-sm rounded-md
-                            bg-[var(--nh-bg-main)] border border-[var(--nh-border-secondary)]
-                            text-[var(--nh-text-primary)] placeholder:text-[var(--nh-text-muted)]
-                            focus:outline-none focus:border-[var(--nh-accent-primary)]
-                            focus:ring-1 focus:ring-[var(--nh-accent-primary)]
-                            transition-colors
-                        "
                     />
                 );
 
             case 'number':
                 return (
-                    <input
+                    <Input
                         type="number"
-                        value={typeof value === 'number' ? value : ''}
+                        value={value !== undefined && value !== '' ? String(value) : ''}
                         onChange={handleNumberChange}
                         min={item.min}
                         max={item.max}
                         step={item.step}
-                        placeholder={item.placeholder}
-                        className="
-                            w-24 px-3 py-1.5 text-sm rounded-md
-                            bg-[var(--nh-bg-main)] border border-[var(--nh-border-secondary)]
-                            text-[var(--nh-text-primary)] placeholder:text-[var(--nh-text-muted)]
-                            focus:outline-none focus:border-[var(--nh-accent-primary)]
-                            focus:ring-1 focus:ring-[var(--nh-accent-primary)]
-                            transition-colors
-                            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
-                            [&::-webkit-inner-spin-button]:appearance-none
-                        "
+                        placeholder={item.placeholder ?? String(item.defaultValue ?? '')}
                     />
                 );
 
@@ -187,7 +210,7 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
                             value={String(value ?? '#000000')}
                             onChange={handleColorChange}
                             className="
-                                w-10 h-8 rounded cursor-pointer border border-[var(--nh-border-secondary)]
+                                w-10 h-8 rounded cursor-pointer border border-[var(--nh-border-subtle)]
                                 bg-transparent
                             "
                         />
@@ -214,9 +237,18 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
         <div className="flex items-start justify-between gap-4 py-3 border-b border-[var(--nh-border-subtle)] last:border-0">
             {/* Label & Description */}
             <div className="flex-1 min-w-0">
-                <label className="text-sm font-medium text-[var(--nh-text-primary)]">
-                    {item.label}
-                </label>
+                <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-[var(--nh-text-primary)]">
+                        {item.label}
+                    </label>
+                    {/* Save indicator */}
+                    {showSaved && (
+                        <span className="flex items-center gap-1 text-xs text-green-500 animate-fade-in">
+                            <Check size={12} />
+                            Saved
+                        </span>
+                    )}
+                </div>
                 {item.description && (
                     <p className="mt-0.5 text-xs text-[var(--nh-text-muted)] leading-relaxed">
                         {item.description}

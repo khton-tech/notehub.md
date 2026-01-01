@@ -105,7 +105,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
             </div>
 
             {/* Main Area */}
-            <div style={{ gridArea: 'main' }} className="bg-[var(--nh-bg-main)]">
+            <div style={{ gridArea: 'main' }} className="bg-[var(--nh-bg-main)] p-4 overflow-auto">
                 <Controller type="editor-main" />
             </div>
 
