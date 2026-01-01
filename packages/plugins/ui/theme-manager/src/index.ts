@@ -432,6 +432,33 @@ export class ThemeManagerPlugin implements IPlugin {
     async onReady(app: NotehubCore): Promise<void> {
         // Register Settings (safe to do here as settings-manager is guaranteed to be loaded)
         registerThemeSettings(app);
+
+        // Listen for bulk config reloads (e.g. vault switch)
+        app.events.on('config:reloaded', async () => {
+            this.log('info', 'Config reloaded, refreshing theme...');
+
+            // Re-fetch current theme preference
+            const savedTheme = await app.api.invoke<string | undefined>('config:get', CONFIG_KEY_CURRENT_THEME);
+
+            // If explicit theme set in this vault, use it. Otherwise default to current (or deep-space)
+            // Actually, if we switched vaults, we usually want to respect the new vault's theme or default.
+            // If 'savedTheme' is undefined, it means this vault has no preference. 
+            // We should probably stick to what we have OR reset to default. 
+            // Let's reset to what 'savedTheme' says or 'deep-space' if missing.
+            const newTheme = savedTheme ?? 'deep-space';
+
+            if (newTheme !== this.currentTheme) {
+                await this.handleSet(newTheme);
+            } else {
+                // Even if theme name is same, accent color might have changed
+                let themeName = this.currentTheme;
+                if (themeName === 'system') themeName = this.resolveSystemTheme();
+                const currentPalette = this.themes.get(themeName);
+                if (currentPalette) {
+                    await this.applyTheme(currentPalette);
+                }
+            }
+        });
     }
 
     /**

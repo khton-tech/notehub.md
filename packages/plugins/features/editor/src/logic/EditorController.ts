@@ -140,6 +140,12 @@ export class EditorController {
                 this.handleSettingChange(key, value);
             }
         });
+
+        // Subscribe to bulk config reloads
+        this.app.events.on('config:reloaded', () => {
+            this.log('info', 'Config reloaded, refreshing editor settings...');
+            this.loadSettings();
+        });
     }
 
     // ========== Private Helpers ==========

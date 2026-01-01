@@ -81,11 +81,20 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
             }
         };
 
+        // Subscribe to full config reload (e.g. vault switch)
+        const handleConfigReload = () => {
+            if (isMounted) {
+                loadValue();
+            }
+        };
+
         app.events.on('config:updated', handleConfigUpdate);
+        app.events.on('config:reloaded', handleConfigReload);
 
         return () => {
             isMounted = false;
             app.events.off('config:updated', handleConfigUpdate);
+            app.events.off('config:reloaded', handleConfigReload);
             if (savedTimeoutRef.current) {
                 clearTimeout(savedTimeoutRef.current);
             }
