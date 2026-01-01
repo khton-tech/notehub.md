@@ -91,6 +91,8 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/dialog-manager');
         case '@notehub/layout-manager':
             return import('@notehub/layout-manager');
+        case '@notehub/settings-manager':
+            return import('@notehub/settings-manager');
 
         // Feature plugins
         case '@notehub/vault-picker':

@@ -38,7 +38,7 @@ import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { Icon } from '@notehub/icon-manager';
 import { EditorController } from './logic/EditorController';
 import { NotehubEditor } from './components/NotehubEditor';
-import type { EditorSettings } from './logic/EditorConfig';
+import { registerEditorSettings, type EditorSettings } from './logic/EditorConfig';
 
 /**
  * Payload structure for file selection events
@@ -265,6 +265,9 @@ export class EditorPlugin implements IPlugin {
     async load(app: NotehubCore): Promise<void> {
         this.app = app;
         this.log('info', 'Loading...');
+
+        // Register settings with settings-manager for UI
+        registerEditorSettings(app);
 
         // Create the controller for managing file state and operations
         this.controller = new EditorController(app);

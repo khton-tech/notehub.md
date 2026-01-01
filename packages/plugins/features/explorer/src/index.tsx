@@ -2,6 +2,7 @@
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { ExplorerController } from './logic/ExplorerController';
 import { FileTree } from './components/FileTree';
+import { registerExplorerSettings } from './logic/ExplorerConfig';
 
 export class ExplorerPlugin implements IPlugin {
     readonly manifest: PluginManifest = {
@@ -30,6 +31,9 @@ export class ExplorerPlugin implements IPlugin {
     async load(app: NotehubCore): Promise<void> {
         this.app = app;
         this.log('info', 'Loading...');
+
+        // Register settings with settings-manager for UI
+        registerExplorerSettings(app);
 
         this.controller = new ExplorerController(app);
 

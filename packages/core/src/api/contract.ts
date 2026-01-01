@@ -103,6 +103,73 @@ export interface ThemePalette {
 }
 
 // ============================================================================
+// Settings Manager Types
+// ============================================================================
+
+/**
+ * Available setting input types
+ */
+export type SettingTypeDef = 'toggle' | 'text' | 'number' | 'select' | 'color';
+
+/**
+ * Settings tab definition for API contract
+ */
+export interface SettingsTabDef {
+    /** Unique identifier for the tab */
+    id: string;
+    /** Display label shown in the sidebar */
+    label: string;
+    /** Lucide icon name */
+    icon: string;
+    /** Sort order (lower = first) */
+    order: number;
+}
+
+/**
+ * Settings group definition for API contract
+ */
+export interface SettingsGroupDef {
+    /** Unique identifier for the group */
+    id: string;
+    /** ID of the parent tab */
+    tabId: string;
+    /** Display label/title */
+    label: string;
+    /** Sort order within the tab */
+    order: number;
+}
+
+/**
+ * Settings item definition for API contract
+ */
+export interface SettingsItemDef {
+    /** Configuration key (e.g., 'editor.font-size') */
+    key: string;
+    /** Input type */
+    type: SettingTypeDef;
+    /** Display label */
+    label: string;
+    /** Optional description text */
+    description?: string;
+    /** ID of the parent group */
+    groupId: string;
+    /** Sort order within the group */
+    order: number;
+    /** Options for 'select' type */
+    options?: Array<{ label: string; value: unknown }>;
+    /** Minimum value for 'number' type */
+    min?: number;
+    /** Maximum value for 'number' type */
+    max?: number;
+    /** Step for 'number' type */
+    step?: number;
+    /** Placeholder for 'text' type */
+    placeholder?: string;
+    /** Default value */
+    defaultValue?: unknown;
+}
+
+// ============================================================================
 // NotehubApiMap - The Central API Registry
 // ============================================================================
 
@@ -333,6 +400,40 @@ export interface NotehubApiMap {
 
     /** Close the current vault and return to welcome screen */
     'vault:close': () => Promise<void>;
+
+    // =========================================================================
+    // Settings Manager Plugin (nh.ui.settings-manager)
+    // =========================================================================
+
+    /** Register a settings tab */
+    'settings:register-tab': (tab: SettingsTabDef) => void;
+
+    /** Register a settings group */
+    'settings:register-group': (group: SettingsGroupDef) => void;
+
+    /** Register a settings item */
+    'settings:register-item': (item: SettingsItemDef) => void;
+
+    /** Register multiple tabs at once */
+    'settings:register-tabs': (tabs: SettingsTabDef[]) => void;
+
+    /** Register multiple groups at once */
+    'settings:register-groups': (groups: SettingsGroupDef[]) => void;
+
+    /** Register multiple items at once */
+    'settings:register-items': (items: SettingsItemDef[]) => void;
+
+    /** Get the nested settings structure for rendering */
+    'settings:get-structure': () => unknown;
+
+    /** Open the settings modal */
+    'settings:open': () => void;
+
+    /** Close the settings modal */
+    'settings:close': () => void;
+
+    /** Toggle the settings modal */
+    'settings:toggle': () => void;
 }
 
 // ============================================================================

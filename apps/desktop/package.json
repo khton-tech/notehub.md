@@ -23,6 +23,7 @@
         "@notehub/icon-manager": "workspace:*",
         "@notehub/layout-manager": "workspace:*",
         "@notehub/logger": "workspace:*",
+        "@notehub/settings-manager": "workspace:*",
         "@notehub/state-manager": "workspace:*",
         "@notehub/theme-manager": "workspace:*",
         "@notehub/vault-picker": "workspace:*",

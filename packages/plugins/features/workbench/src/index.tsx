@@ -1,6 +1,7 @@
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { RibbonPlaceholder, EditorPlaceholder } from './components/Placeholders';
 import { VaultSwitchButton } from './components/VaultSwitchButton';
+import { SettingsButton } from './components/SettingsButton';
 
 export class WorkbenchPlugin implements IPlugin {
     readonly manifest: PluginManifest = {
@@ -37,6 +38,10 @@ export class WorkbenchPlugin implements IPlugin {
 
         // Register ribbon-bottom controller (Close Vault button)
         app.api.invoke('controller:register', 'ribbon-bottom', VaultSwitchButton);
+
+        // Register settings button
+        app.api.invoke('controller:register', 'settings-button', SettingsButton);
+        app.api.invoke('zone:register', 'ribbon-bottom', { component: 'settings-button', priority: 0 });
 
         // Auto-Login Check
         try {

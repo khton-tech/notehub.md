@@ -7,6 +7,7 @@
     "description": "Markdown Editor for Notehub",
     "dependencies": [
       "nh.system.config-manager",
+      "nh.ui.settings-manager",
       "nh.system.fs-manager",
       "nh.system.logger",
       "nh.ui.controllers-manager",
@@ -23,6 +24,7 @@
     "description": "File Explorer for Notehub",
     "dependencies": [
       "nh.system.config-manager",
+      "nh.ui.settings-manager",
       "nh.system.fs-manager",
       "nh.system.logger",
       "nh.ui.controllers-manager",
@@ -56,69 +58,6 @@
       "nh.ui.ck-standard",
       "nh.system.state-manager",
       "nh.features.explorer"
-    ]
-  },
-  {
-    "id": "nh.ui.ck-standard",
-    "name": "CKStandard",
-    "version": "1.0.0",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.icon-manager",
-      "nh.ui.theme-manager"
-    ]
-  },
-  {
-    "id": "nh.ui.controllers-manager",
-    "name": "ControllersManager",
-    "version": "1.0.0",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
-    "id": "nh.ui.dialog-manager",
-    "name": "DialogManager",
-    "version": "1.0.0",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.ui.ck-standard"
-    ]
-  },
-  {
-    "id": "nh.ui.icon-manager",
-    "name": "IconManager",
-    "version": "1.0.0",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
-    "id": "nh.ui.layout-manager",
-    "name": "LayoutManager",
-    "version": "0.0.0",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.ui.theme-manager",
-      "nh.ui.icon-manager",
-      "nh.ui.controllers-manager",
-      "nh.ui.ck-standard"
-    ]
-  },
-  {
-    "id": "nh.ui.theme-manager",
-    "name": "ThemeManager",
-    "version": "0.0.0",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.system.config-manager"
     ]
   },
   {
@@ -175,6 +114,81 @@
     "description": "Runtime session state storage (non-persistent)",
     "dependencies": [
       "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.ui.ck-standard",
+    "name": "CKStandard",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.controllers-manager",
+    "name": "ControllersManager",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.ui.dialog-manager",
+    "name": "DialogManager",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.icon-manager",
+    "name": "IconManager",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.ui.layout-manager",
+    "name": "LayoutManager",
+    "version": "0.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.theme-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.controllers-manager",
+      "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.settings-manager",
+    "name": "SettingsManager",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.config-manager",
+      "nh.ui.ck-standard",
+      "nh.ui.icon-manager",
+      "nh.ui.dialog-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.theme-manager",
+    "name": "ThemeManager",
+    "version": "0.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.system.config-manager"
     ]
   }
 ]
