@@ -13,7 +13,7 @@ import type { MenuItem } from '@notehub/context-menu';
  */
 export interface ExplorerItemPayload {
     path: string;
-    kind: 'file' | 'directory';
+    isDir: boolean;
 }
 
 /**
@@ -42,7 +42,7 @@ export function registerExplorerMenus(
         const items: MenuItem[] = [];
 
         // File-specific items first
-        if (payload.kind === 'file') {
+        if (!payload.isDir) {
             // Files just get rename and delete
             items.push(
                 {

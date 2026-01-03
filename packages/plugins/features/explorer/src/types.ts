@@ -1,8 +1,20 @@
+/**
+ * FileNode interface for react-arborist
+ * 
+ * The library expects:
+ * - `id`: unique identifier (we use full path)
+ * - `name`: display name
+ * - `children`: optional array for tree structure
+ */
 export interface FileNode {
-    path: string;
+    /** Full path - used as unique identifier by react-arborist */
+    id: string;
+    /** Filename for display */
     name: string;
-    kind: 'file' | 'directory';
-    children?: FileNode[]; // For loaded folders
-    isLoaded?: boolean;    // Flag, whether contents are loaded
-    isExpanded?: boolean;  // UI state for expansion
+    /** Is this a directory? */
+    isDir: boolean;
+    /** Child nodes for directories */
+    children?: FileNode[];
+    /** Flag: whether directory contents are loaded */
+    isLoaded?: boolean;
 }
