@@ -94,4 +94,25 @@ export interface IFileSystem {
      * @returns Function to stop watching
      */
     watch(path: string, onChange: (event: FsEvent) => void): Promise<() => void>;
+
+    /**
+     * Remove a file
+     * @param path - Absolute path to the file
+     */
+    removeFile(path: string): Promise<void>;
+
+    /**
+     * Remove a directory
+     * @param path - Absolute path to the directory
+     * @param options - Removal options (recursive)
+     */
+    removeDir(path: string, options?: { recursive?: boolean }): Promise<void>;
+
+    /**
+     * Rename/move a file or directory
+     * @param oldPath - Current path
+     * @param newPath - New path
+     */
+    rename(oldPath: string, newPath: string): Promise<void>;
 }
+

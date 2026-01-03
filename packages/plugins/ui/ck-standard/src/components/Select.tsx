@@ -94,7 +94,7 @@ export const Select: React.FC<SelectProps> = ({
                         ? 'border-[var(--nh-accent-primary)] ring-1 ring-[var(--nh-accent-primary)]'
                         : 'border-[var(--nh-border-subtle)] hover:border-[var(--nh-text-muted)]'
                     }
-                    bg-[var(--nh-bg-secondary)] text-[var(--nh-text-primary)]
+                    bg-[var(--nh-bg-secondary,#2a2a2a)] text-[var(--nh-text-primary)]
                     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
             >

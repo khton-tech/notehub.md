@@ -126,6 +126,47 @@ export class EditorController {
     /** Listeners for settings changes (UI re-render trigger) */
     private settingsListeners: Set<(settings: EditorSettings) => void> = new Set();
 
+    // ========== Bound Event Handlers (for unsubscription) ==========
+
+    /** Bound handler for fs:deleted events */
+    private readonly handleFsDeleted = (payload: { path: string; isDirectory: boolean }): void => {
+        if (!this.currentPath) return;
+
+        const { path, isDirectory } = payload;
+
+        // Check if current file was deleted, or parent folder was deleted
+        if (this.currentPath === path ||
+            (isDirectory && this.currentPath.startsWith(path + '/')) ||
+            (isDirectory && this.currentPath.startsWith(path + '\\'))) {
+            this.log('info', `Active file deleted externally: ${path}`);
+            this.closeFile();
+        }
+    };
+
+    /** Bound handler for fs:renamed events */
+    private readonly handleFsRenamed = (payload: { oldPath: string; newPath: string }): void => {
+        if (!this.currentPath) return;
+
+        const { oldPath, newPath } = payload;
+
+        // Direct file rename
+        if (this.currentPath === oldPath) {
+            this.log('info', `Active file renamed: ${oldPath} -> ${newPath}`);
+            this.currentPath = newPath;
+            this.app.events.emit('editor:path-changed', { oldPath, newPath });
+            return;
+        }
+
+        // Parent folder renamed (need to update path)
+        if (this.currentPath.startsWith(oldPath + '/') ||
+            this.currentPath.startsWith(oldPath + '\\')) {
+            const relativePart = this.currentPath.slice(oldPath.length);
+            this.currentPath = newPath + relativePart;
+            this.log('info', `Parent renamed, new path: ${this.currentPath}`);
+            this.app.events.emit('editor:path-changed', { oldPath, newPath: this.currentPath });
+        }
+    };
+
     /**
      * Create a new EditorController
      * @param app - The NotehubCore instance for API and event access
@@ -146,6 +187,10 @@ export class EditorController {
             this.log('info', 'Config reloaded, refreshing editor settings...');
             this.loadSettings();
         });
+
+        // Subscribe to FS events for sync with Explorer
+        this.app.events.on('fs:deleted', this.handleFsDeleted as (payload: unknown) => void);
+        this.app.events.on('fs:renamed', this.handleFsRenamed as (payload: unknown) => void);
     }
 
     // ========== Private Helpers ==========
@@ -509,6 +554,41 @@ export class EditorController {
         }
     }
 
+    // ========== File Close ==========
+
+    /**
+     * Close the current file and clear editor state.
+     * 
+     * This method:
+     * 1. Clears any pending debounce timer
+     * 2. Clears file state (path, content, dirty flag)
+     * 3. Updates status bar to "No file open"
+     * 4. Emits `editor:file-closed` event for UI
+     * 
+     * Called when the active file is deleted externally.
+     */
+    closeFile(): void {
+        // Clear pending save timer
+        if (this.saveTimeoutId !== null) {
+            clearTimeout(this.saveTimeoutId);
+            this.saveTimeoutId = null;
+        }
+
+        // Clear state
+        this.currentPath = null;
+        this.originalContent = '';
+        this.isDirty = false;
+        this.status = 'idle';
+
+        // Update status bar
+        this.emitStatusReport('ready', 'No file open');
+
+        // Notify UI
+        this.app.events.emit('editor:file-closed', {});
+
+        this.log('info', 'File closed');
+    }
+
     // ========== Lifecycle ==========
 
     /**
@@ -522,6 +602,10 @@ export class EditorController {
      * Called during plugin unload.
      */
     dispose(): void {
+        // Unsubscribe from FS events
+        this.app.events.off('fs:deleted', this.handleFsDeleted as (payload: unknown) => void);
+        this.app.events.off('fs:renamed', this.handleFsRenamed as (payload: unknown) => void);
+
         // Clear pending save timer
         if (this.saveTimeoutId !== null) {
             clearTimeout(this.saveTimeoutId);

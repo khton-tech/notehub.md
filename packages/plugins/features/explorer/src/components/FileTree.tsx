@@ -1,15 +1,16 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { ExplorerController } from '../logic/ExplorerController';
 import { FileTreeItem } from './FileTreeItem';
 import type { FileNode } from '../types';
+import { Menu, MenuItem, MenuSeparator } from '@notehub/ck-standard';
+import { Icon } from '@notehub/icon-manager';
+import { useNotehub } from '@notehub/core';
+
 
 interface FileTreeProps {
     controller: ExplorerController;
     defaultPath?: string;
 }
-
-import { Button, Card } from '@notehub/ck-standard';
-import { Icon } from '@notehub/icon-manager';
 
 /**
  * Flatten the tree to get an array of visible nodes for keyboard navigation
@@ -39,11 +40,15 @@ function flattenTree(node: FileNode | null): FileNode[] {
 }
 
 export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) => {
+    const app = useNotehub();
     const [rootNode, setRootNode] = useState<FileNode | null>(controller.getTree());
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
     const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+    const [activeFilePath, setActiveFilePath] = useState<string | null>(controller.activeFilePath);
+    const [renamingPath, setRenamingPath] = useState<string | null>(controller.renamingPath);
     const [showNewMenu, setShowNewMenu] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (defaultPath) {
@@ -56,6 +61,9 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 const newVal = controller.getTree();
                 return newVal ? { ...newVal } : null;
             });
+            setActiveFilePath(controller.activeFilePath);
+            setRenamingPath(controller.renamingPath);
+            setSelectedPath(controller.selectedPath);
         });
 
         return () => {
@@ -63,37 +71,72 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         };
     }, [controller, defaultPath]);
 
-    const flatNodes = flattenTree(rootNode);
+    // Click-away handler for popup menu
+    useEffect(() => {
+        if (!showNewMenu) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setShowNewMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showNewMenu]);
+
+    const flatNodes = useMemo(() => flattenTree(rootNode), [rootNode]);
 
     const handleToggle = useCallback((path: string) => {
         controller.toggleDir(path);
     }, [controller]);
 
     const handleSelect = useCallback((path: string) => {
-        setSelectedPath(path);
         // Update focused index to match selected
         const idx = flatNodes.findIndex(n => n.path === path);
         if (idx !== -1) setFocusedIndex(idx);
-        // Emit via EventBus through controller
-        controller.selectFile(path);
+        // Delegate selection logic to controller
+        controller.selectItem(path);
     }, [flatNodes, controller]);
+
+    const handleRenameSubmit = useCallback((oldPath: string, newName: string) => {
+        controller.submitRename(oldPath, newName);
+    }, [controller]);
+
+    const handleRenameCancel = useCallback(() => {
+        controller.cancelRename();
+    }, [controller]);
 
     const handleCreateNote = () => {
         if (rootNode) {
-            controller.createNote(rootNode.path);
+            controller.createNote();
             setShowNewMenu(false);
         }
     };
 
     const handleCreateFolder = () => {
         if (rootNode) {
-            controller.createFolder(rootNode.path);
+            controller.createFolder();
             setShowNewMenu(false);
+        }
+    };
+
+    const handleRootContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (rootNode) {
+            app.api.invoke(
+                'context-menu:trigger' as any,
+                e.nativeEvent,
+                'explorer-root',
+                { path: rootNode.path }
+            );
         }
     };
 
     // Keyboard navigation handler
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        // Don't handle keyboard navigation while renaming
+        if (renamingPath) return;
         if (flatNodes.length === 0) return;
 
         switch (e.key) {
@@ -111,6 +154,8 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 const focusedNode = flatNodes[focusedIndex];
                 if (focusedNode) {
                     if (focusedNode.kind === 'directory') {
+                        // Enter on directory toggles expanded state AND selects it
+                        handleSelect(focusedNode.path);
                         handleToggle(focusedNode.path);
                     } else {
                         handleSelect(focusedNode.path);
@@ -134,6 +179,24 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 }
                 break;
             }
+            case 'F2': {
+                // Start rename on F2
+                e.preventDefault();
+                const focusedNode = flatNodes[focusedIndex];
+                if (focusedNode) {
+                    controller.setRenaming(focusedNode.path);
+                }
+                break;
+            }
+            case 'Delete': {
+                // Delete on Delete key
+                e.preventDefault();
+                const focusedNode = flatNodes[focusedIndex];
+                if (focusedNode) {
+                    controller.deleteItem(focusedNode.path);
+                }
+                break;
+            }
             case 'Home':
                 e.preventDefault();
                 setFocusedIndex(0);
@@ -143,7 +206,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 setFocusedIndex(flatNodes.length - 1);
                 break;
         }
-    }, [flatNodes, focusedIndex, handleToggle, handleSelect]);
+    }, [flatNodes, focusedIndex, handleToggle, handleSelect, controller, renamingPath]);
 
     // Get focused path
     const focusedPath = focusedIndex >= 0 && focusedIndex < flatNodes.length
@@ -157,14 +220,17 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
     return (
         <div className="w-full h-full flex flex-col select-none">
             {/* Header / Toolbar */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-color)] bg-[var(--nh-bg-secondary)]">
+            <div
+                className="flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-subtle,#333333)] bg-[var(--nh-bg-secondary,#2a2a2a)]"
+                onContextMenu={handleRootContextMenu}
+            >
                 <span className="text-xs font-bold uppercase tracking-wider text-[var(--nh-text-muted)] truncate select-none" title={rootNode.name}>
                     {rootNode.name}
                 </span>
 
                 <div className="relative">
                     <button
-                        className="p-1 rounded hover:bg-[var(--nh-bg-hover)] text-[var(--nh-text-secondary)] transition-colors"
+                        className="p-1 rounded hover:bg-[var(--nh-bg-hover,#3a3a3a)] text-[var(--nh-text-secondary,#a0a0a0)] transition-colors"
                         onClick={() => setShowNewMenu(!showNewMenu)}
                         title="Create New..."
                     >
@@ -173,30 +239,18 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
 
                     {/* Popup Menu */}
                     {showNewMenu && (
-                        <div className="absolute right-0 top-full mt-1 z-50">
-                            <Card className="w-48 p-1 flex flex-col gap-0.5 shadow-xl border-[var(--nh-border-color)]">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="justify-start px-2 h-8 text-xs font-normal w-full whitespace-nowrap"
-                                    onClick={handleCreateNote}
-                                >
-                                    <Icon name="file" size={16} className="mr-3 text-[var(--nh-text-secondary)]" />
+                        <div ref={menuRef} className="absolute right-0 top-full mt-1 z-50">
+                            <Menu className="w-40 bg-[var(--nh-bg-surface,#2a2a2a)] border-[var(--nh-border-subtle,#333333)]">
+                                <MenuItem onClick={handleCreateNote} icon={<Icon name="file" size={14} />}>
                                     New Note
-                                </Button>
+                                </MenuItem>
 
-                                <div className="h-px bg-[var(--nh-border-color)] mx-1 my-0.5" />
+                                <MenuSeparator className="bg-[var(--nh-border-subtle,#333333)]" />
 
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="justify-start px-2 h-8 text-xs font-normal w-full whitespace-nowrap"
-                                    onClick={handleCreateFolder}
-                                >
-                                    <Icon name="folder" size={16} className="mr-3 text-[var(--nh-text-secondary)]" />
+                                <MenuItem onClick={handleCreateFolder} icon={<Icon name="folder" size={14} />}>
                                     New Folder
-                                </Button>
-                            </Card>
+                                </MenuItem>
+                            </Menu>
                         </div>
                     )}
                 </div>
@@ -208,6 +262,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 className="flex-1 overflow-y-auto overflow-x-hidden py-1 outline-none"
                 onClick={() => setShowNewMenu(false)}
                 onKeyDown={handleKeyDown}
+                onContextMenu={handleRootContextMenu}
                 tabIndex={0}
                 role="tree"
                 aria-label="File explorer"
@@ -221,6 +276,10 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                         onSelect={handleSelect}
                         selectedPath={selectedPath}
                         focusedPath={focusedPath}
+                        activeFilePath={activeFilePath}
+                        renamingPath={renamingPath}
+                        onRenameSubmit={handleRenameSubmit}
+                        onRenameCancel={handleRenameCancel}
                     />
                 ))}
 
@@ -233,4 +292,3 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         </div>
     );
 };
-

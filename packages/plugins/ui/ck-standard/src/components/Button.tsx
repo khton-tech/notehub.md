@@ -48,7 +48,6 @@ const iconSizes: Record<string, number> = {
  */
 const variantClasses: Record<string, string> = {
     primary: 'bg-[var(--nh-accent-primary,#6b5ce7)] text-[var(--nh-button-text,#ffffff)] border-none',
-    purple: 'bg-[var(--nh-accent-primary,#6b5ce7)] text-[var(--nh-button-text,#ffffff)] border-none',
     secondary: 'bg-[var(--nh-accent-secondary,#3a3a3a)] text-[var(--nh-text-primary,#e0e0e0)] border-none',
     ghost: 'bg-transparent text-[var(--nh-text-primary,#e0e0e0)] border-none',
     danger: 'bg-[var(--nh-danger,#dc2626)] text-[var(--nh-button-text,#ffffff)] border-none',

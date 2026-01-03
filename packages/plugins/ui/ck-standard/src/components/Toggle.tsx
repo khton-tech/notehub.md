@@ -82,8 +82,8 @@ export const Toggle: React.FC<ToggleProps> = ({
                 focus:outline-none focus:ring-2 focus:ring-[var(--nh-accent-primary)] focus:ring-offset-2
                 focus:ring-offset-[var(--nh-bg-surface)]
                 ${checked
-                    ? 'bg-[var(--nh-accent-primary)]'
-                    : 'bg-[var(--nh-border-secondary)]'
+                    ? 'bg-[var(--nh-accent-primary,#6b5ce7)]'
+                    : 'bg-[var(--nh-border-secondary,#3a3a3a)]'
                 }
                 ${disabled
                     ? 'opacity-50 cursor-not-allowed'

@@ -19,7 +19,7 @@
   {
     "id": "nh.features.explorer",
     "name": "Explorer",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "type": "features",
     "description": "File Explorer for Notehub",
     "dependencies": [
@@ -29,7 +29,9 @@
       "nh.system.logger",
       "nh.ui.controllers-manager",
       "nh.ui.icon-manager",
-      "nh.ui.theme-manager"
+      "nh.ui.theme-manager",
+      "nh.ui.context-menu",
+      "nh.ui.dialog-manager"
     ]
   },
   {
@@ -70,6 +72,16 @@
       "nh.ui.controllers-manager",
       "nh.ui.icon-manager",
       "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.context-menu",
+    "name": "ContextMenu",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.ui.icon-manager",
+      "nh.ui.ck-standard"
     ]
   },
   {

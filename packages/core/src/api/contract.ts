@@ -86,6 +86,8 @@ export interface ThemePalette {
     'bg-main': string;
     'bg-sidebar': string;
     'bg-surface': string;
+    'bg-secondary': string;
+    'bg-hover': string;
     'accent-primary': string;
     'accent-secondary': string;
     'border-accent': string;
@@ -285,6 +287,15 @@ export interface NotehubApiMap {
 
     /** Watch a path for changes */
     'fs:watch': (path: string, onChange: (event: FsEvent) => void) => Promise<() => void>;
+
+    /** Remove a file */
+    'fs:remove-file': (path: string) => Promise<void>;
+
+    /** Remove a directory */
+    'fs:remove-dir': (path: string, options?: { recursive?: boolean }) => Promise<void>;
+
+    /** Rename/move a file or directory */
+    'fs:rename': (oldPath: string, newPath: string) => Promise<void>;
 
     // =========================================================================
     // Layout Manager Plugin (nh.ui.layout-manager)
