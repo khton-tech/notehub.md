@@ -1,6 +1,7 @@
 import { NotehubCore } from '@notehub/core';
 import type { FsEvent, DirEntry } from '@notehub/fs-manager';
 import type { FileNode } from '../types';
+import { normalizePath, getParentPath, joinPath, getFileName } from './pathUtils';
 
 /** Config key for show-hidden setting */
 const EXPLORER_CONFIG_KEY_SHOW_HIDDEN = 'explorer.show-hidden';
@@ -27,6 +28,9 @@ export class ExplorerController {
 
     // Event cleanup functions
     private eventCleanups: Array<() => void> = [];
+
+    // Rename operation queue to prevent race conditions
+    private pendingRename: Promise<boolean> | null = null;
 
     constructor(app: NotehubCore) {
         this.app = app;
@@ -161,15 +165,27 @@ export class ExplorerController {
             return false;
         }
 
-        // Calculate new path
-        const separator = oldPath.includes('\\') ? '\\' : '/';
-        const lastIndex = oldPath.lastIndexOf(separator);
-        const parentPath = lastIndex !== -1 ? oldPath.substring(0, lastIndex) : '';
-        const newPath = parentPath ? `${parentPath}/${newName}` : newName;
-        const normalizedNewPath = newPath.replace(/\\/g, '/').replace(/\/\//g, '/');
+        // Wait for any pending rename to complete (prevents race condition)
+        if (this.pendingRename) {
+            await this.pendingRename;
+        }
+
+        this.pendingRename = this._doRename(oldPath, newName.trim());
+        const result = await this.pendingRename;
+        this.pendingRename = null;
+        return result;
+    }
+
+    /**
+     * Internal rename implementation
+     */
+    private async _doRename(oldPath: string, newName: string): Promise<boolean> {
+        // Calculate new path using path utilities
+        const parentPath = getParentPath(oldPath);
+        const newPath = joinPath(parentPath, newName);
 
         try {
-            await this.app.api.invoke('fs:rename' as any, oldPath, normalizedNewPath);
+            await this.app.api.invoke('fs:rename' as any, oldPath, newPath);
 
             // --- Optimistic Update ---
 
@@ -178,7 +194,7 @@ export class ExplorerController {
             if (node) {
                 node.name = newName;
                 // Recursively update paths in the tree map
-                this.updateNodePath(oldPath, normalizedNewPath);
+                this.updateNodePath(oldPath, newPath);
 
                 // 2. Update parent's reference
                 const parentNode = this.nodes.get(parentPath);
@@ -194,8 +210,8 @@ export class ExplorerController {
             }
 
             // 3. Update active/selected/renaming references
-            if (this._activeFilePath === oldPath) this._activeFilePath = normalizedNewPath;
-            if (this._selectedPath === oldPath) this._selectedPath = normalizedNewPath;
+            if (this._activeFilePath === oldPath) this._activeFilePath = newPath;
+            if (this._selectedPath === oldPath) this._selectedPath = newPath;
             this._renamingPath = null;
 
             this.notify();
@@ -257,14 +273,18 @@ export class ExplorerController {
     // ========== Delete ==========
 
     /**
-     * Delete an item with confirmation
-     */
-    /**
-     * Delete an item with confirmation
+     * Delete an item with confirmation (Optimistic UI)
+     * 
+     * Strategy:
+     * 1. Confirm with user
+     * 2. Backup affected nodes
+     * 3. IMMEDIATELY update UI (optimistic)
+     * 4. Perform FS operation in background
+     * 5. On error: rollback from backup
      */
     async deleteItem(path: string): Promise<boolean> {
         const node = this.nodes.get(path);
-        const itemName = node?.name || path.split(/[\\/]/).pop() || path;
+        const itemName = node?.name || getFileName(path);
         const isDirectory = node?.kind === 'directory';
 
         const confirmed = await this.app.api.invoke<boolean>(
@@ -277,49 +297,80 @@ export class ExplorerController {
             return false;
         }
 
+        // --- Backup for rollback ---
+        const parentPath = getParentPath(path);
+        const parentNode = this.nodes.get(parentPath);
+        const backupParentChildren = parentNode?.children ? [...parentNode.children] : null;
+        const backupNodes = new Map<string, FileNode>();
+
+        // Collect all nodes that will be deleted (for potential rollback)
+        const collectNodes = (targetPath: string) => {
+            const targetNode = this.nodes.get(targetPath);
+            if (targetNode) {
+                backupNodes.set(targetPath, { ...targetNode });
+                if (targetNode.children) {
+                    targetNode.children.forEach(child => collectNodes(child.path));
+                }
+            }
+        };
+        collectNodes(path);
+
+        // --- OPTIMISTIC UPDATE: Update UI IMMEDIATELY ---
+
+        // 1. Remove from parent's children list
+        if (parentNode && parentNode.children) {
+            parentNode.children = parentNode.children.filter(c => c.path !== path);
+        }
+
+        // 2. Remove from nodes map (recursive for directories)
+        const deleteFromMap = (targetPath: string) => {
+            const targetNode = this.nodes.get(targetPath);
+            if (targetNode && targetNode.children) {
+                targetNode.children.forEach(child => deleteFromMap(child.path));
+            }
+            this.nodes.delete(targetPath);
+            this.expandedPaths.delete(targetPath);
+        };
+        deleteFromMap(path);
+
+        // 3. Update state references
+        if (this._activeFilePath === path) this._activeFilePath = null;
+        if (this._selectedPath === path) this._selectedPath = null;
+        if (this._renamingPath === path) this._renamingPath = null;
+
+        // 4. Notify UI immediately (no waiting for FS!)
+        this.notify();
+
+        // --- FS Operation (background) ---
         try {
             if (isDirectory) {
                 await this.app.api.invoke('fs:remove-dir' as any, path, { recursive: true });
             } else {
                 await this.app.api.invoke('fs:remove-file' as any, path);
             }
-
-            // --- Optimistic Update ---
-
-            // 1. Remove from parent's children list
-            const parentPath = path.substring(0, path.lastIndexOf('/'));
-            const parentNode = this.nodes.get(parentPath);
-            if (parentNode && parentNode.children) {
-                parentNode.children = parentNode.children.filter(c => c.path !== path);
-            }
-
-            // 2. Remove from nodes map (recursive for directories)
-            const deleteRecursively = (targetPath: string) => {
-                const targetNode = this.nodes.get(targetPath);
-                if (targetNode && targetNode.children) {
-                    targetNode.children.forEach(child => deleteRecursively(child.path));
-                }
-                this.nodes.delete(targetPath);
-                this.expandedPaths.delete(targetPath);
-            };
-            deleteRecursively(path);
-
-            // 3. Update state references
-            if (this._activeFilePath === path) this._activeFilePath = null;
-            if (this._selectedPath === path) this._selectedPath = null;
-            if (this._renamingPath === path) this._renamingPath = null;
-
-            this.notify();
+            // Success - nothing more to do, UI already updated
             return true;
         } catch (error: any) {
             console.error('Failed to delete:', error);
+
+            // --- ROLLBACK: Restore from backup ---
+            // Restore nodes
+            backupNodes.forEach((backupNode, nodePath) => {
+                this.nodes.set(nodePath, backupNode);
+            });
+
+            // Restore parent's children
+            if (parentNode && backupParentChildren) {
+                parentNode.children = backupParentChildren;
+            }
+
+            this.notify();
+
             await this.app.api.invoke(
                 'dialog:alert',
                 'Delete Failed',
                 `Failed to delete: ${error?.message || error}`
             );
-            // Revert/Reload on error to ensure consistency
-            if (this.rootPath) await this.loadDir(this.rootPath);
             return false;
         }
     }
@@ -337,7 +388,7 @@ export class ExplorerController {
         // Create root node
         const rootNode: FileNode = {
             path,
-            name: path.split(/[\\/]/).pop() || path,
+            name: getFileName(path),
             kind: 'directory',
             isLoaded: false,
             isExpanded: true
@@ -371,7 +422,7 @@ export class ExplorerController {
             });
 
             const children: FileNode[] = visibleEntries.map(entry => {
-                const childPath = `${path}/${entry.name}`.replace(/\\/g, '/').replace(/\/\//g, '/');
+                const childPath = joinPath(path, entry.name);
 
                 // Check if node already exists to preserve state
                 const existingNode = this.nodes.get(childPath);
@@ -432,29 +483,16 @@ export class ExplorerController {
     }
 
     handleFsEvent(event: FsEvent) {
-        const separator = event.path.includes('\\') ? '\\' : '/';
-        const lastIndex = event.path.lastIndexOf(separator);
-
-        let parentPath = '';
-        if (lastIndex !== -1) {
-            parentPath = event.path.substring(0, lastIndex).replace(/\\/g, '/');
-        }
-
-        if (!this.nodes.has(parentPath)) {
-            const normalizedEventPath = event.path.replace(/\\/g, '/');
-            const lastSlash = normalizedEventPath.lastIndexOf('/');
-            if (lastSlash !== -1) {
-                parentPath = normalizedEventPath.substring(0, lastSlash);
-            }
-        }
+        let parentPath = getParentPath(event.path);
+        const normalizedRootPath = this.rootPath ? normalizePath(this.rootPath) : '';
 
         if (this.nodes.has(parentPath)) {
             const parentNode = this.nodes.get(parentPath);
             if (parentNode && (parentNode.isLoaded || parentNode.isExpanded)) {
                 this.loadDir(parentPath);
             }
-        } else if (this.rootPath && (parentPath === this.rootPath.replace(/\\/g, '/'))) {
-            this.loadDir(this.rootPath);
+        } else if (parentPath === normalizedRootPath) {
+            this.loadDir(this.rootPath!);
         }
     }
 
@@ -486,16 +524,19 @@ export class ExplorerController {
         // If path is a file, use its parent
         const node = this.nodes.get(parentPath);
         if (node && node.kind === 'file') {
-            const separator = parentPath.includes('\\') ? '\\' : '/';
-            const lastIndex = parentPath.lastIndexOf(separator);
-            if (lastIndex !== -1) {
-                parentPath = parentPath.substring(0, lastIndex);
-            }
+            parentPath = getParentPath(parentPath);
+        }
+
+        // Expand parent folder if collapsed (so user sees the new file)
+        const parentNode = this.nodes.get(parentPath);
+        if (parentNode && parentNode.kind === 'directory' && !this.expandedPaths.has(parentPath)) {
+            this.expandedPaths.add(parentPath);
+            parentNode.isExpanded = true;
         }
 
         try {
             const name = await this.findUniqueName(parentPath, 'Untitled Note', '.md');
-            const fullPath = `${parentPath}/${name}`.replace(/\\/g, '/').replace(/\/\//g, '/');
+            const fullPath = joinPath(parentPath, name);
 
             await this.app.api.invoke('fs:write-text-file', fullPath, '');
             // Reveal the new file
@@ -504,6 +545,10 @@ export class ExplorerController {
             // Select and start renaming
             this._selectedPath = fullPath;
             this.setRenaming(fullPath);
+
+            // Open file in editor immediately for instant editing
+            this.app.events.emit('explorer:file-selected', { path: fullPath });
+
             this.notify();
         } catch (error) {
             console.error('Failed to create note', error);
@@ -518,22 +563,24 @@ export class ExplorerController {
         // If path is a file, use its parent
         const node = this.nodes.get(parentPath);
         if (node && node.kind === 'file') {
-            const separator = parentPath.includes('\\') ? '\\' : '/';
-            const lastIndex = parentPath.lastIndexOf(separator);
-            if (lastIndex !== -1) {
-                parentPath = parentPath.substring(0, lastIndex);
-            }
+            parentPath = getParentPath(parentPath);
+        }
+
+        // Expand parent folder if collapsed (so user sees the new folder)
+        const parentNode = this.nodes.get(parentPath);
+        if (parentNode && parentNode.kind === 'directory' && !this.expandedPaths.has(parentPath)) {
+            this.expandedPaths.add(parentPath);
+            parentNode.isExpanded = true;
         }
 
         try {
             const name = await this.findUniqueName(parentPath, 'New Folder');
-            const fullPath = `${parentPath}/${name}`.replace(/\\/g, '/').replace(/\/\//g, '/');
+            const fullPath = joinPath(parentPath, name);
 
             await this.app.api.invoke('fs:create-dir', fullPath);
             await this.loadDir(parentPath);
 
             // Select and start renaming
-            // For folder, we might want to expand parent first? Handled by loadDir usually if structure allows.
             this._selectedPath = fullPath;
             this.setRenaming(fullPath);
             this.notify();

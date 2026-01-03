@@ -167,15 +167,21 @@ export class FsManagerPlugin implements IPlugin {
     }
 
     private async removeFile(path: string): Promise<void> {
-        return this.ensureDriver().removeFile(path);
+        await this.ensureDriver().removeFile(path);
+        // Emit event for subscribers (e.g., Editor)
+        this.app?.events.emit('fs:deleted', { path, isDirectory: false });
     }
 
     private async removeDir(path: string, options?: { recursive?: boolean }): Promise<void> {
-        return this.ensureDriver().removeDir(path, options);
+        await this.ensureDriver().removeDir(path, options);
+        // Emit event for subscribers
+        this.app?.events.emit('fs:deleted', { path, isDirectory: true });
     }
 
     private async rename(oldPath: string, newPath: string): Promise<void> {
-        return this.ensureDriver().rename(oldPath, newPath);
+        await this.ensureDriver().rename(oldPath, newPath);
+        // Emit event for subscribers
+        this.app?.events.emit('fs:renamed', { oldPath, newPath });
     }
 }
 

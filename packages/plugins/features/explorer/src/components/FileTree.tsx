@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { ExplorerController } from '../logic/ExplorerController';
 import { FileTreeItem } from './FileTreeItem';
 import type { FileNode } from '../types';
@@ -48,6 +48,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
     const [renamingPath, setRenamingPath] = useState<string | null>(controller.renamingPath);
     const [showNewMenu, setShowNewMenu] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (defaultPath) {
@@ -70,7 +71,21 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
         };
     }, [controller, defaultPath]);
 
-    const flatNodes = flattenTree(rootNode);
+    // Click-away handler for popup menu
+    useEffect(() => {
+        if (!showNewMenu) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setShowNewMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showNewMenu]);
+
+    const flatNodes = useMemo(() => flattenTree(rootNode), [rootNode]);
 
     const handleToggle = useCallback((path: string) => {
         controller.toggleDir(path);
@@ -120,6 +135,8 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
 
     // Keyboard navigation handler
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        // Don't handle keyboard navigation while renaming
+        if (renamingPath) return;
         if (flatNodes.length === 0) return;
 
         switch (e.key) {
@@ -189,7 +206,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
                 setFocusedIndex(flatNodes.length - 1);
                 break;
         }
-    }, [flatNodes, focusedIndex, handleToggle, handleSelect, controller]);
+    }, [flatNodes, focusedIndex, handleToggle, handleSelect, controller, renamingPath]);
 
     // Get focused path
     const focusedPath = focusedIndex >= 0 && focusedIndex < flatNodes.length
@@ -222,7 +239,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) =
 
                     {/* Popup Menu */}
                     {showNewMenu && (
-                        <div className="absolute right-0 top-full mt-1 z-50">
+                        <div ref={menuRef} className="absolute right-0 top-full mt-1 z-50">
                             <Menu className="w-40 bg-[var(--nh-bg-surface,#2a2a2a)] border-[var(--nh-border-subtle,#333333)]">
                                 <MenuItem onClick={handleCreateNote} icon={<Icon name="file" size={14} />}>
                                     New Note

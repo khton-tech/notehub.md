@@ -98,8 +98,18 @@ function createEditorSlotComponent(controller: EditorController, app: NotehubCor
                 setContent(data.content);
             };
 
-            // Subscribe to editor:file-opened events from the EventBus
+            /**
+             * Handler for file closed events (when file is deleted externally)
+             * Resets state to show placeholder
+             */
+            const handleFileClosed = () => {
+                setFilePath(null);
+                setContent('');
+            };
+
+            // Subscribe to editor events from the EventBus
             app.events.on('editor:file-opened', handleFileOpened);
+            app.events.on('editor:file-closed', handleFileClosed);
 
             // Subscribe to settings changes
             const unsubscribeSettings = controller.subscribeSettings(setSettings);
@@ -107,6 +117,7 @@ function createEditorSlotComponent(controller: EditorController, app: NotehubCor
             // Cleanup subscriptions on unmount
             return () => {
                 app.events.off('editor:file-opened', handleFileOpened);
+                app.events.off('editor:file-closed', handleFileClosed);
                 unsubscribeSettings();
             };
         }, []);

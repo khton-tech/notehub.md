@@ -39,6 +39,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
     // Rename input state
     const [renameValue, setRenameValue] = useState(node.name);
     const inputRef = useRef<HTMLInputElement>(null);
+    const itemRef = useRef<HTMLDivElement>(null);
 
     // Focus input when entering rename mode
     useEffect(() => {
@@ -58,6 +59,13 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
     useEffect(() => {
         setRenameValue(node.name);
     }, [node.name]);
+
+    // Scroll into view when focused via keyboard
+    useEffect(() => {
+        if (isFocused && itemRef.current) {
+            itemRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }, [isFocused]);
 
     // Indentation style - more breathing room
     const style = {
@@ -178,7 +186,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
     }
 
     return (
-        <div className="select-none" role="treeitem" aria-selected={isSelected}>
+        <div ref={itemRef} className="select-none" role="treeitem" aria-selected={isSelected}>
             <div
                 className={baseItemClasses.join(' ')}
                 style={style}
@@ -241,7 +249,10 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
 
             {/* Children */}
             {isDirectory && node.isExpanded && node.children && (
-                <div role="group">
+                <div
+                    role="group"
+                    className="relative ml-4 border-l border-[var(--nh-border-subtle,#333)]"
+                >
                     {node.children.map(child => (
                         <FileTreeItem
                             key={child.path}
