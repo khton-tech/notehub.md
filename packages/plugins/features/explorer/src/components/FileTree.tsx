@@ -1,294 +1,322 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+/**
+ * FileTree - react-arborist based file tree component
+ * 
+ * Features:
+ * - Virtualized rendering for performance
+ * - Drag-and-drop support (via react-dnd)
+ * - Keyboard navigation (built-in)
+ * - Search/filter
+ * - Active file sync with editor
+ */
+
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Tree, TreeApi } from 'react-arborist';
 import { ExplorerController } from '../logic/ExplorerController';
-import { FileTreeItem } from './FileTreeItem';
+import { NodeRow } from './NodeRow';
 import type { FileNode } from '../types';
 import { Menu, MenuItem, MenuSeparator } from '@notehub/ck-standard';
 import { Icon } from '@notehub/icon-manager';
 import { useNotehub } from '@notehub/core';
 
-
 interface FileTreeProps {
     controller: ExplorerController;
-    defaultPath?: string;
 }
 
-/**
- * Flatten the tree to get an array of visible nodes for keyboard navigation
- */
-function flattenTree(node: FileNode | null): FileNode[] {
-    if (!node) return [];
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 
-    const result: FileNode[] = [];
-
-    const traverse = (n: FileNode) => {
-        result.push(n);
-        if (n.kind === 'directory' && n.isExpanded && n.children) {
-            for (const child of n.children) {
-                traverse(child);
-            }
-        }
-    };
-
-    // Start from children of root (don't include root itself)
-    if (node.children) {
-        for (const child of node.children) {
-            traverse(child);
-        }
-    }
-
-    return result;
-}
-
-export const FileTree: React.FC<FileTreeProps> = ({ controller, defaultPath }) => {
+export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     const app = useNotehub();
-    const [rootNode, setRootNode] = useState<FileNode | null>(controller.getTree());
-    const [selectedPath, setSelectedPath] = useState<string | null>(null);
-    const [focusedIndex, setFocusedIndex] = useState<number>(-1);
-    const [activeFilePath, setActiveFilePath] = useState<string | null>(controller.activeFilePath);
-    const [renamingPath, setRenamingPath] = useState<string | null>(controller.renamingPath);
-    const [showNewMenu, setShowNewMenu] = useState(false);
+    const treeRef = useRef<TreeApi<FileNode>>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
+    const [data, setData] = useState<FileNode[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showNewMenu, setShowNewMenu] = useState(false);
+    const [containerHeight, setContainerHeight] = useState(400);
+    const [rootName, setRootName] = useState<string>('');
+    const [renamingId, setRenamingId] = useState<string | null>(null);
+
+    // Subscribe to controller changes
     useEffect(() => {
-        if (defaultPath) {
-            controller.setRoot(defaultPath);
-        }
+        const refresh = () => {
+            // Force new array reference specifically to ensure react-arborist updates
+            const treeData = controller.getTreeData();
+            console.log('FileTree: Refreshing data', treeData.length, 'nodes');
+            setData([...treeData]);
 
-        const unsubscribe = controller.subscribe(() => {
-            setRootNode(prev => {
-                if (!prev && !controller.getTree()) return null;
-                const newVal = controller.getTree();
-                return newVal ? { ...newVal } : null;
-            });
-            setActiveFilePath(controller.activeFilePath);
-            setRenamingPath(controller.renamingPath);
-            setSelectedPath(controller.selectedPath);
-        });
+            const tree = controller.getTree();
+            setRootName(tree?.name || '');
 
-        return () => {
-            unsubscribe();
+            // Sync renaming state
+            if (controller.renamingPath !== renamingId) {
+                setRenamingId(controller.renamingPath);
+            }
         };
-    }, [controller, defaultPath]);
+        refresh();
+        const unsubscribe = controller.subscribe(refresh);
+        return () => { unsubscribe(); };
+    }, [controller, renamingId]);
 
+    // Sync renaming state to Arborist
+    useEffect(() => {
+        if (renamingId && treeRef.current) {
+            console.log('FileTree: Starting rename for', renamingId);
+            treeRef.current.edit(renamingId);
+        }
+    }, [renamingId]);
+
+    // Measure container height for virtualization
+    useEffect(() => {
+        // ... existing height logic ...
+        const updateHeight = () => {
+            if (containerRef.current) {
+                setContainerHeight(containerRef.current.clientHeight);
+            }
+        };
+        updateHeight();
+        const observer = new ResizeObserver(updateHeight);
+        if (containerRef.current) observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    // Sync active file with tree selection
+    useEffect(() => {
+        if (controller.activeFilePath && treeRef.current) {
+            // Focus and select the active file
+            console.log('FileTree: Syncing active file', controller.activeFilePath);
+            const node = treeRef.current.get(controller.activeFilePath);
+            if (node && !node.isSelected) {
+                treeRef.current.select(controller.activeFilePath);
+                treeRef.current.scrollTo(controller.activeFilePath);
+            }
+        }
+    }, [controller.activeFilePath]);
+
+    // ... (click away handler) ...
     // Click-away handler for popup menu
     useEffect(() => {
         if (!showNewMenu) return;
-
         const handleClickOutside = (e: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
                 setShowNewMenu(false);
             }
         };
-
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showNewMenu]);
 
-    const flatNodes = useMemo(() => flattenTree(rootNode), [rootNode]);
-
-    const handleToggle = useCallback((path: string) => {
-        controller.toggleDir(path);
-    }, [controller]);
-
-    const handleSelect = useCallback((path: string) => {
-        // Update focused index to match selected
-        const idx = flatNodes.findIndex(n => n.path === path);
-        if (idx !== -1) setFocusedIndex(idx);
-        // Delegate selection logic to controller
-        controller.selectItem(path);
-    }, [flatNodes, controller]);
-
-    const handleRenameSubmit = useCallback((oldPath: string, newName: string) => {
-        controller.submitRename(oldPath, newName);
-    }, [controller]);
-
-    const handleRenameCancel = useCallback(() => {
-        controller.cancelRename();
-    }, [controller]);
-
-    const handleCreateNote = () => {
-        if (rootNode) {
-            controller.createNote();
-            setShowNewMenu(false);
+    // Handle node toggle (expand/collapse directories)
+    const handleToggle = useCallback((id: string) => {
+        console.log('FileTree: Toggle', id);
+        if (controller.isExpanded(id)) {
+            controller.collapseDir(id);
+        } else {
+            controller.expandDir(id);
         }
+    }, [controller]);
+
+    // Handle node select
+    const handleSelect = useCallback((nodes: any[]) => {
+        if (nodes.length > 0) {
+            const node = nodes[0];
+            console.log('FileTree: Selected', node.id);
+            controller.selectItem(node.id);
+        }
+    }, [controller]);
+
+    // Handle rename
+    const handleRename = useCallback(({ id, name }: { id: string; name: string }) => {
+        console.log('FileTree: Rename submitted', id, '->', name);
+        controller.onRename({ id, name });
+    }, [controller]);
+
+    // Handle move (drag & drop)
+    const handleMove = useCallback((args: {
+        dragIds: string[];
+        parentId: string | null;
+        index: number;
+    }) => {
+        console.log('FileTree: Move', args);
+        controller.onMove(args);
+    }, [controller]);
+
+    // Create handlers
+    const handleCreateNote = () => {
+        console.log('FileTree: Create Note Triggered');
+        controller.createNote();
+        setShowNewMenu(false);
     };
 
     const handleCreateFolder = () => {
-        if (rootNode) {
-            controller.createFolder();
-            setShowNewMenu(false);
+        console.log('FileTree: Create Folder Triggered');
+        controller.createFolder();
+        setShowNewMenu(false);
+    };
+
+
+    // Handle keyboard shortcuts (F2, Delete)
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        // F2 - Rename
+        if (e.key === 'F2') {
+            const selected = controller.selectedPath;
+            console.log('FileTree: F2 pressed, selected:', selected);
+            if (selected) {
+                e.preventDefault();
+                controller.setRenaming(selected);
+            }
+        }
+
+        // Delete - Delete Item
+        if (e.key === 'Delete') {
+            const selected = controller.selectedPath;
+            console.log('FileTree: Delete pressed, selected:', selected);
+            if (selected) {
+                e.preventDefault();
+                controller.deleteItem(selected);
+            }
         }
     };
 
+    // Root context menu
     const handleRootContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
-        if (rootNode) {
+        const rootPath = controller.root;
+        if (rootPath) {
             app.api.invoke(
                 'context-menu:trigger' as any,
                 e.nativeEvent,
                 'explorer-root',
-                { path: rootNode.path }
+                { path: rootPath }
             );
         }
     };
 
-    // Keyboard navigation handler
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        // Don't handle keyboard navigation while renaming
-        if (renamingPath) return;
-        if (flatNodes.length === 0) return;
-
-        switch (e.key) {
-            case 'ArrowDown':
-                e.preventDefault();
-                setFocusedIndex(prev => Math.min(prev + 1, flatNodes.length - 1));
-                break;
-            case 'ArrowUp':
-                e.preventDefault();
-                setFocusedIndex(prev => Math.max(prev - 1, 0));
-                break;
-            case 'Enter':
-            case ' ': {
-                e.preventDefault();
-                const focusedNode = flatNodes[focusedIndex];
-                if (focusedNode) {
-                    if (focusedNode.kind === 'directory') {
-                        // Enter on directory toggles expanded state AND selects it
-                        handleSelect(focusedNode.path);
-                        handleToggle(focusedNode.path);
-                    } else {
-                        handleSelect(focusedNode.path);
-                    }
-                }
-                break;
-            }
-            case 'ArrowRight': {
-                e.preventDefault();
-                const focusedNode = flatNodes[focusedIndex];
-                if (focusedNode && focusedNode.kind === 'directory' && !focusedNode.isExpanded) {
-                    handleToggle(focusedNode.path);
-                }
-                break;
-            }
-            case 'ArrowLeft': {
-                e.preventDefault();
-                const focusedNode = flatNodes[focusedIndex];
-                if (focusedNode && focusedNode.kind === 'directory' && focusedNode.isExpanded) {
-                    handleToggle(focusedNode.path);
-                }
-                break;
-            }
-            case 'F2': {
-                // Start rename on F2
-                e.preventDefault();
-                const focusedNode = flatNodes[focusedIndex];
-                if (focusedNode) {
-                    controller.setRenaming(focusedNode.path);
-                }
-                break;
-            }
-            case 'Delete': {
-                // Delete on Delete key
-                e.preventDefault();
-                const focusedNode = flatNodes[focusedIndex];
-                if (focusedNode) {
-                    controller.deleteItem(focusedNode.path);
-                }
-                break;
-            }
-            case 'Home':
-                e.preventDefault();
-                setFocusedIndex(0);
-                break;
-            case 'End':
-                e.preventDefault();
-                setFocusedIndex(flatNodes.length - 1);
-                break;
-        }
-    }, [flatNodes, focusedIndex, handleToggle, handleSelect, controller, renamingPath]);
-
-    // Get focused path
-    const focusedPath = focusedIndex >= 0 && focusedIndex < flatNodes.length
-        ? flatNodes[focusedIndex]?.path
-        : null;
-
-    if (!rootNode) {
-        return <div className="p-4 text-[var(--nh-text-muted)] text-sm">No folder opened</div>;
-    }
+    // Determine if we should show empty state
+    const isEmpty = data.length === 0;
 
     return (
-        <div className="w-full h-full flex flex-col select-none">
-            {/* Header / Toolbar */}
-            <div
-                className="flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-subtle,#333333)] bg-[var(--nh-bg-secondary,#2a2a2a)]"
-                onContextMenu={handleRootContextMenu}
-            >
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--nh-text-muted)] truncate select-none" title={rootNode.name}>
-                    {rootNode.name}
-                </span>
-
-                <div className="relative">
-                    <button
-                        className="p-1 rounded hover:bg-[var(--nh-bg-hover,#3a3a3a)] text-[var(--nh-text-secondary,#a0a0a0)] transition-colors"
-                        onClick={() => setShowNewMenu(!showNewMenu)}
-                        title="Create New..."
+        <DndProvider backend={HTML5Backend}>
+            <div className="w-full h-full flex flex-col select-none bg-[var(--nh-bg-secondary)]">
+                {/* Header / Toolbar */}
+                <div
+                    className="flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-subtle)] bg-[var(--nh-bg-secondary)]"
+                    onContextMenu={handleRootContextMenu}
+                >
+                    <span
+                        className="text-xs font-bold uppercase tracking-wider text-[var(--nh-text-muted)] truncate select-none"
+                        title={rootName}
                     >
-                        <Icon name="plus" size={16} />
-                    </button>
+                        {rootName || 'EXPLORER'}
+                    </span>
 
-                    {/* Popup Menu */}
-                    {showNewMenu && (
-                        <div ref={menuRef} className="absolute right-0 top-full mt-1 z-50">
-                            <Menu className="w-40 bg-[var(--nh-bg-surface,#2a2a2a)] border-[var(--nh-border-subtle,#333333)]">
-                                <MenuItem onClick={handleCreateNote} icon={<Icon name="file" size={14} />}>
-                                    New Note
-                                </MenuItem>
+                    <div className="relative flex items-center gap-1">
+                        {/* New button */}
+                        <button
+                            className="p-1 rounded hover:bg-[var(--nh-bg-hover)] text-[var(--nh-text-secondary)] transition-colors"
+                            onClick={() => setShowNewMenu(!showNewMenu)}
+                            title="Create New..."
+                        >
+                            <Icon name="plus" size={16} />
+                        </button>
 
-                                <MenuSeparator className="bg-[var(--nh-border-subtle,#333333)]" />
+                        {/* Popup Menu */}
+                        {showNewMenu && (
+                            <div ref={menuRef} className="absolute right-0 top-full mt-1 z-50">
+                                <Menu className="w-40 bg-[var(--nh-bg-surface)] border border-[var(--nh-border-subtle)] shadow-lg rounded">
+                                    <MenuItem onClick={handleCreateNote} icon={<Icon name="file" size={14} />}>
+                                        New Note
+                                    </MenuItem>
 
-                                <MenuItem onClick={handleCreateFolder} icon={<Icon name="folder" size={14} />}>
-                                    New Folder
-                                </MenuItem>
-                            </Menu>
+                                    <MenuSeparator className="bg-[var(--nh-border-subtle)]" />
+
+                                    <MenuItem onClick={handleCreateFolder} icon={<Icon name="folder" size={14} />}>
+                                        New Folder
+                                    </MenuItem>
+                                </Menu>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Search/Filter Input */}
+                <div className="px-2 py-1.5 border-b border-[var(--nh-border-subtle)]">
+                    <div className="relative">
+                        <Icon
+                            name="search"
+                            size={14}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--nh-text-muted)]"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Filter files..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="
+                                w-full pl-7 pr-2 py-1 text-xs
+                                bg-[var(--nh-bg-main)] 
+                                border border-[var(--nh-border-subtle)]
+                                rounded outline-none
+                                text-[var(--nh-text-primary)]
+                                placeholder:text-[var(--nh-text-muted)]
+                                focus:border-[var(--nh-accent-primary)]
+                                transition-colors
+                            "
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)]"
+                            >
+                                <Icon name="x" size={12} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Tree Content */}
+                <div
+                    ref={containerRef}
+                    className="flex-1 overflow-hidden outline-none"
+                    onClick={() => setShowNewMenu(false)}
+                    onContextMenu={handleRootContextMenu}
+                    onKeyDown={handleKeyDown}
+                    tabIndex={0}
+                >
+                    {isEmpty ? (
+                        <div className="px-4 py-8 text-center text-xs text-[var(--nh-text-muted)] italic">
+                            Empty vault
                         </div>
+                    ) : (
+                        <Tree
+                            ref={treeRef}
+                            data={data}
+                            openByDefault={false}
+                            width="100%"
+                            height={containerHeight}
+                            rowHeight={24}
+                            indent={16}
+                            searchTerm={searchTerm}
+                            searchMatch={(node, term) =>
+                                node.data.name.toLowerCase().includes(term.toLowerCase())
+                            }
+                            onMove={handleMove}
+                            onRename={handleRename}
+                            onSelect={handleSelect}
+                            onToggle={(id) => handleToggle(id)}
+                            disableDrag={false}
+                            disableDrop={false}
+                            disableEdit={false}
+                            className="outline-none"
+                        >
+                            {NodeRow}
+                        </Tree>
                     )}
                 </div>
             </div>
-
-            {/* Tree Content with keyboard navigation */}
-            <div
-                ref={containerRef}
-                className="flex-1 overflow-y-auto overflow-x-hidden py-1 outline-none"
-                onClick={() => setShowNewMenu(false)}
-                onKeyDown={handleKeyDown}
-                onContextMenu={handleRootContextMenu}
-                tabIndex={0}
-                role="tree"
-                aria-label="File explorer"
-            >
-                {rootNode.children && rootNode.children.map(child => (
-                    <FileTreeItem
-                        key={child.path}
-                        node={child}
-                        depth={0}
-                        onToggle={handleToggle}
-                        onSelect={handleSelect}
-                        selectedPath={selectedPath}
-                        focusedPath={focusedPath}
-                        activeFilePath={activeFilePath}
-                        renamingPath={renamingPath}
-                        onRenameSubmit={handleRenameSubmit}
-                        onRenameCancel={handleRenameCancel}
-                    />
-                ))}
-
-                {(!rootNode.children || rootNode.children.length === 0) && (
-                    <div className="px-4 py-8 text-center text-xs text-[var(--nh-text-muted)] italic">
-                        Empty vault
-                    </div>
-                )}
-            </div>
-        </div>
+        </DndProvider>
     );
 };
+
+export default FileTree;

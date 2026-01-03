@@ -35,20 +35,6 @@
     ]
   },
   {
-    "id": "nh.features.vault-picker",
-    "name": "VaultPicker",
-    "version": "0.0.0",
-    "type": "feature",
-    "dependencies": [
-      "nh.system.fs-manager",
-      "nh.system.config-manager",
-      "nh.system.state-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.layout-manager"
-    ]
-  },
-  {
     "id": "nh.features.workbench",
     "name": "Workbench",
     "version": "0.0.0",
@@ -60,6 +46,20 @@
       "nh.ui.ck-standard",
       "nh.system.state-manager",
       "nh.features.explorer"
+    ]
+  },
+  {
+    "id": "nh.features.vault-picker",
+    "name": "VaultPicker",
+    "version": "0.0.0",
+    "type": "feature",
+    "dependencies": [
+      "nh.system.fs-manager",
+      "nh.system.config-manager",
+      "nh.system.state-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.layout-manager"
     ]
   },
   {

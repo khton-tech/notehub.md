@@ -32,6 +32,9 @@ export class ExplorerController {
     // Rename operation queue to prevent race conditions
     private pendingRename: Promise<boolean> | null = null;
 
+    // Data version for react-arborist re-render triggering
+    private _dataVersion: number = 0;
+
     constructor(app: NotehubCore) {
         this.app = app;
 
@@ -142,7 +145,178 @@ export class ExplorerController {
     }
 
     private notify() {
+        this._dataVersion++;
         this.listeners.forEach(l => l());
+    }
+
+    // ========== react-arborist Data Adapter ==========
+
+    /**
+     * Get tree data for react-arborist
+     * Returns array of root-level FileNodes with nested children
+     * Always returns a fresh array to trigger re-render
+     */
+    getTreeData(): FileNode[] {
+        if (!this.rootPath) return [];
+        const root = this.nodes.get(this.rootPath);
+        if (!root?.children) return [];
+        // Return fresh reference to trigger react-arborist re-render
+        return [...root.children];
+    }
+
+    /**
+     * Check if a path is expanded
+     */
+    isExpanded(path: string): boolean {
+        return this.expandedPaths.has(path);
+    }
+
+    /**
+     * Handle drag-and-drop move operation
+     */
+    async onMove(args: {
+        dragIds: string[];
+        parentId: string | null;
+        index: number
+    }): Promise<void> {
+        console.log('ExplorerController: onMove', args);
+        const { dragIds, parentId } = args;
+        if (!parentId) return;
+
+        // Process moves
+        for (const dragId of dragIds) {
+            console.log('ExplorerController: Moving', dragId, 'to', parentId);
+            const fileName = getFileName(dragId);
+            const newPath = joinPath(parentId, fileName);
+
+            // Skip if no change (dropped on same parent) - though react-arborist handles this
+            if (dragId === newPath) continue;
+
+            const oldParentPath = getParentPath(dragId);
+            const oldParentNode = this.nodes.get(oldParentPath);
+            const newParentNode = this.nodes.get(parentId);
+            const movedNode = this.nodes.get(dragId);
+
+            // --- OPTIMISTIC UI UPDATE ---
+            if (movedNode) {
+                // 1. Remove from old parent
+                if (oldParentNode && oldParentNode.children) {
+                    oldParentNode.children = oldParentNode.children.filter(c => c.id !== dragId);
+                }
+
+                // 2. Update path (and recursively update children paths if directory)
+                this.updateNodePath(dragId, newPath);
+
+                // 3. Add to new parent
+                if (newParentNode) {
+                    if (!newParentNode.children) newParentNode.children = [];
+                    // Check if exists
+                    const exists = newParentNode.children.find(c => c.name === fileName);
+                    if (!exists) {
+                        newParentNode.children.push(movedNode);
+                        this.sortChildren(newParentNode.children);
+                    }
+                }
+
+                this.notify();
+            }
+
+            // Yield to let UI update before blocking on FS op
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            try {
+                // Perform actual FS operation
+                console.log('ExplorerController: Invoking fs:rename', dragId, newPath);
+                await this.app.api.invoke('fs:rename' as any, dragId, newPath);
+            } catch (error: any) {
+                console.error('Failed to move:', error);
+
+                // Rollback would be complex here, so we rely on reload
+                if (this.rootPath) await this.loadDir(this.rootPath);
+
+                await this.app.api.invoke(
+                    'dialog:alert',
+                    'Move Failed',
+                    `Failed to move: ${error?.message || error}`
+                );
+            }
+        }
+    }
+
+    /**
+     * Updates a node and its children's paths recursively
+     */
+    private updateNodePath(oldPath: string, newPath: string) {
+        const node = this.nodes.get(oldPath);
+        if (!node) return;
+
+        // Remove old mapping
+        this.nodes.delete(oldPath);
+
+        // Update node
+        node.id = newPath;
+
+        // Add new mapping
+        this.nodes.set(newPath, node);
+
+        // Recursive children update
+        if (node.children) {
+            for (const child of node.children) {
+                const childOldPath = joinPath(oldPath, child.name);
+                const childNewPath = joinPath(newPath, child.name);
+                // Note: child object is same reference, so we just need to recurse
+                // But we need to make sure we update the mappings in this.nodes
+                // The 'child' object itself needs its ID updated? 
+                // Wait, if I update child.id, does it affect the map? No.
+                // The map holds references. 
+
+                // We must recursively generic path update
+                // But wait, getTreeData uses traversing from root. so as long as links are correct...
+                // But we use this.nodes to lookup by path. So we MUST update keys.
+
+                // Since I already changed node.id above, I need to be careful not to double update?
+                // Actually, if I iterate children now, their IDs are still old.
+                // Wait, child.children is array of FileNodes. 
+                // So I need to find the node in the map.
+
+                // Actually, I should inspect the child object in the array.
+                // It still has the old ID.
+                this.updateNodePath(childOldPath, childNewPath);
+            }
+        }
+
+        // Update active/selection/expansion states
+        if (this._activeFilePath === oldPath) this._activeFilePath = newPath;
+        if (this._selectedPath === oldPath) this._selectedPath = newPath;
+        if (this._renamingPath === oldPath) this._renamingPath = null;
+        if (this.expandedPaths.has(oldPath)) {
+            this.expandedPaths.delete(oldPath);
+            this.expandedPaths.add(newPath);
+        }
+    }
+
+    /**
+     * Handle rename from react-arborist
+     */
+    async onRename(args: { id: string; name: string }): Promise<void> {
+        await this.submitRename(args.id, args.name);
+    }
+
+    /**
+     * Handle create from react-arborist or external calls
+     */
+    async onCreate(args: {
+        parentId: string | null;
+        type: 'file' | 'folder'
+    }): Promise<void> {
+        const parentPath = args.parentId || this.rootPath;
+        if (!parentPath) return;
+
+        if (args.type === 'file') {
+            await this.createNote(parentPath);
+        } else {
+            await this.createFolder(parentPath);
+        }
     }
 
     // ========== Renaming ==========
@@ -159,6 +333,7 @@ export class ExplorerController {
      * Submit rename operation
      */
     async submitRename(oldPath: string, newName: string): Promise<boolean> {
+        console.log('ExplorerController: submitRename', oldPath, '->', newName);
         if (!newName || newName.trim() === '') {
             this._renamingPath = null;
             this.notify();
@@ -167,6 +342,7 @@ export class ExplorerController {
 
         // Wait for any pending rename to complete (prevents race condition)
         if (this.pendingRename) {
+            console.log('ExplorerController: Waiting for pending rename...');
             await this.pendingRename;
         }
 
@@ -180,41 +356,28 @@ export class ExplorerController {
      * Internal rename implementation
      */
     private async _doRename(oldPath: string, newName: string): Promise<boolean> {
-        // Calculate new path using path utilities
         const parentPath = getParentPath(oldPath);
         const newPath = joinPath(parentPath, newName);
 
-        try {
-            await this.app.api.invoke('fs:rename' as any, oldPath, newPath);
+        // --- OPTIMISTIC UI UPDATE ---
+        const node = this.nodes.get(oldPath);
+        const parentNode = this.nodes.get(parentPath);
 
-            // --- Optimistic Update ---
+        if (node) {
+            node.name = newName;
+            this.updateNodePath(oldPath, newPath);
 
-            // 1. Update node itself
-            const node = this.nodes.get(oldPath);
-            if (node) {
-                node.name = newName;
-                // Recursively update paths in the tree map
-                this.updateNodePath(oldPath, newPath);
-
-                // 2. Update parent's reference
-                const parentNode = this.nodes.get(parentPath);
-                if (parentNode && parentNode.children) {
-                    // Update path in children array but keeping object reference
-                    // (Actually updateNodePath logic above handles the object properties, 
-                    // but we might need to re-sort if we want strict sorting)
-                    parentNode.children.sort((a, b) => {
-                        if (a.kind === b.kind) return a.name.localeCompare(b.name);
-                        return a.kind === 'directory' ? -1 : 1;
-                    });
-                }
+            // Re-sort parent children
+            if (parentNode && parentNode.children) {
+                this.sortChildren(parentNode.children);
             }
 
-            // 3. Update active/selected/renaming references
-            if (this._activeFilePath === oldPath) this._activeFilePath = newPath;
-            if (this._selectedPath === oldPath) this._selectedPath = newPath;
-            this._renamingPath = null;
-
             this.notify();
+        }
+
+        try {
+            await this.app.api.invoke('fs:rename' as any, oldPath, newPath);
+            // Optimistic update already handled state
             return true;
         } catch (error: any) {
             console.error('Failed to rename:', error);
@@ -223,42 +386,13 @@ export class ExplorerController {
                 'Rename Failed',
                 `Failed to rename: ${error?.message || error}`
             );
-            // Revert/Reload on error
-            if (this.rootPath) await this.loadDir(this.rootPath);
+
+            // Revert state (lazy way: reload parent)
+            await this.loadDir(parentPath);
 
             this._renamingPath = null;
             this.notify();
             return false;
-        }
-    }
-
-    /**
-     * Recursively update paths in the nodes map
-     */
-    private updateNodePath(oldPath: string, newPath: string) {
-        const node = this.nodes.get(oldPath);
-        if (!node) return;
-
-        // Update map key
-        this.nodes.delete(oldPath);
-        this.nodes.set(newPath, node);
-
-        // Update node property
-        node.path = newPath;
-
-        // Update expanded paths
-        if (this.expandedPaths.has(oldPath)) {
-            this.expandedPaths.delete(oldPath);
-            this.expandedPaths.add(newPath);
-        }
-
-        // Recursively update children
-        if (node.children) {
-            for (const child of node.children) {
-                const childOldPath = child.path;
-                const childNewPath = `${newPath}/${child.name}`;
-                this.updateNodePath(childOldPath, childNewPath);
-            }
         }
     }
 
@@ -273,19 +407,12 @@ export class ExplorerController {
     // ========== Delete ==========
 
     /**
-     * Delete an item with confirmation (Optimistic UI)
-     * 
-     * Strategy:
-     * 1. Confirm with user
-     * 2. Backup affected nodes
-     * 3. IMMEDIATELY update UI (optimistic)
-     * 4. Perform FS operation in background
-     * 5. On error: rollback from backup
+     * Delete an item with confirmation
      */
     async deleteItem(path: string): Promise<boolean> {
         const node = this.nodes.get(path);
         const itemName = node?.name || getFileName(path);
-        const isDirectory = node?.kind === 'directory';
+        const isDirectory = node?.isDir;
 
         const confirmed = await this.app.api.invoke<boolean>(
             'dialog:confirm',
@@ -297,80 +424,52 @@ export class ExplorerController {
             return false;
         }
 
-        // --- Backup for rollback ---
+        // --- OPTIMISTIC UI UPDATE ---
         const parentPath = getParentPath(path);
         const parentNode = this.nodes.get(parentPath);
-        const backupParentChildren = parentNode?.children ? [...parentNode.children] : null;
-        const backupNodes = new Map<string, FileNode>();
 
-        // Collect all nodes that will be deleted (for potential rollback)
-        const collectNodes = (targetPath: string) => {
-            const targetNode = this.nodes.get(targetPath);
-            if (targetNode) {
-                backupNodes.set(targetPath, { ...targetNode });
-                if (targetNode.children) {
-                    targetNode.children.forEach(child => collectNodes(child.path));
-                }
-            }
-        };
-        collectNodes(path);
-
-        // --- OPTIMISTIC UPDATE: Update UI IMMEDIATELY ---
-
-        // 1. Remove from parent's children list
+        // Remove from parent children
         if (parentNode && parentNode.children) {
-            parentNode.children = parentNode.children.filter(c => c.path !== path);
+            parentNode.children = parentNode.children.filter(c => c.id !== path);
         }
 
-        // 2. Remove from nodes map (recursive for directories)
+        // Remove from map (recursive)
         const deleteFromMap = (targetPath: string) => {
             const targetNode = this.nodes.get(targetPath);
             if (targetNode && targetNode.children) {
-                targetNode.children.forEach(child => deleteFromMap(child.path));
+                targetNode.children.forEach(child => deleteFromMap(child.id));
             }
             this.nodes.delete(targetPath);
             this.expandedPaths.delete(targetPath);
         };
         deleteFromMap(path);
 
-        // 3. Update state references
+        // Clear references
         if (this._activeFilePath === path) this._activeFilePath = null;
         if (this._selectedPath === path) this._selectedPath = null;
         if (this._renamingPath === path) this._renamingPath = null;
 
-        // 4. Notify UI immediately (no waiting for FS!)
         this.notify();
 
-        // --- FS Operation (background) ---
+        // Yield to let UI update (optimistic delete)
+        await new Promise(resolve => setTimeout(resolve, 0));
+
         try {
             if (isDirectory) {
                 await this.app.api.invoke('fs:remove-dir' as any, path, { recursive: true });
             } else {
                 await this.app.api.invoke('fs:remove-file' as any, path);
             }
-            // Success - nothing more to do, UI already updated
             return true;
         } catch (error: any) {
             console.error('Failed to delete:', error);
-
-            // --- ROLLBACK: Restore from backup ---
-            // Restore nodes
-            backupNodes.forEach((backupNode, nodePath) => {
-                this.nodes.set(nodePath, backupNode);
-            });
-
-            // Restore parent's children
-            if (parentNode && backupParentChildren) {
-                parentNode.children = backupParentChildren;
-            }
-
-            this.notify();
-
             await this.app.api.invoke(
                 'dialog:alert',
                 'Delete Failed',
                 `Failed to delete: ${error?.message || error}`
             );
+            // Revert (reload parent)
+            if (parentNode) await this.loadDir(parentNode.id);
             return false;
         }
     }
@@ -387,11 +486,10 @@ export class ExplorerController {
 
         // Create root node
         const rootNode: FileNode = {
-            path,
+            id: path,
             name: getFileName(path),
-            kind: 'directory',
-            isLoaded: false,
-            isExpanded: true
+            isDir: true,
+            isLoaded: false
         };
         this.nodes.set(path, rootNode);
         this.expandedPaths.add(path);
@@ -403,7 +501,7 @@ export class ExplorerController {
 
     async loadDir(path: string) {
         const node = this.nodes.get(path);
-        if (!node || node.kind !== 'directory') return;
+        if (!node || !node.isDir) return;
 
         try {
             const entries: DirEntry[] = await this.app.api.invoke('fs:read-dir', path);
@@ -413,14 +511,6 @@ export class ExplorerController {
                 ? entries
                 : entries.filter(e => !e.name.startsWith('.'));
 
-            // sort: folders first, then files
-            visibleEntries.sort((a, b) => {
-                if (a.isDirectory === b.isDirectory) {
-                    return a.name.localeCompare(b.name);
-                }
-                return a.isDirectory ? -1 : 1;
-            });
-
             const children: FileNode[] = visibleEntries.map(entry => {
                 const childPath = joinPath(path, entry.name);
 
@@ -428,17 +518,23 @@ export class ExplorerController {
                 const existingNode = this.nodes.get(childPath);
 
                 const childNode: FileNode = {
-                    path: childPath,
+                    id: childPath,
                     name: entry.name,
-                    kind: entry.isDirectory ? 'directory' : 'file',
+                    isDir: entry.isDirectory,
                     isLoaded: existingNode ? !!existingNode.isLoaded : false,
-                    isExpanded: this.expandedPaths.has(childPath), // Use strict source of truth
-                    children: existingNode?.children || []
                 };
+
+                // Only set children for directories
+                if (entry.isDirectory) {
+                    childNode.children = existingNode?.children ?? [];
+                }
 
                 this.nodes.set(childPath, childNode);
                 return childNode;
             });
+
+            // Sort
+            this.sortChildren(children);
 
             node.children = children;
             node.isLoaded = true;
@@ -448,20 +544,50 @@ export class ExplorerController {
         }
     }
 
+    private sortChildren(children: FileNode[]) {
+        children.sort((a, b) => {
+            if (a.isDir === b.isDir) return a.name.localeCompare(b.name);
+            return a.isDir ? -1 : 1;
+        });
+    }
+
+    /**
+     * Toggle directory expansion
+     */
     toggleDir(path: string) {
         const node = this.nodes.get(path);
-        if (!node || node.kind !== 'directory') return;
+        if (!node || !node.isDir) return;
 
         if (this.expandedPaths.has(path)) {
             this.expandedPaths.delete(path);
-            node.isExpanded = false;
         } else {
             this.expandedPaths.add(path);
-            node.isExpanded = true;
             if (!node.isLoaded) {
                 this.loadDir(path);
             }
         }
+        this.notify();
+    }
+
+    /**
+     * Expand a directory (for react-arborist onToggle)
+     */
+    async expandDir(path: string): Promise<void> {
+        const node = this.nodes.get(path);
+        if (!node || !node.isDir) return;
+
+        this.expandedPaths.add(path);
+        if (!node.isLoaded) {
+            await this.loadDir(path);
+        }
+        this.notify();
+    }
+
+    /**
+     * Collapse a directory
+     */
+    collapseDir(path: string): void {
+        this.expandedPaths.delete(path);
         this.notify();
     }
 
@@ -486,9 +612,11 @@ export class ExplorerController {
         let parentPath = getParentPath(event.path);
         const normalizedRootPath = this.rootPath ? normalizePath(this.rootPath) : '';
 
+        // Debounce or check complexity?
+        // For now, reload parent
         if (this.nodes.has(parentPath)) {
             const parentNode = this.nodes.get(parentPath);
-            if (parentNode && (parentNode.isLoaded || parentNode.isExpanded)) {
+            if (parentNode && (parentNode.isLoaded || this.expandedPaths.has(parentPath))) {
                 this.loadDir(parentPath);
             }
         } else if (parentPath === normalizedRootPath) {
@@ -497,62 +625,84 @@ export class ExplorerController {
     }
 
     async findUniqueName(parentPath: string, baseName: string, extension: string = ''): Promise<string> {
-        try {
-            const entries: DirEntry[] = await this.app.api.invoke('fs:read-dir', parentPath);
-            const names = new Set(entries.map(e => e.name));
+        // Optimistic check against local nodes first
+        const parentNode = this.nodes.get(parentPath);
+        const existingNames = new Set<string>();
+        if (parentNode && parentNode.children) {
+            parentNode.children.forEach(c => existingNames.add(c.name));
+        }
 
-            let name = `${baseName}${extension}`;
-            if (!names.has(name)) return name;
+        let name = `${baseName}${extension}`;
+        if (!existingNames.has(name)) return name;
 
-            let counter = 1;
-            while (true) {
-                name = `${baseName} ${counter}${extension}`;
-                if (!names.has(name)) return name;
-                counter++;
-            }
-        } catch (error) {
-            console.error('Failed to find unique name', error);
-            // Fallback to timestamp if read-dir fails
-            return `${baseName} ${Date.now()}${extension}`;
+        let counter = 1;
+        while (true) {
+            name = `${baseName} ${counter}${extension}`;
+            if (!existingNames.has(name)) return name;
+            counter++;
         }
     }
 
     async createNote(contextPath?: string) {
         let parentPath = contextPath || this._selectedPath || this.rootPath;
-        if (!parentPath) return;
+        if (!parentPath) {
+            console.warn('ExplorerController: createNote failed - no parent path available');
+            return;
+        }
 
         // If path is a file, use its parent
         const node = this.nodes.get(parentPath);
-        if (node && node.kind === 'file') {
+        if (node && !node.isDir) {
             parentPath = getParentPath(parentPath);
         }
+        const parentNode = this.nodes.get(parentPath!);
 
-        // Expand parent folder if collapsed (so user sees the new file)
-        const parentNode = this.nodes.get(parentPath);
-        if (parentNode && parentNode.kind === 'directory' && !this.expandedPaths.has(parentPath)) {
-            this.expandedPaths.add(parentPath);
-            parentNode.isExpanded = true;
+        // Expand parent folder
+        if (!this.expandedPaths.has(parentPath!)) {
+            this.expandedPaths.add(parentPath!);
         }
 
         try {
-            const name = await this.findUniqueName(parentPath, 'Untitled Note', '.md');
-            const fullPath = joinPath(parentPath, name);
+            const name = await this.findUniqueName(parentPath!, 'Untitled Note', '.md');
+            const fullPath = joinPath(parentPath!, name);
 
-            await this.app.api.invoke('fs:write-text-file', fullPath, '');
-            // Reveal the new file
-            await this.loadDir(parentPath);
+            // --- OPTIMISTIC UI UPDATE ---
+            // Create dummy node
+            const newNode: FileNode = {
+                id: fullPath,
+                name: name,
+                isDir: false,
+                isLoaded: false
+            };
 
-            // Select and start renaming
+            this.nodes.set(fullPath, newNode);
+
+            if (parentNode) {
+                if (!parentNode.children) parentNode.children = [];
+                parentNode.children.push(newNode);
+                this.sortChildren(parentNode.children);
+                // Mark loaded so it shows up?
+                if (!parentNode.isLoaded) parentNode.isLoaded = true;
+            }
+
             this._selectedPath = fullPath;
             this.setRenaming(fullPath);
+            this.notify();
 
-            // Open file in editor immediately for instant editing
+            // Yield for UI render
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            // FS Op
+            await this.app.api.invoke('fs:write-text-file', fullPath, '');
+
+            // Open file
             this.app.events.emit('explorer:file-selected', { path: fullPath });
 
-            this.notify();
         } catch (error) {
             console.error('Failed to create note', error);
             await this.app.api.invoke('dialog:alert', 'Error', `Failed to create note: ${error}`);
+            // Revert (reload parent)
+            if (parentNode) await this.loadDir(parentNode.id);
         }
     }
 
@@ -560,44 +710,65 @@ export class ExplorerController {
         let parentPath = contextPath || this._selectedPath || this.rootPath;
         if (!parentPath) return;
 
-        // If path is a file, use its parent
         const node = this.nodes.get(parentPath);
-        if (node && node.kind === 'file') {
+        if (node && !node.isDir) {
             parentPath = getParentPath(parentPath);
         }
+        const parentNode = this.nodes.get(parentPath!);
 
-        // Expand parent folder if collapsed (so user sees the new folder)
-        const parentNode = this.nodes.get(parentPath);
-        if (parentNode && parentNode.kind === 'directory' && !this.expandedPaths.has(parentPath)) {
-            this.expandedPaths.add(parentPath);
-            parentNode.isExpanded = true;
+        // Expand parent folder
+        if (!this.expandedPaths.has(parentPath!)) {
+            this.expandedPaths.add(parentPath!);
         }
 
         try {
-            const name = await this.findUniqueName(parentPath, 'New Folder');
-            const fullPath = joinPath(parentPath, name);
+            const name = await this.findUniqueName(parentPath!, 'New Folder');
+            const fullPath = joinPath(parentPath!, name);
 
-            await this.app.api.invoke('fs:create-dir', fullPath);
-            await this.loadDir(parentPath);
+            // --- OPTIMISTIC UI UPDATE ---
+            const newNode: FileNode = {
+                id: fullPath,
+                name: name,
+                isDir: true,
+                isLoaded: true,
+                children: [] // empty folder
+            };
 
-            // Select and start renaming
+            this.nodes.set(fullPath, newNode);
+
+            if (parentNode) {
+                if (!parentNode.children) parentNode.children = [];
+                parentNode.children.push(newNode);
+                this.sortChildren(parentNode.children);
+                if (!parentNode.isLoaded) parentNode.isLoaded = true;
+            }
+
             this._selectedPath = fullPath;
             this.setRenaming(fullPath);
             this.notify();
+
+            // Yield for UI render
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            // FS Op
+            await this.app.api.invoke('fs:create-dir', fullPath);
+
         } catch (error) {
             console.error('Failed to create folder', error);
             await this.app.api.invoke('dialog:alert', 'Error', `Failed to create folder: ${error}`);
+            // Revert
+            if (parentNode) await this.loadDir(parentNode.id);
         }
     }
 
+    /**
+     * Get tree structure (legacy compatibility)
+     */
     getTree(): FileNode | null {
         if (!this.rootPath) return null;
         return this.nodes.get(this.rootPath) || null;
     }
 
-    /**
-     * Select a file and emit via EventBus
-     */
     /**
      * Select an item
      */
@@ -607,7 +778,7 @@ export class ExplorerController {
         const node = this.nodes.get(path);
 
         // Only emit file-selected if it's a file
-        if (node && node.kind !== 'directory') {
+        if (node && !node.isDir) {
             this.app.events.emit('explorer:file-selected', { path });
         }
 
