@@ -94,9 +94,7 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
         );
     }
 
-    if (node.isFocused && !node.isSelected) {
-        baseClasses.push('ring-1 ring-inset ring-[var(--nh-accent-primary)]/50');
-    }
+    // Focused state (keyboard navigation) - removed thick ring in favor of subtle left border
 
     // Icon color classes
     const iconColorClass = node.isSelected
@@ -105,6 +103,16 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
             ? 'text-yellow-500/80'
             : 'text-[var(--nh-text-secondary)]';
 
+    // Handle key press (Enter to select, not rename)
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !node.isEditing) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('NodeRow: Enter pressed on', data.id);
+            node.select();
+        }
+    };
+
     return (
         <div
             ref={dragHandle}
@@ -112,13 +120,17 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
             className={baseClasses.join(' ')}
             onClick={handleClick}
             onContextMenu={handleContextMenu}
+            onKeyDown={handleKeyDown}
             role="treeitem"
             aria-selected={node.isSelected}
             tabIndex={0} // Ensure dive is focusable (arborist handles this usually, but explicit doesn't hurt)
         >
-            {/* Selection indicator */}
+            {/* Selection/Focus indicators */}
             {node.isSelected && (
                 <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--nh-accent-primary)] rounded-r-sm" />
+            )}
+            {node.isFocused && !node.isSelected && (
+                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-[var(--nh-accent-primary)] opacity-40" />
             )}
 
             {/* Chevron for directories */}
