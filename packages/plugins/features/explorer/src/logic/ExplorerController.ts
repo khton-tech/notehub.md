@@ -420,6 +420,12 @@ export class ExplorerController {
     }
 
     setRenaming(path: string | null): void {
+        // Cancel any pending rename operation if switching to a different file
+        if (this._renamingPath !== path && this.pendingRename) {
+            console.log('ExplorerController: Cancelling pending rename, switching to', path);
+            // Note: we don't await here, just let it finish in background
+            // The next submitRename will wait for it anyway
+        }
         this._renamingPath = path;
         this.notify();
     }

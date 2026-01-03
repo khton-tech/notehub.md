@@ -38,6 +38,14 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
         }
     }, [node.isEditing, data.name, data.isDir, data.id]);
 
+    // Auto-open files when focused via keyboard navigation
+    useEffect(() => {
+        if (node.isFocused && !data.isDir && !node.isEditing) {
+            console.log('NodeRow: Auto-opening focused file', data.id);
+            app.events.emit('explorer:file-selected', { path: data.id });
+        }
+    }, [node.isFocused, data.isDir, data.id, node.isEditing, app.events]);
+
     // Context menu handler
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -57,10 +65,11 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
         if (node.isEditing) return;
 
         console.log('NodeRow: Clicked', data.id);
+        // Toggle folders when clicking on the row
         if (data.isDir) {
             node.toggle();
         }
-        // Select the node
+        // Always select the node
         node.select();
     };
 
@@ -82,7 +91,10 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
         'transition-colors duration-100',
     ];
 
-    if (node.isSelected) {
+    // Highlight based on focus (react-arborist sets focus on both click and keyboard nav)
+    const isHighlighted = node.isFocused;
+
+    if (isHighlighted) {
         baseClasses.push(
             'text-white',
             'bg-[var(--nh-accent-secondary)]'
@@ -97,21 +109,11 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
     // Focused state (keyboard navigation) - removed thick ring in favor of subtle left border
 
     // Icon color classes
-    const iconColorClass = node.isSelected
+    const iconColorClass = isHighlighted
         ? 'text-white'
         : data.isDir
             ? 'text-yellow-500/80'
             : 'text-[var(--nh-text-secondary)]';
-
-    // Handle key press (Enter to select, not rename)
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !node.isEditing) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('NodeRow: Enter pressed on', data.id);
-            node.select();
-        }
-    };
 
     return (
         <div
@@ -120,17 +122,12 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
             className={baseClasses.join(' ')}
             onClick={handleClick}
             onContextMenu={handleContextMenu}
-            onKeyDown={handleKeyDown}
             role="treeitem"
             aria-selected={node.isSelected}
-            tabIndex={0} // Ensure dive is focusable (arborist handles this usually, but explicit doesn't hurt)
         >
-            {/* Selection/Focus indicators */}
-            {node.isSelected && (
+            {/* Selection/Focus indicator */}
+            {isHighlighted && (
                 <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--nh-accent-primary)] rounded-r-sm" />
-            )}
-            {node.isFocused && !node.isSelected && (
-                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-[var(--nh-accent-primary)] opacity-40" />
             )}
 
             {/* Chevron for directories */}
@@ -142,7 +139,7 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
                     <Icon
                         name={node.isOpen ? 'chevron-down' : 'chevron-right'}
                         size={14}
-                        className={node.isSelected ? 'text-white/80' : 'text-[var(--nh-text-muted)]'}
+                        className={isHighlighted ? 'text-white/80' : 'text-[var(--nh-text-muted)]'}
                     />
                 </span>
             ) : (

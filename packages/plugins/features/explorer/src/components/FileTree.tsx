@@ -95,7 +95,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     }, [controller.activeFilePath]);
 
     // ... (click away handler) ...
-    // Click-away handler for popup menu
+    // Click-away and Escape handler for popup menu
     useEffect(() => {
         if (!showNewMenu) return;
         const handleClickOutside = (e: MouseEvent) => {
@@ -103,8 +103,17 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                 setShowNewMenu(false);
             }
         };
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setShowNewMenu(false);
+            }
+        };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
     }, [showNewMenu]);
 
     // Handle node toggle (expand/collapse directories)
@@ -156,8 +165,36 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     };
 
 
-    // Handle keyboard shortcuts (F2, Delete)
+    // Handle keyboard shortcuts (Enter, F2, Delete)
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        // Enter - Open file or toggle folder
+        if (e.key === 'Enter') {
+            const selected = controller.selectedPath;
+            if (selected) {
+                e.preventDefault();
+                const tree = controller.getTree();
+                const findNode = (nodes: FileNode[] | undefined, path: string): FileNode | null => {
+                    if (!nodes) return null;
+                    for (const node of nodes) {
+                        if (node.id === path) return node;
+                        if (node.children) {
+                            const found = findNode(node.children, path);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                const node = findNode(tree?.children, selected);
+                if (node) {
+                    if (node.isDir) {
+                        controller.toggleDir(selected);
+                    } else {
+                        app.events.emit('explorer:file-selected', { path: selected });
+                    }
+                }
+            }
+        }
+
         // F2 - Rename
         if (e.key === 'F2') {
             const selected = controller.selectedPath;
@@ -198,6 +235,12 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
 
     return (
         <DndProvider backend={HTML5Backend}>
+            <style>{`
+                /* Remove browser default outline on all tree elements */
+                .react-arborist-tree * {
+                    outline: none !important;
+                }
+            `}</style>
             <div className="w-full h-full flex flex-col select-none bg-[var(--nh-bg-secondary)]">
                 {/* Header / Toolbar */}
                 <div
@@ -278,7 +321,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                 {/* Tree Content */}
                 <div
                     ref={containerRef}
-                    className="flex-1 overflow-hidden outline-none"
+                    className="react-arborist-tree flex-1 overflow-hidden outline-none"
                     onClick={() => setShowNewMenu(false)}
                     onContextMenu={handleRootContextMenu}
                     onKeyDown={handleKeyDown}
@@ -298,16 +341,18 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                             rowHeight={24}
                             indent={16}
                             searchTerm={searchTerm}
-                            searchMatch={(node, term) =>
-                                node.data.name.toLowerCase().includes(term.toLowerCase())
-                            }
+                            searchMatch={(node, term) => {
+                                const lowerTerm = term.toLowerCase();
+                                return node.data.name.toLowerCase().includes(lowerTerm) ||
+                                    node.data.id.toLowerCase().includes(lowerTerm);
+                            }}
                             onMove={handleMove}
                             onRename={handleRename}
                             onSelect={handleSelect}
                             onToggle={(id) => handleToggle(id)}
                             disableDrag={false}
                             disableDrop={false}
-                            disableEdit={false}
+                            disableEdit={true}
                             className="outline-none"
                         >
                             {NodeRow}
