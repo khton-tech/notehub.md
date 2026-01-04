@@ -7,6 +7,7 @@
  * This package provides:
  * - {@link NotehubPlugin} - Abstract base class for plugins
  * - {@link PluginContext} - Interface for plugin-ecosystem interaction
+ * - {@link NotehubApiMap} - Complete API type definitions
  * 
  * @example
  * ```ts
@@ -38,3 +39,6 @@ export { NotehubPlugin } from './plugin.js';
 
 // Export context interface
 export type { PluginContext } from './context.js';
+
+// Export API contract types
+export * from './contract.js';

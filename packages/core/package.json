@@ -18,6 +18,9 @@
         "dev": "tsc --watch",
         "clean": "rimraf dist"
     },
+    "dependencies": {
+        "@notehub/api": "workspace:*"
+    },
     "peerDependencies": {
         "react": "^18.0.0"
     },

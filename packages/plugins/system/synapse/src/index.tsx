@@ -37,6 +37,7 @@ import { PluginLoader } from './logic/PluginLoader.js';
 export * from './types.js';
 export { initSharedScope, isScopeInitialized } from './logic/ScopeInitializer.js';
 export { PluginLoader } from './logic/PluginLoader.js';
+export { ZipLoader, type NhpLoadResult } from './logic/ZipLoader.js';
 
 /**
  * SynapsePlugin - System plugin for external extension loading
@@ -173,6 +174,7 @@ export class SynapsePlugin implements IPlugin {
 
     /**
      * Scan a vault's plugin directory and load all external plugins
+     * Supports both traditional folder-based plugins and packed .nhp files
      */
     private async scanAndLoadPlugins(vaultPath: string): Promise<void> {
         const pluginsDir = `${vaultPath}/.notehub/plugins`;
@@ -185,20 +187,30 @@ export class SynapsePlugin implements IPlugin {
         }
 
         // Read directory contents
-        const entries = await this.app!.api.invoke('fs:read-dir', pluginsDir);
-        const directories = entries.filter((entry: { isDirectory: boolean }) => entry.isDirectory);
+        const entries = await this.app!.api.invoke('fs:read-dir', pluginsDir) as Array<{
+            name: string;
+            isDirectory: boolean;
+        }>;
 
-        if (directories.length === 0) {
+        // Separate directories and .nhp files
+        const directories = entries.filter((entry) => entry.isDirectory);
+        const nhpFiles = entries.filter((entry) =>
+            !entry.isDirectory && entry.name.endsWith('.nhp')
+        );
+
+        const totalPlugins = directories.length + nhpFiles.length;
+        if (totalPlugins === 0) {
             this.log('info', 'No external plugins found');
             return;
         }
 
-        this.log('info', `Found ${directories.length} potential external plugin(s)`);
+        this.log('info', `Found ${totalPlugins} potential external plugin(s): ${directories.length} folders, ${nhpFiles.length} NHP files`);
 
-        // Load each plugin directory
+        // Load counters
         let successCount = 0;
         let failCount = 0;
 
+        // Load folder-based plugins
         for (const entry of directories) {
             const pluginPath = `${pluginsDir}/${entry.name}`;
             const result = await this.loader!.loadPlugin(pluginPath);
@@ -206,6 +218,32 @@ export class SynapsePlugin implements IPlugin {
             if (result.success) {
                 successCount++;
             } else {
+                failCount++;
+            }
+        }
+
+        // Load NHP files
+        for (const entry of nhpFiles) {
+            const nhpPath = `${pluginsDir}/${entry.name}`;
+
+            try {
+                // Read NHP file as binary
+                const buffer = await this.app!.api.invoke('fs:read-file', nhpPath) as Uint8Array;
+
+                // Convert Uint8Array to ArrayBuffer (create a copy to ensure proper type)
+                const arrayBuffer = new Uint8Array(buffer).buffer;
+
+                // Load using the NHP loader
+                const result = await this.loader!.loadFromNhp(arrayBuffer, entry.name);
+
+                if (result.success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.log('error', `Failed to read NHP file ${entry.name}: ${errorMessage}`);
                 failCount++;
             }
         }

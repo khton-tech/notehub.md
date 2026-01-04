@@ -20,7 +20,11 @@
         "clean": "rimraf dist"
     },
     "devDependencies": {
+        "@types/react": "^18.2.0",
         "typescript": "^5.3.0",
         "rimraf": "^5.0.0"
+    },
+    "peerDependencies": {
+        "react": "^18.2.0"
     }
 }

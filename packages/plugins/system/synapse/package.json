@@ -22,6 +22,7 @@
         "@notehub/api": "workspace:*",
         "@notehub/core": "workspace:*",
         "@tauri-apps/api": "^2.0.0",
+        "jszip": "^3.10.1",
         "systemjs": "^6.15.1"
     },
     "peerDependencies": {

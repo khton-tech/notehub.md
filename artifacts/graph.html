@@ -95,12 +95,12 @@
 flowchart LR
     nh_features_editor["Editor"]
     nh_features_explorer["Explorer"]
-    nh_features_vault-picker["VaultPicker"]
     nh_features_workbench["Workbench"]
+    nh_features_vault-picker["VaultPicker"]
     nh_ui_ck-standard["CKStandard"]
     nh_ui_context-menu["ContextMenu"]
-    nh_ui_dialog-manager["DialogManager"]
     nh_ui_controllers-manager["ControllersManager"]
+    nh_ui_dialog-manager["DialogManager"]
     nh_ui_icon-manager["IconManager"]
     nh_ui_layout-manager["LayoutManager"]
     nh_ui_settings-manager["SettingsManager"]
@@ -129,27 +129,27 @@ flowchart LR
     nh_features_explorer --> nh_ui_theme-manager
     nh_features_explorer --> nh_ui_context-menu
     nh_features_explorer --> nh_ui_dialog-manager
-    nh_features_vault-picker --> nh_system_fs-manager
-    nh_features_vault-picker --> nh_system_config-manager
-    nh_features_vault-picker --> nh_system_state-manager
-    nh_features_vault-picker --> nh_system_logger
-    nh_features_vault-picker --> nh_ui_controllers-manager
-    nh_features_vault-picker --> nh_ui_layout-manager
     nh_features_workbench --> nh_system_config-manager
     nh_features_workbench --> nh_ui_layout-manager
     nh_features_workbench --> nh_ui_theme-manager
     nh_features_workbench --> nh_ui_ck-standard
     nh_features_workbench --> nh_system_state-manager
     nh_features_workbench --> nh_features_explorer
+    nh_features_vault-picker --> nh_system_fs-manager
+    nh_features_vault-picker --> nh_system_config-manager
+    nh_features_vault-picker --> nh_system_state-manager
+    nh_features_vault-picker --> nh_system_logger
+    nh_features_vault-picker --> nh_ui_controllers-manager
+    nh_features_vault-picker --> nh_ui_layout-manager
     nh_ui_ck-standard --> nh_system_logger
     nh_ui_ck-standard --> nh_ui_controllers-manager
     nh_ui_ck-standard --> nh_ui_icon-manager
     nh_ui_ck-standard --> nh_ui_theme-manager
     nh_ui_context-menu --> nh_ui_icon-manager
     nh_ui_context-menu --> nh_ui_ck-standard
+    nh_ui_controllers-manager --> nh_system_logger
     nh_ui_dialog-manager --> nh_system_logger
     nh_ui_dialog-manager --> nh_ui_ck-standard
-    nh_ui_controllers-manager --> nh_system_logger
     nh_ui_icon-manager --> nh_system_logger
     nh_ui_layout-manager --> nh_system_logger
     nh_ui_layout-manager --> nh_ui_theme-manager
@@ -178,7 +178,7 @@ flowchart LR
     classDef feature fill:#51cf66,stroke:#2f9e44,color:#fff
     class nh_features_editor,nh_features_explorer,nh_features_workbench feature
     class nh_features_vault-picker feature
-    class nh_ui_ck-standard,nh_ui_context-menu,nh_ui_dialog-manager,nh_ui_controllers-manager,nh_ui_icon-manager,nh_ui_layout-manager,nh_ui_settings-manager,nh_ui_theme-manager ui
+    class nh_ui_ck-standard,nh_ui_context-menu,nh_ui_controllers-manager,nh_ui_dialog-manager,nh_ui_icon-manager,nh_ui_layout-manager,nh_ui_settings-manager,nh_ui_theme-manager ui
     class nh_system_bootloader,nh_system_config-manager,nh_system_fs-driver-tauri,nh_system_fs-manager,nh_system_logger,nh_system_state-manager,nh_system_synapse system
                 </pre>
             </div>

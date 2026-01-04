@@ -13,6 +13,7 @@ import type { NotehubPlugin } from '@notehub/api';
 import type { IPlugin, NotehubCore } from '@notehub/core';
 import type { ExternalPluginManifest, LoadedPluginRecord, PluginLoadResult } from '../types.js';
 import { PluginContextImpl } from './PluginContextImpl.js';
+import { ZipLoader, type NhpLoadResult } from './ZipLoader.js';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 // SystemJS global type declaration (SystemJS 6.x)
@@ -159,7 +160,22 @@ export class PluginLoader {
             // Step 3: Clean up SystemJS registry for potential HMR
             System.delete(record.url);
 
-            // Step 4: Remove from our registry
+            // Step 4: Revoke Blob URL if this was an NHP plugin (memory safety)
+            if (record.blobUrl) {
+                URL.revokeObjectURL(record.blobUrl);
+                this.log('info', `Revoked Blob URL for ${pluginId}`);
+            }
+
+            // Step 5: Remove injected CSS style tag if present
+            if (record.isNhp) {
+                const styleTag = document.getElementById(`style-${pluginId}`);
+                if (styleTag) {
+                    styleTag.remove();
+                    this.log('info', `Removed style tag for ${pluginId}`);
+                }
+            }
+
+            // Step 6: Remove from our registry
             this.loadedPlugins.delete(pluginId);
 
             this.log('info', `External plugin unloaded: ${pluginId}`);
@@ -170,6 +186,14 @@ export class PluginLoader {
             this.log('error', `Error unloading plugin ${pluginId}: ${errorMessage}`);
             // Still remove from registry to prevent zombie entries
             this.loadedPlugins.delete(pluginId);
+            // Also cleanup Blob URL and CSS even on error
+            if (record.blobUrl) {
+                URL.revokeObjectURL(record.blobUrl);
+            }
+            const styleTag = document.getElementById(`style-${pluginId}`);
+            if (styleTag) {
+                styleTag.remove();
+            }
             return false;
         }
     }
@@ -198,6 +222,87 @@ export class PluginLoader {
      */
     getLoadedPlugin(pluginId: string): LoadedPluginRecord | undefined {
         return this.loadedPlugins.get(pluginId);
+    }
+
+    /**
+     * Load an external plugin from an NHP file buffer (in-memory ZIP)
+     * 
+     * @param buffer - Raw bytes of the .nhp file
+     * @param filename - Original filename for logging
+     * @returns Result indicating success or failure
+     */
+    async loadFromNhp(buffer: ArrayBuffer, filename: string): Promise<PluginLoadResult> {
+        try {
+            // Step 1: Extract NHP contents using ZipLoader
+            const zipLoader = new ZipLoader();
+            const nhpResult: NhpLoadResult = await zipLoader.loadFromBuffer(buffer, filename);
+
+            const { manifest, blobUrl, css } = nhpResult;
+
+            // Step 2: Check if already loaded
+            if (this.loadedPlugins.has(manifest.id)) {
+                this.log('warn', `Plugin ${manifest.id} is already loaded, skipping`);
+                // Revoke the blob URL we just created since we won't use it
+                URL.revokeObjectURL(blobUrl);
+                return { success: true, pluginId: manifest.id };
+            }
+
+            this.log('info', `Loading NHP plugin: ${manifest.id} from ${filename}`);
+
+            // Step 3: Inject CSS if present
+            if (css) {
+                const styleTag = document.createElement('style');
+                styleTag.id = `style-${manifest.id}`;
+                styleTag.textContent = css;
+                document.head.appendChild(styleTag);
+                this.log('info', `Injected CSS for ${manifest.id}`);
+            }
+
+            // Step 4: Dynamic import via SystemJS using Blob URL
+            const module = await System.import(blobUrl);
+
+            // Step 5: Get and validate the plugin class/instance
+            const plugin = this.extractPlugin(module, manifest.id);
+            if (!plugin) {
+                // Clean up on failure
+                URL.revokeObjectURL(blobUrl);
+                const styleTag = document.getElementById(`style-${manifest.id}`);
+                if (styleTag) styleTag.remove();
+                return { success: false, error: 'Module does not export a valid plugin' };
+            }
+
+            // Step 6: Determine plugin type and call appropriate load method
+            let context: PluginContextImpl | undefined;
+
+            if (this.isNotehubPlugin(plugin)) {
+                // New NotehubPlugin: create context with auto-cleanup
+                context = new PluginContextImpl(this.app, manifest.id);
+                await plugin.onload(context);
+            } else {
+                // Legacy IPlugin: call load with app reference
+                await plugin.load(this.app);
+            }
+
+            // Step 7: Store in registry with NHP-specific fields
+            this.loadedPlugins.set(manifest.id, {
+                manifest,
+                plugin,
+                context,
+                url: blobUrl, // Use blobUrl as the URL for SystemJS cleanup
+                blobUrl,      // Keep separate reference for revokeObjectURL
+                isNhp: true,
+                loadedAt: new Date(),
+            });
+
+            const stats = context ? ` (${context.getStats().registeredApis} APIs, ${context.getStats().eventSubscriptions} subscriptions)` : '';
+            this.log('info', `NHP plugin loaded: ${manifest.id} v${manifest.version}${stats}`);
+            return { success: true, pluginId: manifest.id };
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `Failed to load NHP plugin from ${filename}: ${errorMessage}`);
+            return { success: false, error: errorMessage };
+        }
     }
 
     /**

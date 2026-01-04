@@ -1,0 +1,11 @@
+{
+    "id": "ext.stress-test",
+    "name": "Stress Test Plugin",
+    "version": "0.0.1",
+    "description": "A complex plugin to stress verify the NHP loader.",
+    "main": "main.js",
+    "dependencies": [
+        "nh.ui.settings-manager",
+        "nh.ui.dialog-manager"
+    ]
+}

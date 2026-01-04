@@ -30,6 +30,10 @@ export interface LoadedPluginRecord {
     context?: PluginContextImpl | undefined;
     /** URL used to load the plugin (for cleanup) */
     url: string;
+    /** Blob URL for NHP-loaded plugins (needs revokeObjectURL on unload) */
+    blobUrl?: string;
+    /** Whether this plugin was loaded from an NHP file */
+    isNhp?: boolean;
     /** Timestamp when plugin was loaded */
     loadedAt: Date;
 }
