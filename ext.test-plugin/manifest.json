@@ -1,0 +1,8 @@
+{
+    "id": "ext.test-plugin",
+    "name": "Test Plugin",
+    "version": "0.1.0",
+    "description": "Test Plugin plugin for Notehub.md",
+    "author": "",
+    "main": "main.js"
+}

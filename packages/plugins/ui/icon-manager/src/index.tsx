@@ -31,6 +31,8 @@ import {
     Check,
     AlertTriangle,
     Loader,
+    Palette,
+    FlaskConical,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -101,6 +103,8 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     'check': Check,
     'alert-triangle': AlertTriangle,
     'loader': Loader,
+    'palette': Palette,
+    'flask-conical': FlaskConical,
 };
 
 /**
