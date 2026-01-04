@@ -1,0 +1,7 @@
+{
+    "id": "ext.hello-world",
+    "name": "Hello World Plugin",
+    "version": "1.0.0",
+    "main": "dist/main.js",
+    "apiVersion": "1.0.0"
+}

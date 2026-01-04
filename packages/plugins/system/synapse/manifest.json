@@ -1,0 +1,11 @@
+{
+    "id": "nh.system.synapse",
+    "name": "Synapse",
+    "version": "0.0.0",
+    "type": "system",
+    "description": "External plugin loader using SystemJS with shared scope injection",
+    "dependencies": [
+        "nh.system.fs-manager",
+        "nh.system.logger"
+    ]
+}

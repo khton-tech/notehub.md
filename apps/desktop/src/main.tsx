@@ -75,6 +75,8 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/fs-driver-tauri');
         case '@notehub/config-manager':
             return import('@notehub/config-manager');
+        case '@notehub/synapse':
+            return import('@notehub/synapse');
         case '@notehub/bootloader':
             return import('@notehub/bootloader');
 

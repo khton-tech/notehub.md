@@ -85,15 +85,6 @@
     ]
   },
   {
-    "id": "nh.ui.controllers-manager",
-    "name": "ControllersManager",
-    "version": "1.0.0",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
     "id": "nh.ui.dialog-manager",
     "name": "DialogManager",
     "version": "1.0.0",
@@ -101,6 +92,15 @@
     "dependencies": [
       "nh.system.logger",
       "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.controllers-manager",
+    "name": "ControllersManager",
+    "version": "1.0.0",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger"
     ]
   },
   {
@@ -200,6 +200,17 @@
     "type": "system",
     "description": "Runtime session state storage (non-persistent)",
     "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.system.synapse",
+    "name": "Synapse",
+    "version": "0.0.0",
+    "type": "system",
+    "description": "External plugin loader using SystemJS with shared scope injection",
+    "dependencies": [
+      "nh.system.fs-manager",
       "nh.system.logger"
     ]
   }
