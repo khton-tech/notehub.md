@@ -20,7 +20,7 @@ Notehub is built from the ground up to be different:
 
 - **Modular Architecture:** Everything is a plugin. The core is minimal, ensuring stability and performance.
 - **Microkernel Design:** Isolation by default. Plugins run safely without crashing the core.
-- **Rich Markdown:** Use real React components inside your notes (Callouts, Checkboxes, Progress Bars).
+- **Rich Markdown:** Use real React components inside your notes (Callouts, Checkboxes).
 - **Settings System:** A unified, searchable settings interface for Core and Plugins alike.
 - **External Plugin Loader:** Load plugins dynamically. If you can build it, Notehub can run it.
 
