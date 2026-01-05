@@ -38,6 +38,8 @@ import type { NotehubCore } from '@notehub/core';
 import type { EditorView } from '@codemirror/view';
 import type { EditorSettings } from './EditorConfig';
 import { EDITOR_CONFIG_KEYS, EDITOR_CONFIG_DEFAULTS } from './EditorConfig';
+import { WidgetRegistry } from './WidgetRegistry';
+import type { FC } from 'react';
 
 /**
  * Status values for the editor lifecycle.
@@ -125,6 +127,11 @@ export class EditorController {
 
     /** Listeners for settings changes (UI re-render trigger) */
     private settingsListeners: Set<(settings: EditorSettings) => void> = new Set();
+
+    // ========== Widget Registry ==========
+
+    /** Registry for dynamic editor widgets */
+    public readonly widgetRegistry: WidgetRegistry = new WidgetRegistry();
 
     // ========== Bound Event Handlers (for unsubscription) ==========
 
@@ -618,5 +625,29 @@ export class EditorController {
         this.originalContent = '';
         this.isDirty = false;
         this.status = 'idle';
+    }
+
+    // ========== Public API: Widgets ==========
+
+    /**
+     * Register a new dynamic widget
+     * 
+     * @param id - Unique widget ID
+     * @param regex - Regex pattern to match
+     * @param component - React component to render
+     */
+    registerWidget(id: string, regex: RegExp, component: FC<any>): void {
+        this.widgetRegistry.register(id, regex, component);
+        this.log('info', `Registered widget: ${id}`);
+    }
+
+    /**
+     * Unregister a dynamic widget
+     * 
+     * @param id - Unique widget ID
+     */
+    unregisterWidget(id: string): void {
+        this.widgetRegistry.unregister(id);
+        this.log('info', `Unregistered widget: ${id}`);
     }
 }

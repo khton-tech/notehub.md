@@ -116,6 +116,7 @@ export class PluginLoader {
                 plugin,
                 context,
                 url,
+                sourcePath: pluginPath,
                 loadedAt: new Date(),
             });
 
@@ -225,17 +226,48 @@ export class PluginLoader {
     }
 
     /**
+     * Get a plugin ID by its source path
+     * 
+     * Used by the watcher to map file events to plugins.
+     * Handles both exact matches (for .nhp files) and directory prefixes (for folder plugins).
+     */
+    getPluginIdByPath(path: string): string | undefined {
+        // Normalize the input path
+        const normalizedPath = path.replace(/\\/g, '/');
+
+        for (const [id, record] of this.loadedPlugins) {
+            if (!record.sourcePath) continue;
+
+            const recordPath = record.sourcePath.replace(/\\/g, '/');
+
+            // Exact match (e.g. .nhp file or exact folder match)
+            if (normalizedPath === recordPath) {
+                return id;
+            }
+
+            // Child file match (e.g. modified file inside plugin folder)
+            if (normalizedPath.startsWith(recordPath + '/')) {
+                return id;
+            }
+        }
+        return undefined;
+    }
+
+    /**
      * Load an external plugin from an NHP file buffer (in-memory ZIP)
      * 
      * @param buffer - Raw bytes of the .nhp file
-     * @param filename - Original filename for logging
+     * @param sourcePath - Absolute path to the .nhp file
      * @returns Result indicating success or failure
      */
-    async loadFromNhp(buffer: ArrayBuffer, filename: string): Promise<PluginLoadResult> {
+    async loadFromNhp(buffer: ArrayBuffer, sourcePath: string): Promise<PluginLoadResult> {
         try {
             // Step 1: Extract NHP contents using ZipLoader
             const zipLoader = new ZipLoader();
-            const nhpResult: NhpLoadResult = await zipLoader.loadFromBuffer(buffer, filename);
+            // Use the basename of the source path for the filename logic inside ZipLoader if needed, 
+            // but ZipLoader.loadFromBuffer mostly needs the buffer.
+            // We pass sourcePath as filename for logging reference inside ZipLoader if it uses it.
+            const nhpResult: NhpLoadResult = await zipLoader.loadFromBuffer(buffer, sourcePath);
 
             const { manifest, blobUrl, css } = nhpResult;
 
@@ -247,7 +279,7 @@ export class PluginLoader {
                 return { success: true, pluginId: manifest.id };
             }
 
-            this.log('info', `Loading NHP plugin: ${manifest.id} from ${filename}`);
+            this.log('info', `Loading NHP plugin: ${manifest.id} from ${sourcePath}`);
 
             // Step 3: Inject CSS if present
             if (css) {
@@ -291,6 +323,7 @@ export class PluginLoader {
                 url: blobUrl, // Use blobUrl as the URL for SystemJS cleanup
                 blobUrl,      // Keep separate reference for revokeObjectURL
                 isNhp: true,
+                sourcePath,
                 loadedAt: new Date(),
             });
 
@@ -300,7 +333,7 @@ export class PluginLoader {
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            this.log('error', `Failed to load NHP plugin from ${filename}: ${errorMessage}`);
+            this.log('error', `Failed to load NHP plugin from ${sourcePath}: ${errorMessage}`);
             return { success: false, error: errorMessage };
         }
     }

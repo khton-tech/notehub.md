@@ -34,6 +34,8 @@ export interface LoadedPluginRecord {
     blobUrl?: string;
     /** Whether this plugin was loaded from an NHP file */
     isNhp?: boolean;
+    /** Source path of the plugin (folder or .nhp file) for watcher tracking */
+    sourcePath?: string;
     /** Timestamp when plugin was loaded */
     loadedAt: Date;
 }

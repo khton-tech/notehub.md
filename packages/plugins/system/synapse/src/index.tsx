@@ -57,6 +57,9 @@ export class SynapsePlugin implements IPlugin {
 
     private app: NotehubCore | null = null;
     private loader: PluginLoader | null = null;
+    private watcherUnsubscribe: (() => void) | null = null;
+    private pendingEvents: Map<string, { path: string; type: string }> = new Map();
+    private debounceTimer: any = null; // using any for timer to avoid node/window type conflicts
 
     /**
      * Log a message via the Logger plugin
@@ -117,6 +120,7 @@ export class SynapsePlugin implements IPlugin {
         this.log('info', `Vault opened: ${vaultPath}, scanning for external plugins...`);
         try {
             await this.scanAndLoadPlugins(vaultPath);
+            await this.startWatching(vaultPath);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.log('error', `Error scanning for external plugins: ${errorMessage}`);
@@ -141,6 +145,7 @@ export class SynapsePlugin implements IPlugin {
             }
 
             await this.scanAndLoadPlugins(vaultPath);
+            await this.startWatching(vaultPath);
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -167,9 +172,174 @@ export class SynapsePlugin implements IPlugin {
         app.api.unregister('synapse:unload-plugin');
         app.api.unregister('synapse:list-plugins');
 
+        this.stopWatching();
         this.loader = null;
         this.log('info', 'Synapse Engine unloaded');
         this.app = null;
+    }
+
+    /**
+     * Start watching the plugins directory for changes
+     */
+    private async startWatching(vaultPath: string): Promise<void> {
+        this.stopWatching(); // Clean up existing watcher if any
+
+        const pluginsDir = `${vaultPath}/.notehub/plugins`;
+
+        // Ensure directory exists before watching (though scanAndLoadPlugins checks too)
+        const dirExists = await this.app!.api.invoke('fs:exists', pluginsDir);
+        if (!dirExists) return;
+
+        try {
+            this.log('info', `Starting plugin watcher on ${pluginsDir}`);
+            // Use an arrow function wrapper to preserve 'this' context and handle the event
+            this.watcherUnsubscribe = await this.app!.api.invoke('fs:watch', pluginsDir, (event: any) => this.handleFsEvent(event)) as (() => void);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `Failed to start plugin watcher: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Stop the current watcher
+     */
+    private stopWatching(): void {
+        if (this.watcherUnsubscribe) {
+            try {
+                this.watcherUnsubscribe();
+                this.log('info', 'Stopped plugin watcher');
+            } catch (error) {
+                // Ignore errors during cleanup
+            }
+            this.watcherUnsubscribe = null;
+        }
+
+        // Clear pending events/timer
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = null;
+        }
+        this.pendingEvents.clear();
+    }
+
+    /**
+     * Handle File System events with debounce
+     */
+    private handleFsEvent(event: { path: string; type: string }): void {
+        if (!event.path || !event.type) return;
+
+        // Add to pending events map (keyed by path to deduplicate multiple events for same file)
+        this.pendingEvents.set(event.path, event);
+
+        // Reset debounce timer
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+        }
+
+        this.debounceTimer = setTimeout(() => {
+            this.processPendingEvents();
+        }, 500);
+    }
+
+    /**
+     * Process accumulated FS events
+     */
+    private async processPendingEvents(): Promise<void> {
+        if (!this.loader) return;
+
+        const events = Array.from(this.pendingEvents.values());
+        this.pendingEvents.clear();
+        this.debounceTimer = null;
+
+        for (const event of events) {
+            await this.processFsEvent(event);
+        }
+    }
+
+    /**
+     * Process a single FS event
+     */
+    private async processFsEvent(event: { path: string; type: string }): Promise<void> {
+        const { path, type } = event;
+        // Normalize path separator
+        const normalizedPath = path.replace(/\\/g, '/');
+
+        this.log('info', `Processing FS event: ${type} on ${normalizedPath}`);
+
+        // Helper to get plugin ID affected by this path
+        const affectedPluginId = this.loader!.getPluginIdByPath(normalizedPath);
+
+        // Case 1: Removal
+        if (type === 'remove') {
+            if (affectedPluginId) {
+                this.log('info', `Detected removal of plugin ${affectedPluginId}`);
+                await this.loader!.unloadPlugin(affectedPluginId);
+            }
+            return;
+        }
+
+        // Case 2: Create or Modify
+        if (type === 'create' || type === 'modify') {
+
+            // If it's an existing loaded plugin, unload it first (Hot Reload)
+            if (affectedPluginId) {
+                this.log('info', `Hot reloading plugin ${affectedPluginId}...`);
+                const record = this.loader!.getLoadedPlugin(affectedPluginId);
+                // We need the source path (loaded path) to reload
+                // If the event was on a subfile, we reload the plugin root
+                const sourcePath = record?.sourcePath;
+
+                await this.loader!.unloadPlugin(affectedPluginId);
+
+                if (sourcePath) {
+                    // Slight delay to ensure file system is stable (optional but safe)
+                    await this.loadPluginByPath(sourcePath);
+                }
+                return;
+            }
+
+            // If it's a NEW plugin (not currently loaded)
+            // It could be a new .nhp file
+            if (normalizedPath.endsWith('.nhp')) {
+                await this.loadPluginByPath(normalizedPath);
+                return;
+            }
+
+            // Or a new directory with manifest.json
+            // If the event path is .../manifest.json, the plugin root is the parent dir
+            if (normalizedPath.endsWith('/manifest.json')) {
+                const pluginDir = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
+                await this.loadPluginByPath(pluginDir);
+                return;
+            }
+
+            // Or just a directory creation?
+            // Usually we wait for manifest.json or content. 
+            // If a user drops a folder, we might get create events for folder then files.
+            // If we get "create manifest.json" that's our signal.
+            // If we get generic directory changes, we might ignore unless we can verify it's a plugin.
+        }
+    }
+
+    /**
+     * Helper to load a plugin from a path (NHP or Folder)
+    */
+    private async loadPluginByPath(path: string): Promise<void> {
+        if (!this.loader) return;
+
+        // Check if it's an NHP file
+        if (path.endsWith('.nhp')) {
+            try {
+                const buffer = await this.app!.api.invoke('fs:read-file', path) as Uint8Array;
+                const arrayBuffer = new Uint8Array(buffer).buffer;
+                await this.loader.loadFromNhp(arrayBuffer, path);
+            } catch (err) {
+                this.log('error', `Hot load failed for NHP ${path}: ${err}`);
+            }
+        } else {
+            // Assume folder
+            await this.loader.loadPlugin(path);
+        }
     }
 
     /**
@@ -234,7 +404,7 @@ export class SynapsePlugin implements IPlugin {
                 const arrayBuffer = new Uint8Array(buffer).buffer;
 
                 // Load using the NHP loader
-                const result = await this.loader!.loadFromNhp(arrayBuffer, entry.name);
+                const result = await this.loader!.loadFromNhp(arrayBuffer, nhpPath);
 
                 if (result.success) {
                     successCount++;

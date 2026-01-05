@@ -549,6 +549,25 @@ export interface NotehubApiMap {
     /** Toggle the settings modal */
     'settings:toggle': () => void;
 
+    /** Unregister a settings tab */
+    'settings:unregister-tab': (id: string) => void;
+
+    /** Unregister a settings group */
+    'settings:unregister-group': (id: string) => void;
+
+    /** Unregister a settings item */
+    'settings:unregister-item': (key: string) => void;
+
+    // =========================================================================
+    // Editor Plugin (nh.features.editor)
+    // =========================================================================
+
+    /** Register a dynamic widget */
+    'editor:register-widget': (id: string, regex: RegExp | string, component: FC<{ match: RegExpMatchArray }>) => void;
+
+    /** Unregister a dynamic widget */
+    'editor:unregister-widget': (id: string) => void;
+
     // =========================================================================
     // Synapse Plugin (nh.system.synapse) - External Plugin Loader
     // =========================================================================

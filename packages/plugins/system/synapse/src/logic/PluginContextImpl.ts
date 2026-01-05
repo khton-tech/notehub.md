@@ -79,10 +79,57 @@ export class PluginContextImpl implements PluginContext {
      * @param args - Arguments to pass to the API method
      * @returns Promise resolving to the API method's return value
      */
+    /** List of registered widget IDs (for cleanup) */
+    private registeredWidgets: string[] = [];
+
+    /** Lists of registered settings resources (for cleanup) */
+    private registeredSettingsTabs: string[] = [];
+    private registeredSettingsGroups: string[] = [];
+    private registeredSettingsItems: string[] = [];
+
+    /**
+     * Invoke an API method registered by Core or another plugin.
+     * 
+     * @param name - API method name to invoke
+     * @param args - Arguments to pass to the API method
+     * @returns Promise resolving to the API method's return value
+     */
     async invokeApi<T = unknown>(name: string, ...args: unknown[]): Promise<T> {
         this.ensureNotDisposed('invokeApi');
 
+        // Intercept widget registration for auto-cleanup
+        if (name === 'editor:register-widget' && typeof args[0] === 'string') {
+            const widgetId = args[0];
+            this.registeredWidgets.push(widgetId);
+            this.log('info', `Tracked widget for cleanup: ${widgetId}`);
+        }
+
+        // Intercept settings registration
+        this.interceptSettingsRegistration(name, args);
+
         return this.app.api.invoke<T>(name, ...args);
+    }
+
+    /**
+     * Helper to track settings registrations
+     */
+    private interceptSettingsRegistration(name: string, args: unknown[]): void {
+        const arg0 = args[0] as any;
+        if (!arg0) return;
+
+        if (name === 'settings:register-tab' && typeof arg0.id === 'string') {
+            this.registeredSettingsTabs.push(arg0.id);
+        } else if (name === 'settings:register-group' && typeof arg0.id === 'string') {
+            this.registeredSettingsGroups.push(arg0.id);
+        } else if (name === 'settings:register-item' && typeof arg0.key === 'string') {
+            this.registeredSettingsItems.push(arg0.key);
+        } else if (name === 'settings:register-tabs' && Array.isArray(arg0)) {
+            arg0.forEach((t: any) => t.id && this.registeredSettingsTabs.push(t.id));
+        } else if (name === 'settings:register-groups' && Array.isArray(arg0)) {
+            arg0.forEach((g: any) => g.id && this.registeredSettingsGroups.push(g.id));
+        } else if (name === 'settings:register-items' && Array.isArray(arg0)) {
+            arg0.forEach((i: any) => i.key && this.registeredSettingsItems.push(i.key));
+        }
     }
 
     /**
@@ -150,6 +197,38 @@ export class PluginContextImpl implements PluginContext {
         }
         this.eventUnsubscribers = [];
 
+        // Unregister tracked widgets
+        for (const widgetId of this.registeredWidgets) {
+            try {
+                this.app.api.invoke('editor:unregister-widget', widgetId).catch(err => {
+                    this.log('warn', `Failed to unregister widget "${widgetId}" during cleanup: ${err}`);
+                });
+                this.log('info', `Unregistered widget: ${widgetId}`);
+            } catch (error) {
+                this.log('error', `Failed to unregister widget "${widgetId}": ${error}`);
+            }
+        }
+        this.registeredWidgets = [];
+
+        // Unregister settings resources
+        // Note: We unregister items first, then groups, then tabs to be safe,
+        // although the registry handles cascading deletion.
+
+        for (const key of this.registeredSettingsItems) {
+            this.app.api.invoke('settings:unregister-item', key).catch(() => { });
+        }
+        this.registeredSettingsItems = [];
+
+        for (const id of this.registeredSettingsGroups) {
+            this.app.api.invoke('settings:unregister-group', id).catch(() => { });
+        }
+        this.registeredSettingsGroups = [];
+
+        for (const id of this.registeredSettingsTabs) {
+            this.app.api.invoke('settings:unregister-tab', id).catch(() => { });
+        }
+        this.registeredSettingsTabs = [];
+
         this.disposed = true;
         this.log('info', 'Cleanup complete');
     }
@@ -164,10 +243,12 @@ export class PluginContextImpl implements PluginContext {
     /**
      * Get statistics about tracked registrations
      */
-    getStats(): { registeredApis: number; eventSubscriptions: number } {
+    getStats(): { registeredApis: number; eventSubscriptions: number; registeredWidgets: number; settings: number } {
         return {
             registeredApis: this.registeredApis.length,
             eventSubscriptions: this.eventUnsubscribers.length,
+            registeredWidgets: this.registeredWidgets.length,
+            settings: this.registeredSettingsTabs.length + this.registeredSettingsGroups.length + this.registeredSettingsItems.length,
         };
     }
 

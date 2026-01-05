@@ -39,6 +39,7 @@ import { Icon } from '@notehub/icon-manager';
 import { EditorController } from './logic/EditorController';
 import { NotehubEditor } from './components/NotehubEditor';
 import { registerEditorSettings, type EditorSettings } from './logic/EditorConfig';
+import type { FC } from 'react';
 
 /**
  * Payload structure for file selection events
@@ -297,6 +298,21 @@ export class EditorPlugin implements IPlugin {
         app.events.on('explorer:file-selected', this.handleFileSelected);
         this.eventCleanups.push(() => app.events.off('explorer:file-selected', this.handleFileSelected));
 
+        // Register API for dynamic widgets
+        (app.api.register as any)('editor:register-widget', (id: string, regex: RegExp, component: FC<any>) => {
+            if (this.controller) {
+                this.controller.registerWidget(id, regex, component);
+            } else {
+                this.log('warn', `Cannot register widget ${id}: controller not initialized`);
+            }
+        });
+
+        (app.api.register as any)('editor:unregister-widget', (id: string) => {
+            if (this.controller) {
+                this.controller.unregisterWidget(id);
+            }
+        });
+
         this.log('info', 'Loaded successfully');
     }
 
@@ -326,6 +342,10 @@ export class EditorPlugin implements IPlugin {
 
         // 2. Unregister the controller component from the registry
         app.api.invoke('controller:unregister', 'editor-main');
+
+        // Unregister API
+        app.api.unregister('editor:register-widget');
+        app.api.unregister('editor:unregister-widget');
 
         // 3. Dispose controller (clears debounce timers, internal state)
         if (this.controller) {
