@@ -46,6 +46,7 @@ export class SettingsRegistry {
     private tabs: Map<string, SettingsTab> = new Map();
     private groups: Map<string, SettingsGroup> = new Map();
     private items: Map<string, SettingsItem> = new Map();
+    private customViews: Map<string, React.FC<any>> = new Map();
 
     /** Listeners for structure changes */
     private listeners: Set<() => void> = new Set();
@@ -96,6 +97,20 @@ export class SettingsRegistry {
             console.warn(`[SettingsRegistry] Item "${item.key}" already registered, overwriting`);
         }
         this.items.set(item.key, item);
+        this.notifyListeners();
+    }
+
+    /**
+     * Register a custom view for a tab
+     * 
+     * @param tabId - ID of the tab to replace with custom view
+     * @param view - React component definition
+     */
+    registerCustomView(tabId: string, view: React.FC<any>): void {
+        if (this.customViews.has(tabId)) {
+            console.warn(`[SettingsRegistry] Custom view for tab "${tabId}" already registered, overwriting`);
+        }
+        this.customViews.set(tabId, view);
         this.notifyListeners();
     }
 
@@ -219,6 +234,13 @@ export class SettingsRegistry {
         return Array.from(this.items.values());
     }
 
+    /**
+     * Get custom view for a tab
+     */
+    getCustomView(tabId: string): React.FC<any> | undefined {
+        return this.customViews.get(tabId);
+    }
+
     // ========================================================================
     // Unregistration
     // ========================================================================
@@ -266,6 +288,7 @@ export class SettingsRegistry {
         this.tabs.clear();
         this.groups.clear();
         this.items.clear();
+        this.customViews.clear();
         this.notifyListeners();
     }
 

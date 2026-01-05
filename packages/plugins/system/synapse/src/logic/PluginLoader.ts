@@ -11,13 +11,12 @@
 
 import type { NotehubPlugin } from '@notehub/api';
 import type { IPlugin, NotehubCore } from '@notehub/core';
-import type { ExternalPluginManifest, LoadedPluginRecord, PluginLoadResult } from '../types.js';
+import type { ExternalPluginManifest, LoadedPluginRecord, PluginLoadResult, DiscoveredPluginRecord } from '../types.js';
 import { PluginContextImpl } from './PluginContextImpl.js';
 import { ZipLoader, type NhpLoadResult } from './ZipLoader.js';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 // SystemJS global type declaration (SystemJS 6.x)
-// Note: System.newModule was removed in SystemJS 6.x
 declare const System: {
     set(id: string, module: object): void;
     import(id: string): Promise<{ default?: unknown;[key: string]: unknown }>;
@@ -26,17 +25,13 @@ declare const System: {
 
 /**
  * PluginLoader - Manages loading and unloading of external plugins
- * 
- * Responsibilities:
- * - Read plugin manifests from disk
- * - Load plugin entry points via SystemJS
- * - Validate plugin interface conformance
- * - Track loaded plugins for cleanup
- * - Handle errors gracefully (don't crash on bad plugins)
  */
 export class PluginLoader {
     /** Map of loaded plugins by ID */
     private loadedPlugins: Map<string, LoadedPluginRecord> = new Map();
+
+    /** Map of all discovered plugins (loaded or not) by ID */
+    private discoveredPlugins: Map<string, DiscoveredPluginRecord> = new Map();
 
     /** Core application instance */
     private app: NotehubCore;
@@ -53,12 +48,122 @@ export class PluginLoader {
     }
 
     /**
+     * Scan the vault for plugins without loading them
+     */
+    async scan(vaultPath: string): Promise<void> {
+        this.discoveredPlugins.clear();
+        const pluginsDir = `${vaultPath}/.notehub/plugins`;
+
+        // Check if plugins directory exists
+        const dirExists = await this.app.api.invoke('fs:exists', pluginsDir);
+        if (!dirExists) {
+            this.log('info', `No plugins directory found at ${pluginsDir}`);
+            return;
+        }
+
+        // Read directory contents
+        const entries = await this.app.api.invoke('fs:read-dir', pluginsDir) as Array<{
+            name: string;
+            isDirectory: boolean;
+        }>;
+
+        // Separate directories and .nhp files
+        const directories = entries.filter((entry) => entry.isDirectory);
+        const nhpFiles = entries.filter((entry) =>
+            !entry.isDirectory && entry.name.endsWith('.nhp')
+        );
+
+        this.log('info', `Scanning found: ${directories.length} folders, ${nhpFiles.length} NHP files`);
+
+        // Process folders
+        for (const entry of directories) {
+            const pluginPath = `${pluginsDir}/${entry.name}`;
+            const manifestPath = `${pluginPath}/manifest.json`;
+
+            try {
+                if (await this.app.api.invoke('fs:exists', manifestPath)) {
+                    const manifestJson = await this.app.api.invoke('fs:read-text-file', manifestPath);
+                    const manifest = this.parseManifest(manifestJson, pluginPath);
+                    if (manifest) {
+                        const isLoaded = this.loadedPlugins.has(manifest.id);
+                        this.discoveredPlugins.set(manifest.id, {
+                            manifest,
+                            sourcePath: pluginPath,
+                            status: isLoaded ? 'Active' : 'Inactive',
+                            isNhp: false
+                        });
+                    }
+                }
+            } catch (err) {
+                this.log('warn', `Failed to scan folder plugin at ${pluginPath}: ${err}`);
+            }
+        }
+
+        // Process NHP files
+        for (const entry of nhpFiles) {
+            const nhpPath = `${pluginsDir}/${entry.name}`;
+            try {
+                // For NHP, we need to read the ZIP to get the manifest.
+                const buffer = await this.app.api.invoke('fs:read-file', nhpPath) as Uint8Array;
+                const arrayBuffer = new Uint8Array(buffer).buffer;
+                const zipLoader = new ZipLoader();
+                const { manifest } = await zipLoader.loadFromBuffer(arrayBuffer, nhpPath);
+
+                if (manifest) {
+                    const isLoaded = this.loadedPlugins.has(manifest.id);
+                    this.discoveredPlugins.set(manifest.id, {
+                        manifest,
+                        sourcePath: nhpPath,
+                        status: isLoaded ? 'Active' : 'Inactive',
+                        isNhp: true
+                    });
+                }
+            } catch (err) {
+                this.log('warn', `Failed to scan NHP plugin at ${nhpPath}: ${err}`);
+            }
+        }
+        this.log('info', `Scan complete. Discovered ${this.discoveredPlugins.size} plugins.`);
+    }
+
+    /**
+     * Load all discovered plugins that depend on auto-load (currently all)
+     */
+    async loadAll(): Promise<void> {
+        for (const [id, record] of this.discoveredPlugins) {
+            // In the future, check enabled state from settings here
+            if (record.isNhp) {
+                try {
+                    const buffer = await this.app.api.invoke('fs:read-file', record.sourcePath) as Uint8Array;
+                    const arrayBuffer = new Uint8Array(buffer).buffer;
+                    await this.loadFromNhp(arrayBuffer, record.sourcePath);
+                } catch (e) {
+                    this.log('error', `Failed to load discovered NHP ${id}: ${e}`);
+                    record.status = 'Error';
+                    record.error = String(e);
+                }
+            } else {
+                await this.loadPlugin(record.sourcePath);
+            }
+        }
+    }
+
+    /**
      * Load an external plugin from a directory path
-     * 
-     * @param pluginPath - Absolute path to the plugin directory
-     * @returns Result indicating success or failure
      */
     async loadPlugin(pluginPath: string): Promise<PluginLoadResult> {
+        // Handle NHP files
+        if (pluginPath.endsWith('.nhp')) {
+            try {
+                const buffer = await this.app.api.invoke('fs:read-file', pluginPath) as Uint8Array;
+                const arrayBuffer = new Uint8Array(buffer).buffer;
+                return this.loadFromNhp(arrayBuffer, pluginPath);
+            } catch (e) {
+                const errorMessage = String(e);
+                this.log('error', `Failed to load NHP ${pluginPath}: ${errorMessage}`);
+                return { success: false, error: errorMessage };
+            }
+        }
+
         const manifestPath = `${pluginPath}/manifest.json`;
 
         try {
@@ -80,6 +185,12 @@ export class PluginLoader {
             // Step 3: Check if already loaded
             if (this.loadedPlugins.has(manifest.id)) {
                 this.log('warn', `Plugin ${manifest.id} is already loaded, skipping`);
+                // Ensure discovered status is active
+                const discovered = this.discoveredPlugins.get(manifest.id);
+                if (discovered) {
+                    discovered.status = 'Active';
+                    delete discovered.error;
+                }
                 return { success: true, pluginId: manifest.id };
             }
 
@@ -102,11 +213,9 @@ export class PluginLoader {
             let context: PluginContextImpl | undefined;
 
             if (this.isNotehubPlugin(plugin)) {
-                // New NotehubPlugin: create context with auto-cleanup
                 context = new PluginContextImpl(this.app, manifest.id);
                 await plugin.onload(context);
             } else {
-                // Legacy IPlugin: call load with app reference
                 await plugin.load(this.app);
             }
 
@@ -122,6 +231,21 @@ export class PluginLoader {
 
             const stats = context ? ` (${context.getStats().registeredApis} APIs, ${context.getStats().eventSubscriptions} subscriptions)` : '';
             this.log('info', `External plugin loaded: ${manifest.id} v${manifest.version}${stats}`);
+
+            // Update discovered record status
+            const discovered = this.discoveredPlugins.get(manifest.id);
+            if (discovered) {
+                discovered.status = 'Active';
+                delete discovered.error;
+            } else {
+                this.discoveredPlugins.set(manifest.id, {
+                    manifest,
+                    sourcePath: pluginPath,
+                    status: 'Active',
+                    isNhp: false
+                });
+            }
+
             return { success: true, pluginId: manifest.id };
 
         } catch (error) {
@@ -133,9 +257,6 @@ export class PluginLoader {
 
     /**
      * Unload a previously loaded plugin
-     * 
-     * @param pluginId - ID of the plugin to unload
-     * @returns true if plugin was unloaded, false if not found
      */
     async unloadPlugin(pluginId: string): Promise<boolean> {
         const record = this.loadedPlugins.get(pluginId);
@@ -145,8 +266,7 @@ export class PluginLoader {
         }
 
         try {
-            // Step 1: Clean up context BEFORE calling plugin.onunload()
-            // This ensures APIs are unregistered even if onunload() throws
+            // Step 1: Clean up context
             if (record.context) {
                 record.context.cleanup();
             }
@@ -158,43 +278,45 @@ export class PluginLoader {
                 await record.plugin.unload(this.app);
             }
 
-            // Step 3: Clean up SystemJS registry for potential HMR
+            // Step 3: Clean up SystemJS registry
             System.delete(record.url);
 
-            // Step 4: Revoke Blob URL if this was an NHP plugin (memory safety)
+            // Step 4: Revoke Blob URL
             if (record.blobUrl) {
                 URL.revokeObjectURL(record.blobUrl);
-                this.log('info', `Revoked Blob URL for ${pluginId}`);
             }
 
-            // Step 5: Remove injected CSS style tag if present
+            // Step 5: Remove injected CSS
             if (record.isNhp) {
                 const styleTag = document.getElementById(`style-${pluginId}`);
                 if (styleTag) {
                     styleTag.remove();
-                    this.log('info', `Removed style tag for ${pluginId}`);
                 }
             }
 
-            // Step 6: Remove from our registry
+            // Step 6: Remove from registry
             this.loadedPlugins.delete(pluginId);
 
             this.log('info', `External plugin unloaded: ${pluginId}`);
+
+            // Update status to Inactive
+            const discovered = this.discoveredPlugins.get(pluginId);
+            if (discovered) {
+                discovered.status = 'Inactive';
+            }
+
             return true;
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.log('error', `Error unloading plugin ${pluginId}: ${errorMessage}`);
-            // Still remove from registry to prevent zombie entries
+
+            // Cleanup on error
             this.loadedPlugins.delete(pluginId);
-            // Also cleanup Blob URL and CSS even on error
-            if (record.blobUrl) {
-                URL.revokeObjectURL(record.blobUrl);
-            }
+            if (record.blobUrl) URL.revokeObjectURL(record.blobUrl);
             const styleTag = document.getElementById(`style-${pluginId}`);
-            if (styleTag) {
-                styleTag.remove();
-            }
+            if (styleTag) styleTag.remove();
+
             return false;
         }
     }
@@ -204,8 +326,6 @@ export class PluginLoader {
      */
     async unloadAll(): Promise<void> {
         const pluginIds = Array.from(this.loadedPlugins.keys());
-
-        // Unload in reverse order (LIFO)
         for (const pluginId of pluginIds.reverse()) {
             await this.unloadPlugin(pluginId);
         }
@@ -219,6 +339,26 @@ export class PluginLoader {
     }
 
     /**
+     * Get metadata for all plugins (loaded + discovered)
+     */
+    getPluginsMetadata(): any[] {
+        return Array.from(this.discoveredPlugins.values()).map(record => {
+            const loaded = this.loadedPlugins.get(record.manifest.id);
+            return {
+                id: record.manifest.id,
+                name: record.manifest.name,
+                version: record.manifest.version,
+                description: (record.manifest as any).description || '',
+                path: record.sourcePath || '',
+                status: record.status,
+                error: record.error || undefined,
+                isNhp: record.isNhp,
+                loadedAt: loaded?.loadedAt || new Date()
+            };
+        });
+    }
+
+    /**
      * Get a loaded plugin record by ID
      */
     getLoadedPlugin(pluginId: string): LoadedPluginRecord | undefined {
@@ -227,25 +367,17 @@ export class PluginLoader {
 
     /**
      * Get a plugin ID by its source path
-     * 
-     * Used by the watcher to map file events to plugins.
-     * Handles both exact matches (for .nhp files) and directory prefixes (for folder plugins).
      */
     getPluginIdByPath(path: string): string | undefined {
-        // Normalize the input path
         const normalizedPath = path.replace(/\\/g, '/');
 
         for (const [id, record] of this.loadedPlugins) {
             if (!record.sourcePath) continue;
-
             const recordPath = record.sourcePath.replace(/\\/g, '/');
 
-            // Exact match (e.g. .nhp file or exact folder match)
             if (normalizedPath === recordPath) {
                 return id;
             }
-
-            // Child file match (e.g. modified file inside plugin folder)
             if (normalizedPath.startsWith(recordPath + '/')) {
                 return id;
             }
@@ -254,74 +386,58 @@ export class PluginLoader {
     }
 
     /**
-     * Load an external plugin from an NHP file buffer (in-memory ZIP)
-     * 
-     * @param buffer - Raw bytes of the .nhp file
-     * @param sourcePath - Absolute path to the .nhp file
-     * @returns Result indicating success or failure
+     * Load an external plugin from an NHP file buffer
      */
     async loadFromNhp(buffer: ArrayBuffer, sourcePath: string): Promise<PluginLoadResult> {
         try {
-            // Step 1: Extract NHP contents using ZipLoader
             const zipLoader = new ZipLoader();
-            // Use the basename of the source path for the filename logic inside ZipLoader if needed, 
-            // but ZipLoader.loadFromBuffer mostly needs the buffer.
-            // We pass sourcePath as filename for logging reference inside ZipLoader if it uses it.
             const nhpResult: NhpLoadResult = await zipLoader.loadFromBuffer(buffer, sourcePath);
-
             const { manifest, blobUrl, css } = nhpResult;
 
-            // Step 2: Check if already loaded
             if (this.loadedPlugins.has(manifest.id)) {
                 this.log('warn', `Plugin ${manifest.id} is already loaded, skipping`);
-                // Revoke the blob URL we just created since we won't use it
+                // Ensure discovered status is active
+                const discovered = this.discoveredPlugins.get(manifest.id);
+                if (discovered) {
+                    discovered.status = 'Active';
+                    delete discovered.error;
+                }
                 URL.revokeObjectURL(blobUrl);
                 return { success: true, pluginId: manifest.id };
             }
 
             this.log('info', `Loading NHP plugin: ${manifest.id} from ${sourcePath}`);
 
-            // Step 3: Inject CSS if present
             if (css) {
                 const styleTag = document.createElement('style');
                 styleTag.id = `style-${manifest.id}`;
                 styleTag.textContent = css;
                 document.head.appendChild(styleTag);
-                this.log('info', `Injected CSS for ${manifest.id}`);
             }
 
-            // Step 4: Dynamic import via SystemJS using Blob URL
             const module = await System.import(blobUrl);
-
-            // Step 5: Get and validate the plugin class/instance
             const plugin = this.extractPlugin(module, manifest.id);
             if (!plugin) {
-                // Clean up on failure
                 URL.revokeObjectURL(blobUrl);
                 const styleTag = document.getElementById(`style-${manifest.id}`);
                 if (styleTag) styleTag.remove();
                 return { success: false, error: 'Module does not export a valid plugin' };
             }
 
-            // Step 6: Determine plugin type and call appropriate load method
             let context: PluginContextImpl | undefined;
-
             if (this.isNotehubPlugin(plugin)) {
-                // New NotehubPlugin: create context with auto-cleanup
                 context = new PluginContextImpl(this.app, manifest.id);
                 await plugin.onload(context);
             } else {
-                // Legacy IPlugin: call load with app reference
                 await plugin.load(this.app);
             }
 
-            // Step 7: Store in registry with NHP-specific fields
             this.loadedPlugins.set(manifest.id, {
                 manifest,
                 plugin,
                 context,
-                url: blobUrl, // Use blobUrl as the URL for SystemJS cleanup
-                blobUrl,      // Keep separate reference for revokeObjectURL
+                url: blobUrl,
+                blobUrl,
                 isNhp: true,
                 sourcePath,
                 loadedAt: new Date(),
@@ -329,6 +445,20 @@ export class PluginLoader {
 
             const stats = context ? ` (${context.getStats().registeredApis} APIs, ${context.getStats().eventSubscriptions} subscriptions)` : '';
             this.log('info', `NHP plugin loaded: ${manifest.id} v${manifest.version}${stats}`);
+
+            const discovered = this.discoveredPlugins.get(manifest.id);
+            if (discovered) {
+                discovered.status = 'Active';
+                delete discovered.error;
+            } else {
+                this.discoveredPlugins.set(manifest.id, {
+                    manifest,
+                    sourcePath,
+                    status: 'Active',
+                    isNhp: true
+                });
+            }
+
             return { success: true, pluginId: manifest.id };
 
         } catch (error) {
@@ -345,7 +475,6 @@ export class PluginLoader {
         try {
             const parsed = JSON.parse(json);
 
-            // Minimal validation
             if (!parsed.id || typeof parsed.id !== 'string') {
                 this.log('error', `Invalid manifest at ${path}: missing or invalid 'id'`);
                 return null;
@@ -374,35 +503,23 @@ export class PluginLoader {
 
     /**
      * Construct a file URL for loading
-     * 
-     * Uses Tauri's convertFileSrc to create an asset:// URL that can be
-     * loaded in the WebView. Direct file:// URLs are blocked for security.
      */
     private constructFileUrl(basePath: string, entryPoint: string): string {
-        // Normalize path separators
         const normalizedPath = basePath.replace(/\\/g, '/');
         const normalizedEntry = entryPoint.replace(/\\/g, '/');
-
-        // Build full file path
         const fullPath = `${normalizedPath}/${normalizedEntry}`;
-
-        // Use Tauri's convertFileSrc to get a safe asset:// URL
-        // This transforms file paths into URLs that Tauri's WebView can load
         return convertFileSrc(fullPath);
     }
 
     /**
      * Extract and validate plugin from module exports
-     * Supports both legacy IPlugin and new NotehubPlugin interfaces
      */
     private extractPlugin(
         module: { default?: unknown;[key: string]: unknown },
         pluginId: string
     ): IPlugin | NotehubPlugin | null {
-        // Try default export first
         let pluginCandidate = module.default;
 
-        // If default is a class, instantiate it
         if (typeof pluginCandidate === 'function') {
             try {
                 pluginCandidate = new (pluginCandidate as new () => IPlugin | NotehubPlugin)();
@@ -412,15 +529,11 @@ export class PluginLoader {
             }
         }
 
-        // Check for new NotehubPlugin interface first (onload/onunload)
         if (this.isNotehubPlugin(pluginCandidate)) {
-            this.log('info', `Detected NotehubPlugin interface for ${pluginId}`);
             return pluginCandidate;
         }
 
-        // Fall back to legacy IPlugin interface validation
         if (this.isLegacyPlugin(pluginCandidate)) {
-            this.log('info', `Detected legacy IPlugin interface for ${pluginId}`);
             return pluginCandidate;
         }
 
@@ -429,8 +542,7 @@ export class PluginLoader {
     }
 
     /**
-     * Type guard for NotehubPlugin interface (new @notehub/api style)
-     * Checks for onload and onunload methods
+     * Type guard for NotehubPlugin interface
      */
     private isNotehubPlugin(candidate: unknown): candidate is NotehubPlugin {
         if (!candidate || typeof candidate !== 'object') {
@@ -443,7 +555,6 @@ export class PluginLoader {
 
     /**
      * Type guard for legacy IPlugin interface
-     * Checks for manifest object with id, and load/unload methods
      */
     private isLegacyPlugin(candidate: unknown): candidate is IPlugin {
         if (!candidate || typeof candidate !== 'object') {
@@ -452,7 +563,6 @@ export class PluginLoader {
 
         const plugin = candidate as Record<string, unknown>;
 
-        // Must have manifest object with id
         if (!plugin.manifest || typeof plugin.manifest !== 'object') {
             return false;
         }
@@ -462,12 +572,10 @@ export class PluginLoader {
             return false;
         }
 
-        // Must have load function
         if (typeof plugin.load !== 'function') {
             return false;
         }
 
-        // Must have unload function
         if (typeof plugin.unload !== 'function') {
             return false;
         }

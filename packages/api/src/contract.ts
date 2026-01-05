@@ -558,6 +558,9 @@ export interface NotehubApiMap {
     /** Unregister a settings item */
     'settings:unregister-item': (key: string) => void;
 
+    /** Register a custom view for a tab */
+    'settings:register-custom-view': (args: { tabId: string; view: FC<any> }) => void;
+
     // =========================================================================
     // Editor Plugin (nh.features.editor)
     // =========================================================================
@@ -590,7 +593,17 @@ export interface NotehubApiMap {
      * List all currently loaded external plugin IDs
      * @returns Array of plugin IDs
      */
+    /**
+     * List all currently loaded external plugin IDs
+     * @returns Array of plugin IDs
+     */
     'synapse:list-plugins': () => string[];
+
+    /**
+     * Get detailed metadata for all loaded plugins
+     * @returns Array of plugin metadata objects
+     */
+    'synapse:get-details': () => unknown[];
 }
 
 // ============================================================================

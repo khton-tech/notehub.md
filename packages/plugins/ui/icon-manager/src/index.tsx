@@ -33,6 +33,7 @@ import {
     Loader,
     Palette,
     FlaskConical,
+    Package,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -105,6 +106,7 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     'loader': Loader,
     'palette': Palette,
     'flask-conical': FlaskConical,
+    'package': Package,
 };
 
 /**

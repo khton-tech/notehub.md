@@ -32,6 +32,7 @@ import 'systemjs';
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { initSharedScope } from './logic/ScopeInitializer.js';
 import { PluginLoader } from './logic/PluginLoader.js';
+import { PluginManagerView } from './components/PluginManagerView.js';
 
 // Re-export types for consumers
 export * from './types.js';
@@ -91,6 +92,7 @@ export class SynapsePlugin implements IPlugin {
             (app.api.register as any)('synapse:load-plugin', this.loadExternalPlugin.bind(this));
             (app.api.register as any)('synapse:unload-plugin', this.unloadExternalPlugin.bind(this));
             (app.api.register as any)('synapse:list-plugins', this.listLoadedPlugins.bind(this));
+            (app.api.register as any)('synapse:get-details', this.getPluginsDetails.bind(this));
 
             // Subscribe to vault-opened event to scan for external plugins
             app.events.on('app:vault-opened', this.handleVaultOpened.bind(this));
@@ -119,7 +121,8 @@ export class SynapsePlugin implements IPlugin {
 
         this.log('info', `Vault opened: ${vaultPath}, scanning for external plugins...`);
         try {
-            await this.scanAndLoadPlugins(vaultPath);
+            await this.loader?.scan(vaultPath);
+            await this.loader?.loadAll();
             await this.startWatching(vaultPath);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -136,6 +139,20 @@ export class SynapsePlugin implements IPlugin {
         this.log('info', 'Synapse onReady: scanning for external plugins...');
 
         try {
+            // Register Settings UI
+            app.api.invoke('settings:register-tab', {
+                id: 'plugins',
+                label: 'Plugins',
+                order: 100, // Put it at the bottom
+                icon: 'package' // Assuming lucide icon name support or similar, settings manager might use string
+            });
+
+            // Register custom view for the plugins tab
+            app.api.invoke('settings:register-custom-view', {
+                tabId: 'plugins',
+                view: PluginManagerView
+            });
+
             // Get current vault path from state
             const vaultPath = (await app.api.invoke('state:get', 'vault.current-path')) as string | undefined;
 
@@ -144,8 +161,12 @@ export class SynapsePlugin implements IPlugin {
                 return;
             }
 
-            await this.scanAndLoadPlugins(vaultPath);
+            await this.loader!.scan(vaultPath);
+            await this.loader!.loadAll();
             await this.startWatching(vaultPath);
+
+
+
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -342,84 +363,9 @@ export class SynapsePlugin implements IPlugin {
         }
     }
 
-    /**
-     * Scan a vault's plugin directory and load all external plugins
-     * Supports both traditional folder-based plugins and packed .nhp files
-     */
-    private async scanAndLoadPlugins(vaultPath: string): Promise<void> {
-        const pluginsDir = `${vaultPath}/.notehub/plugins`;
 
-        // Check if plugins directory exists
-        const dirExists = await this.app!.api.invoke('fs:exists', pluginsDir);
-        if (!dirExists) {
-            this.log('info', `No plugins directory found at ${pluginsDir}`);
-            return;
-        }
+    // scanAndLoadPlugins removed in favor of loader.scan() + loader.loadAll()
 
-        // Read directory contents
-        const entries = await this.app!.api.invoke('fs:read-dir', pluginsDir) as Array<{
-            name: string;
-            isDirectory: boolean;
-        }>;
-
-        // Separate directories and .nhp files
-        const directories = entries.filter((entry) => entry.isDirectory);
-        const nhpFiles = entries.filter((entry) =>
-            !entry.isDirectory && entry.name.endsWith('.nhp')
-        );
-
-        const totalPlugins = directories.length + nhpFiles.length;
-        if (totalPlugins === 0) {
-            this.log('info', 'No external plugins found');
-            return;
-        }
-
-        this.log('info', `Found ${totalPlugins} potential external plugin(s): ${directories.length} folders, ${nhpFiles.length} NHP files`);
-
-        // Load counters
-        let successCount = 0;
-        let failCount = 0;
-
-        // Load folder-based plugins
-        for (const entry of directories) {
-            const pluginPath = `${pluginsDir}/${entry.name}`;
-            const result = await this.loader!.loadPlugin(pluginPath);
-
-            if (result.success) {
-                successCount++;
-            } else {
-                failCount++;
-            }
-        }
-
-        // Load NHP files
-        for (const entry of nhpFiles) {
-            const nhpPath = `${pluginsDir}/${entry.name}`;
-
-            try {
-                // Read NHP file as binary
-                const buffer = await this.app!.api.invoke('fs:read-file', nhpPath) as Uint8Array;
-
-                // Convert Uint8Array to ArrayBuffer (create a copy to ensure proper type)
-                const arrayBuffer = new Uint8Array(buffer).buffer;
-
-                // Load using the NHP loader
-                const result = await this.loader!.loadFromNhp(arrayBuffer, nhpPath);
-
-                if (result.success) {
-                    successCount++;
-                } else {
-                    failCount++;
-                }
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                this.log('error', `Failed to read NHP file ${entry.name}: ${errorMessage}`);
-                failCount++;
-            }
-        }
-
-        this.log('info', `External plugin loading complete: ${successCount} loaded, ${failCount} failed`);
-    }
 
     // =========================================================================
     // API Methods
@@ -453,6 +399,16 @@ export class SynapsePlugin implements IPlugin {
             return [];
         }
         return this.loader.getLoadedPluginIds();
+    }
+
+    /**
+     * API: Get detailed metadata for all loaded plugins
+     */
+    private getPluginsDetails(): any[] {
+        if (!this.loader) {
+            return [];
+        }
+        return this.loader.getPluginsMetadata();
     }
 }
 

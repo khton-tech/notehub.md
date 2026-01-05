@@ -111,6 +111,12 @@ export class SettingsManagerPlugin implements IPlugin {
             this.log('info', `Registered ${items.length} items`);
         });
 
+        // Custom View registration
+        app.api.register('settings:register-custom-view', (args: { tabId: string; view: React.FC<any> }) => {
+            registry.registerCustomView(args.tabId, args.view);
+            this.log('info', `Registered custom view for tab: ${args.tabId}`);
+        });
+
         // ====================================================================
         // Unregister API Methods
         // ====================================================================
