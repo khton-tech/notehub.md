@@ -1,76 +1,54 @@
-# Notehub.md
+![Notehub Banner](./logos/logo-background.svg)
 
-**Модульное приложение для заметок с микроядерной архитектурой**
+# Notehub
 
-## 🏗️ Архитектура
+![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)
 
-Notehub.md построен на принципах микроядерной архитектуры:
+**The Linux of Note-taking.**
+A modular, microkernel-based note-taking environment designed to be extended.
 
-- **Ядро (@notehub/core)** — минимальный набор функций: управление плагинами, шина событий, API-шина
-- **Плагины** — вся функциональность вынесена в подключаемые модули
-- **Монорепозиторий** — единый репозиторий с pnpm workspaces
+---
 
-```
-notehub.md/
-├── packages/
-│   ├── core/                 # Ядро приложения
-│   └── plugins/
-│       ├── system/           # Системные плагины (логирование, конфигурация)
-│       ├── ui/               # UI плагины (темы, компоненты)
-│       └── features/         # Фича-плагины (редактор, файловый менеджер)
-├── apps/                     # Приложения (desktop, web)
-└── docs/                     # Документация
-```
+> 🛠 **Building Plugins?**
+> Check out the [Developer Hub](docs/DEVELOPERS.md) to learn how to extend Notehub.
 
-## 🚀 Быстрый старт
+---
 
-### Установка зависимостей
+## Features
+
+Notehub is built from the ground up to be different:
+
+- **Modular Architecture:** Everything is a plugin. The core is minimal, ensuring stability and performance.
+- **Microkernel Design:** Isolation by default. Plugins run safely without crashing the core.
+- **Rich Markdown:** Use real React components inside your notes (Callouts, Checkboxes, Progress Bars).
+- **Settings System:** A unified, searchable settings interface for Core and Plugins alike.
+- **External Plugin Loader:** Load plugins dynamically. If you can build it, Notehub can run it.
+
+## Getting Started
+
+### Installation
+
+- **Windows Installer (.msi)**: For a standard setup.
+- **Portable Version**: Run directly without installation.
+
+### Development
+
+To build the app locally:
 
 ```bash
 pnpm install
+pnpm dev:desktop
 ```
 
-### Сборка всех пакетов
+## Community & Contributing
 
-```bash
-pnpm build
-```
+We are Open Source and Copyleft (AGPLv3).
 
-### Создание нового плагина
+- **For Users:** Join our community (link coming soon).
+- **For Developers:** Read the [Developer Hub](docs/DEVELOPERS.md).
 
-```bash
-pnpm gen:plugin
-```
+## License
 
-## 📚 Документация
-
-- [Архитектура ядра](./docs/ru/core-architecture.md)
-- [Разработка плагинов](./docs/ru/plugin-development.md)
-- [CLI инструменты](./docs/ru/cli-tools.md)
-
-## 📦 Пакеты
-
-| Пакет | Описание |
-|-------|----------|
-| `@notehub/core` | Ядро приложения с EventBus, ApiBus и PluginManager |
-
-## 🛠️ Разработка
-
-### Требования
-
-- Node.js 20+
-- pnpm 9+
-
-### Команды
-
-| Команда | Описание |
-|---------|----------|
-| `pnpm install` | Установка зависимостей |
-| `pnpm build` | Сборка всех пакетов |
-| `pnpm dev` | Режим разработки (watch) |
-| `pnpm clean` | Очистка build-артефактов |
-| `pnpm gen:plugin` | Генерация нового плагина |
-
-## 📄 Лицензия
-
-MIT
+Copyright (C) 2026 Notehub Contributors.
+Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+See [LICENSE](LICENSE) for details.
