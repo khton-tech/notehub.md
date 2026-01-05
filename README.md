@@ -28,7 +28,8 @@ Notehub is built from the ground up to be different:
 
 ### Installation
 
-*Coming Soon for Windows, macOS, and Linux.*
+- **Windows Installer (.msi)**: For a standard setup.
+- **Portable Version**: Run directly without installation.
 
 ### Development
 
