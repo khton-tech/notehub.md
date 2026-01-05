@@ -441,6 +441,12 @@ export class ExplorerController {
             await this.pendingRename;
         }
 
+        // Prevent double-submission: if the file is no longer marked for renaming
+        // (likely because the previous pending rename finished successfully), abort.
+        if (this._renamingPath !== oldPath) {
+            return true;
+        }
+
         this.pendingRename = this._doRename(oldPath, newName.trim());
         const result = await this.pendingRename;
         this.pendingRename = null;

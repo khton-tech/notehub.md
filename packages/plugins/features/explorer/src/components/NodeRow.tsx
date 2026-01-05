@@ -38,9 +38,23 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
         }
     }, [node.isEditing, data.name, data.isDir, data.id]);
 
+    // Track previous editing state to prevent stale opens
+    const wasEditing = useRef(false);
+    useEffect(() => {
+        if (node.isEditing) wasEditing.current = true;
+    }, [node.isEditing]);
+
     // Auto-open files when focused via keyboard navigation
     useEffect(() => {
         if (node.isFocused && !data.isDir && !node.isEditing) {
+            // If we just finished editing, the data.id might be stale (pre-rename).
+            // Skip this trigger; the data update will trigger a re-render/effect soon.
+            if (wasEditing.current) {
+                console.log('NodeRow: Skipping auto-open after edit for', data.id);
+                wasEditing.current = false;
+                return;
+            }
+
             console.log('NodeRow: Auto-opening focused file', data.id);
             app.events.emit('explorer:file-selected', { path: data.id });
         }
