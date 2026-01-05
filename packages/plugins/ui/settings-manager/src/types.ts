@@ -165,6 +165,7 @@ export interface SettingsItem {
  */
 export interface SettingsStructure {
     tabs: Array<SettingsTab & {
+        customView?: React.FC<any>;
         groups: Array<SettingsGroup & {
             items: SettingsItem[];
         }>;

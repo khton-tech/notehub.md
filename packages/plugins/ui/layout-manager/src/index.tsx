@@ -2,6 +2,7 @@ import type { IPlugin, PluginManifest, NotehubCore, ZoneItem } from '@notehub/co
 import { useSyncExternalStore, type FC } from 'react';
 import { WelcomeLayout } from './components/WelcomeLayout.js';
 import { EditorLayout } from './components/EditorLayout.js';
+import { WindowController } from './logic/WindowController.js';
 
 /**
  * Layout component type definition
@@ -241,6 +242,7 @@ export class LayoutManagerPlugin implements IPlugin {
 
     /** Reference to kernel */
     private app: NotehubCore | null = null;
+    private windowController: WindowController | null = null;
 
     /**
      * Log a message via the Logger plugin
@@ -381,7 +383,18 @@ export class LayoutManagerPlugin implements IPlugin {
 
         // Register built-in layouts
         this.handleRegisterComponent('welcome', WelcomeLayout);
+
+
         this.handleRegisterComponent('editor', EditorLayout);
+
+        // Initialize Window Controller (restore state)
+        this.windowController = new WindowController(app);
+        // We don't await this to avoid blocking startup, or we should?
+        // User didn't specify, but restore typically should happen fast.
+        // However, init() involves async config:get.
+        // Let's await it to ensure window jumps to correct position before valid UI is fully interactive if possible,
+        // but `load` is async so it's fine.
+        await this.windowController.init();
 
         this.log('info', 'Loaded successfully');
     }
@@ -391,6 +404,11 @@ export class LayoutManagerPlugin implements IPlugin {
      */
     async unload(app: NotehubCore): Promise<void> {
         this.log('info', 'Unloading...');
+
+        if (this.windowController) {
+            await this.windowController.destroy();
+            this.windowController = null;
+        }
 
         // Unregister Layout API methods
         app.api.unregister('layout:register-component');

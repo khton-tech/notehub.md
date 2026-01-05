@@ -32,6 +32,7 @@ import 'systemjs';
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { initSharedScope } from './logic/ScopeInitializer.js';
 import { PluginLoader } from './logic/PluginLoader.js';
+import { PluginManagerView } from './components/PluginManagerView.js';
 
 // Re-export types for consumers
 export * from './types.js';
@@ -57,6 +58,9 @@ export class SynapsePlugin implements IPlugin {
 
     private app: NotehubCore | null = null;
     private loader: PluginLoader | null = null;
+    private watcherUnsubscribe: (() => void) | null = null;
+    private pendingEvents: Map<string, { path: string; type: string }> = new Map();
+    private debounceTimer: any = null; // using any for timer to avoid node/window type conflicts
 
     /**
      * Log a message via the Logger plugin
@@ -88,6 +92,7 @@ export class SynapsePlugin implements IPlugin {
             (app.api.register as any)('synapse:load-plugin', this.loadExternalPlugin.bind(this));
             (app.api.register as any)('synapse:unload-plugin', this.unloadExternalPlugin.bind(this));
             (app.api.register as any)('synapse:list-plugins', this.listLoadedPlugins.bind(this));
+            (app.api.register as any)('synapse:get-details', this.getPluginsDetails.bind(this));
 
             // Subscribe to vault-opened event to scan for external plugins
             app.events.on('app:vault-opened', this.handleVaultOpened.bind(this));
@@ -116,7 +121,9 @@ export class SynapsePlugin implements IPlugin {
 
         this.log('info', `Vault opened: ${vaultPath}, scanning for external plugins...`);
         try {
-            await this.scanAndLoadPlugins(vaultPath);
+            await this.loader?.scan(vaultPath);
+            await this.loader?.loadAll();
+            await this.startWatching(vaultPath);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.log('error', `Error scanning for external plugins: ${errorMessage}`);
@@ -132,6 +139,20 @@ export class SynapsePlugin implements IPlugin {
         this.log('info', 'Synapse onReady: scanning for external plugins...');
 
         try {
+            // Register Settings UI
+            app.api.invoke('settings:register-tab', {
+                id: 'plugins',
+                label: 'Plugins',
+                order: 100, // Put it at the bottom
+                icon: 'package' // Assuming lucide icon name support or similar, settings manager might use string
+            });
+
+            // Register custom view for the plugins tab
+            app.api.invoke('settings:register-custom-view', {
+                tabId: 'plugins',
+                view: PluginManagerView
+            });
+
             // Get current vault path from state
             const vaultPath = (await app.api.invoke('state:get', 'vault.current-path')) as string | undefined;
 
@@ -140,7 +161,12 @@ export class SynapsePlugin implements IPlugin {
                 return;
             }
 
-            await this.scanAndLoadPlugins(vaultPath);
+            await this.loader!.scan(vaultPath);
+            await this.loader!.loadAll();
+            await this.startWatching(vaultPath);
+
+
+
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -167,89 +193,179 @@ export class SynapsePlugin implements IPlugin {
         app.api.unregister('synapse:unload-plugin');
         app.api.unregister('synapse:list-plugins');
 
+        this.stopWatching();
         this.loader = null;
         this.log('info', 'Synapse Engine unloaded');
         this.app = null;
     }
 
     /**
-     * Scan a vault's plugin directory and load all external plugins
-     * Supports both traditional folder-based plugins and packed .nhp files
+     * Start watching the plugins directory for changes
      */
-    private async scanAndLoadPlugins(vaultPath: string): Promise<void> {
+    private async startWatching(vaultPath: string): Promise<void> {
+        this.stopWatching(); // Clean up existing watcher if any
+
         const pluginsDir = `${vaultPath}/.notehub/plugins`;
 
-        // Check if plugins directory exists
+        // Ensure directory exists before watching (though scanAndLoadPlugins checks too)
         const dirExists = await this.app!.api.invoke('fs:exists', pluginsDir);
-        if (!dirExists) {
-            this.log('info', `No plugins directory found at ${pluginsDir}`);
-            return;
+        if (!dirExists) return;
+
+        try {
+            this.log('info', `Starting plugin watcher on ${pluginsDir}`);
+            // Use an arrow function wrapper to preserve 'this' context and handle the event
+            this.watcherUnsubscribe = await this.app!.api.invoke('fs:watch', pluginsDir, (event: any) => this.handleFsEvent(event)) as (() => void);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `Failed to start plugin watcher: ${errorMessage}`);
         }
-
-        // Read directory contents
-        const entries = await this.app!.api.invoke('fs:read-dir', pluginsDir) as Array<{
-            name: string;
-            isDirectory: boolean;
-        }>;
-
-        // Separate directories and .nhp files
-        const directories = entries.filter((entry) => entry.isDirectory);
-        const nhpFiles = entries.filter((entry) =>
-            !entry.isDirectory && entry.name.endsWith('.nhp')
-        );
-
-        const totalPlugins = directories.length + nhpFiles.length;
-        if (totalPlugins === 0) {
-            this.log('info', 'No external plugins found');
-            return;
-        }
-
-        this.log('info', `Found ${totalPlugins} potential external plugin(s): ${directories.length} folders, ${nhpFiles.length} NHP files`);
-
-        // Load counters
-        let successCount = 0;
-        let failCount = 0;
-
-        // Load folder-based plugins
-        for (const entry of directories) {
-            const pluginPath = `${pluginsDir}/${entry.name}`;
-            const result = await this.loader!.loadPlugin(pluginPath);
-
-            if (result.success) {
-                successCount++;
-            } else {
-                failCount++;
-            }
-        }
-
-        // Load NHP files
-        for (const entry of nhpFiles) {
-            const nhpPath = `${pluginsDir}/${entry.name}`;
-
-            try {
-                // Read NHP file as binary
-                const buffer = await this.app!.api.invoke('fs:read-file', nhpPath) as Uint8Array;
-
-                // Convert Uint8Array to ArrayBuffer (create a copy to ensure proper type)
-                const arrayBuffer = new Uint8Array(buffer).buffer;
-
-                // Load using the NHP loader
-                const result = await this.loader!.loadFromNhp(arrayBuffer, entry.name);
-
-                if (result.success) {
-                    successCount++;
-                } else {
-                    failCount++;
-                }
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                this.log('error', `Failed to read NHP file ${entry.name}: ${errorMessage}`);
-                failCount++;
-            }
-        }
-
-        this.log('info', `External plugin loading complete: ${successCount} loaded, ${failCount} failed`);
     }
+
+    /**
+     * Stop the current watcher
+     */
+    private stopWatching(): void {
+        if (this.watcherUnsubscribe) {
+            try {
+                this.watcherUnsubscribe();
+                this.log('info', 'Stopped plugin watcher');
+            } catch (error) {
+                // Ignore errors during cleanup
+            }
+            this.watcherUnsubscribe = null;
+        }
+
+        // Clear pending events/timer
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = null;
+        }
+        this.pendingEvents.clear();
+    }
+
+    /**
+     * Handle File System events with debounce
+     */
+    private handleFsEvent(event: { path: string; type: string }): void {
+        if (!event.path || !event.type) return;
+
+        // Add to pending events map (keyed by path to deduplicate multiple events for same file)
+        this.pendingEvents.set(event.path, event);
+
+        // Reset debounce timer
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+        }
+
+        this.debounceTimer = setTimeout(() => {
+            this.processPendingEvents();
+        }, 500);
+    }
+
+    /**
+     * Process accumulated FS events
+     */
+    private async processPendingEvents(): Promise<void> {
+        if (!this.loader) return;
+
+        const events = Array.from(this.pendingEvents.values());
+        this.pendingEvents.clear();
+        this.debounceTimer = null;
+
+        for (const event of events) {
+            await this.processFsEvent(event);
+        }
+    }
+
+    /**
+     * Process a single FS event
+     */
+    private async processFsEvent(event: { path: string; type: string }): Promise<void> {
+        const { path, type } = event;
+        // Normalize path separator
+        const normalizedPath = path.replace(/\\/g, '/');
+
+        this.log('info', `Processing FS event: ${type} on ${normalizedPath}`);
+
+        // Helper to get plugin ID affected by this path
+        const affectedPluginId = this.loader!.getPluginIdByPath(normalizedPath);
+
+        // Case 1: Removal
+        if (type === 'remove') {
+            if (affectedPluginId) {
+                this.log('info', `Detected removal of plugin ${affectedPluginId}`);
+                await this.loader!.unloadPlugin(affectedPluginId);
+            }
+            return;
+        }
+
+        // Case 2: Create or Modify
+        if (type === 'create' || type === 'modify') {
+
+            // If it's an existing loaded plugin, unload it first (Hot Reload)
+            if (affectedPluginId) {
+                this.log('info', `Hot reloading plugin ${affectedPluginId}...`);
+                const record = this.loader!.getLoadedPlugin(affectedPluginId);
+                // We need the source path (loaded path) to reload
+                // If the event was on a subfile, we reload the plugin root
+                const sourcePath = record?.sourcePath;
+
+                await this.loader!.unloadPlugin(affectedPluginId);
+
+                if (sourcePath) {
+                    // Slight delay to ensure file system is stable (optional but safe)
+                    await this.loadPluginByPath(sourcePath);
+                }
+                return;
+            }
+
+            // If it's a NEW plugin (not currently loaded)
+            // It could be a new .nhp file
+            if (normalizedPath.endsWith('.nhp')) {
+                await this.loadPluginByPath(normalizedPath);
+                return;
+            }
+
+            // Or a new directory with manifest.json
+            // If the event path is .../manifest.json, the plugin root is the parent dir
+            if (normalizedPath.endsWith('/manifest.json')) {
+                const pluginDir = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
+                await this.loadPluginByPath(pluginDir);
+                return;
+            }
+
+            // Or just a directory creation?
+            // Usually we wait for manifest.json or content. 
+            // If a user drops a folder, we might get create events for folder then files.
+            // If we get "create manifest.json" that's our signal.
+            // If we get generic directory changes, we might ignore unless we can verify it's a plugin.
+        }
+    }
+
+    /**
+     * Helper to load a plugin from a path (NHP or Folder)
+    */
+    private async loadPluginByPath(path: string): Promise<void> {
+        if (!this.loader) return;
+
+        // Check if it's an NHP file
+        if (path.endsWith('.nhp')) {
+            try {
+                const buffer = await this.app!.api.invoke('fs:read-file', path) as Uint8Array;
+                const arrayBuffer = new Uint8Array(buffer).buffer;
+                await this.loader.loadFromNhp(arrayBuffer, path);
+            } catch (err) {
+                this.log('error', `Hot load failed for NHP ${path}: ${err}`);
+            }
+        } else {
+            // Assume folder
+            await this.loader.loadPlugin(path);
+        }
+    }
+
+
+    // scanAndLoadPlugins removed in favor of loader.scan() + loader.loadAll()
+
 
     // =========================================================================
     // API Methods
@@ -283,6 +399,16 @@ export class SynapsePlugin implements IPlugin {
             return [];
         }
         return this.loader.getLoadedPluginIds();
+    }
+
+    /**
+     * API: Get detailed metadata for all loaded plugins
+     */
+    private getPluginsDetails(): any[] {
+        if (!this.loader) {
+            return [];
+        }
+        return this.loader.getPluginsMetadata();
     }
 }
 

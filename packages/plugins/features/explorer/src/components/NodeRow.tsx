@@ -105,8 +105,8 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
         'transition-colors duration-100',
     ];
 
-    // Highlight based on focus (react-arborist sets focus on both click and keyboard nav)
-    const isHighlighted = node.isFocused;
+    // Highlight based on selection (active file)
+    const isHighlighted = node.isSelected;
 
     if (isHighlighted) {
         baseClasses.push(

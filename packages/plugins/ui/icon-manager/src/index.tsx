@@ -1,5 +1,7 @@
 import type { FC } from 'react';
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { AppLogo } from './icons/AppLogo.js';
+import { PluginLogo } from './icons/PluginLogo.js';
 import {
     FolderOpen,
     Info,
@@ -33,6 +35,7 @@ import {
     Loader,
     Palette,
     FlaskConical,
+    Package,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -105,6 +108,7 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     'loader': Loader,
     'palette': Palette,
     'flask-conical': FlaskConical,
+    'package': Package,
 };
 
 /**
@@ -193,6 +197,10 @@ export class IconManagerPlugin implements IPlugin {
         }
         this.log('info', `Registered ${Object.keys(CORE_ICONS).length} core icons`);
 
+        // Register custom branding icons
+        this.icons.set('app-logo', AppLogo);
+        this.icons.set('plugin-default', PluginLogo);
+
         // Set singleton reference for Icon component access
         iconRegistryInstance = this.icons;
 
@@ -226,3 +234,7 @@ export class IconManagerPlugin implements IPlugin {
 
 // Default export for dynamic loading
 export default IconManagerPlugin;
+
+// Export custom icons for static usage (e.g. bootloader/splash)
+export { AppLogo } from './icons/AppLogo.js';
+export { PluginLogo } from './icons/PluginLogo.js';

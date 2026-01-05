@@ -21,8 +21,10 @@
     "dependencies": {
         "@notehub/api": "workspace:*",
         "@notehub/core": "workspace:*",
+        "@notehub/icon-manager": "workspace:*",
         "@tauri-apps/api": "^2.0.0",
         "jszip": "^3.10.1",
+        "lucide-react": "^0.562.0",
         "systemjs": "^6.15.1"
     },
     "peerDependencies": {

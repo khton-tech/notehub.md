@@ -88,47 +88,67 @@ export const SettingsContent: FC<SettingsContentProps> = ({
             </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="
+                flex-1 overflow-y-auto p-8
+                [&::-webkit-scrollbar]:w-1.5
+                [&::-webkit-scrollbar-track]:bg-transparent
+                [&::-webkit-scrollbar-thumb]:bg-[var(--nh-ring-focus)]
+                [&::-webkit-scrollbar-thumb]:rounded-full
+                hover:[&::-webkit-scrollbar-thumb]:bg-[var(--nh-accent-primary)]
+            ">
                 {!tabData ? (
                     <div className="flex items-center justify-center h-full text-[var(--nh-text-muted)]">
                         Select a category from the sidebar
                     </div>
-                ) : tabData.groups.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-[var(--nh-text-muted)]">
-                        No settings in this category
-                    </div>
                 ) : (
-                    <div className="space-y-8 max-w-3xl">
-                        {tabData.groups.map(group => (
-                            <section key={group.id}>
-                                {/* Group Header */}
-                                <h3 className="
-                                    text-xs font-semibold uppercase tracking-wider
-                                    text-[var(--nh-text-muted)] mb-3 pb-2
-                                    border-b border-[var(--nh-border-subtle)]
-                                ">
-                                    {group.label}
-                                </h3>
+                    (() => {
+                        const registry = SettingsRegistry.getInstance();
+                        const CustomView = registry.getCustomView(tabData.id);
 
-                                {/* Group Items */}
-                                <div className="bg-[var(--nh-bg-surface)] rounded-lg px-4">
-                                    {group.items.length === 0 ? (
-                                        <div className="py-4 text-sm text-[var(--nh-text-muted)]">
-                                            No settings in this group
-                                        </div>
-                                    ) : (
-                                        group.items.map(item => (
-                                            <SettingField
-                                                key={item.key}
-                                                item={item}
-                                                app={app}
-                                            />
-                                        ))
-                                    )}
+                        if (CustomView) {
+                            return <CustomView app={app} />;
+                        }
+
+                        return (
+                            tabData.groups.length === 0 ? (
+                                <div className="flex items-center justify-center h-full text-[var(--nh-text-muted)]">
+                                    No settings in this category
                                 </div>
-                            </section>
-                        ))}
-                    </div>
+                            ) : (
+                                <div className="space-y-8 max-w-3xl">
+                                    {tabData.groups.map(group => (
+                                        <section key={group.id}>
+                                            {/* Group Header */}
+                                            <h3 className="
+                                                text-xs font-semibold uppercase tracking-wider
+                                                text-[var(--nh-text-muted)] mb-3 pb-2
+                                                border-b border-[var(--nh-border-subtle)]
+                                            ">
+                                                {group.label}
+                                            </h3>
+
+                                            {/* Group Items */}
+                                            <div className="bg-[var(--nh-bg-surface)] rounded-lg px-4">
+                                                {group.items.length === 0 ? (
+                                                    <div className="py-4 text-sm text-[var(--nh-text-muted)]">
+                                                        No settings in this group
+                                                    </div>
+                                                ) : (
+                                                    group.items.map(item => (
+                                                        <SettingField
+                                                            key={item.key}
+                                                            item={item}
+                                                            app={app}
+                                                        />
+                                                    ))
+                                                )}
+                                            </div>
+                                        </section>
+                                    ))}
+                                </div>
+                            )
+                        );
+                    })()
                 )}
             </div>
         </div>

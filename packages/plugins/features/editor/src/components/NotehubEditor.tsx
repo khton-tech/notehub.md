@@ -42,6 +42,7 @@ import { EditorPortalRenderer } from '../bridge';
 import { livePreviewExtension } from '../cm/live-preview';
 import { inlineStylesExtension } from '../cm/inline-styles';
 import { listsExtension } from '../cm/lists';
+import { createDynamicWidgetExtension } from '../cm/DynamicWidgetPlugin';
 import type { EditorController } from '../logic/EditorController';
 import type { EditorSettings } from '../logic/EditorConfig';
 import { EDITOR_CONFIG_DEFAULTS } from '../logic/EditorConfig';
@@ -58,6 +59,9 @@ const lineWrappingCompartment = new Compartment();
 
 /** Compartment for dynamic font size changes */
 const fontSizeCompartment = new Compartment();
+
+/** Compartment for dynamic path/regex widgets */
+const dynamicWidgetsCompartment = new Compartment();
 
 /**
  * Create a theme extension with dynamic font size.
@@ -302,6 +306,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 lineNumbersCompartment.of(settings.showLineNumbers ? lineNumbers() : []),
                 lineWrappingCompartment.of(settings.wordWrap ? EditorView.lineWrapping : []),
                 fontSizeCompartment.of(createFontSizeTheme(settings.fontSize)),
+                dynamicWidgetsCompartment.of(createDynamicWidgetExtension(controller.widgetRegistry)),
 
                 // Core functionality
                 highlightActiveLine(),
@@ -405,6 +410,23 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
         // Dispatch all effects in a single transaction
         view.dispatch({ effects });
     }, [settings.showLineNumbers, settings.wordWrap, settings.fontSize]);
+
+    /**
+     * Subscribe to dynamic widget registry changes.
+     * Reconfigures the editor extensions when new widgets are registered.
+     */
+    useEffect(() => {
+        return controller.widgetRegistry.subscribe(() => {
+            const view = viewRef.current;
+            if (view) {
+                view.dispatch({
+                    effects: dynamicWidgetsCompartment.reconfigure(
+                        createDynamicWidgetExtension(controller.widgetRegistry)
+                    )
+                });
+            }
+        });
+    }, [controller]);
 
     return (
         <>

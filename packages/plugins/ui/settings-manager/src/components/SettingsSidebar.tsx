@@ -93,7 +93,14 @@ export const SettingsSidebar: FC<SettingsSidebarProps> = ({
             </div>
 
             {/* Tab List */}
-            <div className="flex-1 overflow-y-auto py-2">
+            <div className="
+                flex-1 overflow-y-auto py-2
+                [&::-webkit-scrollbar]:w-1.5
+                [&::-webkit-scrollbar-track]:bg-transparent
+                [&::-webkit-scrollbar-thumb]:bg-[var(--nh-ring-focus)]
+                [&::-webkit-scrollbar-thumb]:rounded-full
+                hover:[&::-webkit-scrollbar-thumb]:bg-[var(--nh-accent-primary)]
+            ">
                 {tabs.length === 0 ? (
                     <div className="px-4 py-8 text-center text-sm text-[var(--nh-text-muted)]">
                         No settings registered

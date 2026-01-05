@@ -111,6 +111,31 @@ export class SettingsManagerPlugin implements IPlugin {
             this.log('info', `Registered ${items.length} items`);
         });
 
+        // Custom View registration
+        app.api.register('settings:register-custom-view', (args: { tabId: string; view: React.FC<any> }) => {
+            registry.registerCustomView(args.tabId, args.view);
+            this.log('info', `Registered custom view for tab: ${args.tabId}`);
+        });
+
+        // ====================================================================
+        // Unregister API Methods
+        // ====================================================================
+
+        app.api.register('settings:unregister-tab', (tabId: string) => {
+            registry.unregisterTab(tabId);
+            this.log('info', `Unregistered tab: ${tabId}`);
+        });
+
+        app.api.register('settings:unregister-group', (groupId: string) => {
+            registry.unregisterGroup(groupId);
+            this.log('info', `Unregistered group: ${groupId}`);
+        });
+
+        app.api.register('settings:unregister-item', (itemKey: string) => {
+            registry.unregisterItem(itemKey);
+            this.log('info', `Unregistered item: ${itemKey}`);
+        });
+
         // Get structure
         app.api.register('settings:get-structure', (): SettingsStructure => {
             return registry.getStructure();

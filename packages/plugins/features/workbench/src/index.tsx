@@ -22,6 +22,32 @@ export class WorkbenchPlugin implements IPlugin {
     private handleVaultOpened = (): void => {
         this.log('info', 'Vault opened, switching layout to editor');
         this.app?.api.invoke('layout:set', 'editor');
+
+        // Restore active file
+        // We delay slightly to ensure editor layout is ready and editor plugin is listening,
+        // although layout:set should trigger mounting which might take a tick.
+        setTimeout(async () => {
+            try {
+                const lastFile = await this.app?.api.invoke('config:get', 'workbench.last-active-file') as string;
+                if (lastFile) {
+                    this.log('info', `Restoring last active file: ${lastFile}`);
+                    this.app?.api.invoke('editor:open', lastFile);
+                }
+            } catch (e) {
+                this.log('warn', 'Failed to restore active file');
+            }
+        }, 100);
+    };
+
+    private handleFileOpened = (payload: unknown): void => {
+        const path = payload as string;
+        // Save active file
+        // Note: editor:open sends path as string usually, or an object?
+        // User provided: "Subscribe to editor:file-opened ... Handler: api.invoke('config:set'..."
+        // We assume call sends path.
+        if (typeof path === 'string') {
+            this.app?.api.invoke('config:set', 'workbench.last-active-file', path);
+        }
     };
 
     async load(app: NotehubCore): Promise<void> {
@@ -30,6 +56,9 @@ export class WorkbenchPlugin implements IPlugin {
 
         // Subscribe to vault opened event
         app.events.on('app:vault-opened', this.handleVaultOpened);
+
+        // Subscribe to editor file opened
+        app.events.on('editor:file-opened', this.handleFileOpened);
 
         // Register placeholders
         app.api.invoke('controller:register', 'ribbon-placeholder', RibbonPlaceholder);
@@ -65,6 +94,7 @@ export class WorkbenchPlugin implements IPlugin {
         this.log('info', 'Unloading...');
 
         this.app?.events.off('app:vault-opened', this.handleVaultOpened);
+        this.app?.events.off('editor:file-opened', this.handleFileOpened);
 
         // We don't unregister controllers ideally, or we need a way to unregister them if API supports it.
         // controller:unregister is not in the interface I saw in ControllersManagerPlugin.

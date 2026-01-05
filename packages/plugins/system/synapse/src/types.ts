@@ -34,8 +34,32 @@ export interface LoadedPluginRecord {
     blobUrl?: string;
     /** Whether this plugin was loaded from an NHP file */
     isNhp?: boolean;
+    /** Source path of the plugin (folder or .nhp file) for watcher tracking */
+    sourcePath?: string;
+    /** Timestamp when plugin was loaded */
     /** Timestamp when plugin was loaded */
     loadedAt: Date;
+}
+
+/**
+ * Valid statuses for a plugin
+ */
+export type PluginStatus = 'Active' | 'Inactive' | 'Error';
+
+/**
+ * Record for discovered but potentially unloaded plugins
+ */
+export interface DiscoveredPluginRecord {
+    /** The manifest parsed from disk */
+    manifest: ExternalPluginManifest;
+    /** Source path (folder or .nhp file) */
+    sourcePath: string;
+    /** Current status of the plugin */
+    status: PluginStatus;
+    /** Error message if load failed */
+    error?: string;
+    /** Whether it is an NHP file */
+    isNhp: boolean;
 }
 
 /**

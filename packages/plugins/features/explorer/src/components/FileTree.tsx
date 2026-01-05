@@ -86,13 +86,26 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
         if (controller.activeFilePath && treeRef.current) {
             // Focus and select the active file
             console.log('FileTree: Syncing active file', controller.activeFilePath);
+
+            // 1. Expand ancestors visually
+            let parent = controller.activeFilePath;
+            while (parent && parent.length > (controller.root?.length || 0)) {
+                parent = parent.substring(0, Math.max(parent.lastIndexOf('/'), parent.lastIndexOf('\\')));
+                if (parent && parent.length >= (controller.root?.length || 0)) {
+                    treeRef.current.open(parent);
+                }
+            }
+
+            // 2. Select and Scroll
             const node = treeRef.current.get(controller.activeFilePath);
-            if (node && !node.isSelected) {
-                treeRef.current.select(controller.activeFilePath);
+            if (node) {
+                if (!node.isSelected) {
+                    treeRef.current.select(controller.activeFilePath);
+                }
                 treeRef.current.scrollTo(controller.activeFilePath);
             }
         }
-    }, [controller.activeFilePath]);
+    }, [controller.activeFilePath, data]); // Add data dependency to retry if node wasn't loaded yet
 
     // ... (click away handler) ...
     // Click-away and Escape handler for popup menu

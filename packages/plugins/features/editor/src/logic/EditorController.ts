@@ -38,6 +38,8 @@ import type { NotehubCore } from '@notehub/core';
 import type { EditorView } from '@codemirror/view';
 import type { EditorSettings } from './EditorConfig';
 import { EDITOR_CONFIG_KEYS, EDITOR_CONFIG_DEFAULTS } from './EditorConfig';
+import { WidgetRegistry } from './WidgetRegistry';
+import type { FC } from 'react';
 
 /**
  * Status values for the editor lifecycle.
@@ -126,9 +128,14 @@ export class EditorController {
     /** Listeners for settings changes (UI re-render trigger) */
     private settingsListeners: Set<(settings: EditorSettings) => void> = new Set();
 
+    // ========== Widget Registry ==========
+
+    /** Registry for dynamic editor widgets */
+    public readonly widgetRegistry: WidgetRegistry = new WidgetRegistry();
+
     // ========== Bound Event Handlers (for unsubscription) ==========
 
-    /** Bound handler for fs:deleted events */
+    // Bound handler for fs:deleted events
     private readonly handleFsDeleted = (payload: { path: string; isDirectory: boolean }): void => {
         if (!this.currentPath) return;
 
@@ -142,6 +149,9 @@ export class EditorController {
             this.closeFile();
         }
     };
+
+    // Getters for UI state initialization
+    public get activePath(): string | null { return this.currentPath; }
 
     /** Bound handler for fs:renamed events */
     private readonly handleFsRenamed = (payload: { oldPath: string; newPath: string }): void => {
@@ -186,6 +196,11 @@ export class EditorController {
         this.app.events.on('config:reloaded', () => {
             this.log('info', 'Config reloaded, refreshing editor settings...');
             this.loadSettings();
+
+            // Try to restore file if not already open (handles race condition where vault config loads after plugin init)
+            if (!this.currentPath) {
+                this.restoreLastFile();
+            }
         });
 
         // Subscribe to FS events for sync with Explorer
@@ -414,6 +429,11 @@ export class EditorController {
             // Emit file opened event for other plugins (and our own UI)
             this.app.events.emit('editor:file-opened', { path, content });
 
+            // Persist last opened file
+            this.app.api.invoke('config:set', 'editor.last-opened', path).catch(err => {
+                this.log('warn', `Failed to save last opened file: ${err}`);
+            });
+
             return content;
         } catch (error) {
             this.status = 'error';
@@ -586,10 +606,36 @@ export class EditorController {
         // Notify UI
         this.app.events.emit('editor:file-closed', {});
 
+        // Clear persisted state
+        this.app.api.invoke('config:delete', 'editor.last-opened').catch(err => {
+            this.log('warn', `Failed to clear last opened file: ${err}`);
+        });
+
         this.log('info', 'File closed');
     }
 
     // ========== Lifecycle ==========
+
+    /**
+     * Restore the last opened file upon startup.
+     */
+    async restoreLastFile(): Promise<void> {
+        try {
+            const lastPath = await this.app.api.invoke('config:get', 'editor.last-opened') as string | undefined;
+            if (lastPath) {
+                const exists = await this.app.api.invoke('fs:exists', lastPath) as boolean;
+                if (exists) {
+                    this.log('info', `Restoring last opened file: ${lastPath}`);
+                    await this.openFile(lastPath);
+                } else {
+                    this.log('warn', `Last opened file not found: ${lastPath}`);
+                    await this.app.api.invoke('config:delete', 'editor.last-opened');
+                }
+            }
+        } catch (error) {
+            this.log('warn', `Failed to restore last file: ${error}`);
+        }
+    }
 
     /**
      * Dispose the controller and clean up resources.
@@ -618,5 +664,29 @@ export class EditorController {
         this.originalContent = '';
         this.isDirty = false;
         this.status = 'idle';
+    }
+
+    // ========== Public API: Widgets ==========
+
+    /**
+     * Register a new dynamic widget
+     * 
+     * @param id - Unique widget ID
+     * @param regex - Regex pattern to match
+     * @param component - React component to render
+     */
+    registerWidget(id: string, regex: RegExp, component: FC<any>): void {
+        this.widgetRegistry.register(id, regex, component);
+        this.log('info', `Registered widget: ${id}`);
+    }
+
+    /**
+     * Unregister a dynamic widget
+     * 
+     * @param id - Unique widget ID
+     */
+    unregisterWidget(id: string): void {
+        this.widgetRegistry.unregister(id);
+        this.log('info', `Unregistered widget: ${id}`);
     }
 }
