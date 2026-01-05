@@ -168,8 +168,10 @@ export class SettingsRegistry {
                     .filter(group => group.tabId === tab.id)
                     .sort((a, b) => a.order - b.order);
 
+                const customView = this.customViews.get(tab.id);
                 return {
                     ...tab,
+                    ...(customView ? { customView } : {}),
                     groups: tabGroups.map(group => {
                         // Get items for this group, sorted by order
                         const groupItems = Array.from(this.items.values())

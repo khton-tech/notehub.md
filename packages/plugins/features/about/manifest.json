@@ -1,0 +1,11 @@
+{
+    "id": "nh.features.about",
+    "name": "About",
+    "version": "1.0.0",
+    "type": "feature",
+    "description": "Displays application information and credits",
+    "dependencies": [
+        "nh.ui.settings-manager",
+        "nh.ui.icon-manager"
+    ]
+}

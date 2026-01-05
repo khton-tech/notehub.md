@@ -29,6 +29,9 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@notehub/about':
+        specifier: workspace:*
+        version: link:../../packages/plugins/features/about
       '@notehub/bootloader':
         specifier: workspace:*
         version: link:../../packages/plugins/system/bootloader
@@ -186,6 +189,49 @@ importers:
       '@types/react':
         specifier: ^18.2.0
         version: 18.3.27
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/plugins/features/about:
+    dependencies:
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../../ui/ck-standard
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+      '@notehub/icon-manager':
+        specifier: workspace:*
+        version: link:../../ui/icon-manager
+      '@notehub/settings-manager':
+        specifier: workspace:*
+        version: link:../../ui/settings-manager
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.9.1
+      '@tauri-apps/plugin-shell':
+        specifier: ^2.0.0
+        version: 2.3.3
+      lucide-react:
+        specifier: ^0.562.0
+        version: 0.562.0(react@18.3.1)
+      react:
+        specifier: ^18.0.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.0.0
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.2.0
+        version: 18.3.7(@types/react@18.3.27)
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10
@@ -460,6 +506,9 @@ importers:
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core
+      '@notehub/icon-manager':
+        specifier: workspace:*
+        version: link:../../ui/icon-manager
       '@tauri-apps/api':
         specifier: ^2.0.0
         version: 2.9.1
@@ -649,6 +698,9 @@ importers:
       '@notehub/theme-manager':
         specifier: workspace:*
         version: link:../theme-manager
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.9.1
       react:
         specifier: ^18.0.0
         version: 18.3.1
@@ -1397,6 +1449,9 @@ packages:
 
   '@tauri-apps/plugin-fs@2.4.4':
     resolution: {integrity: sha512-MTorXxIRmOnOPT1jZ3w96vjSuScER38ryXY88vl5F0uiKdnvTKKTtaEjTEo8uPbl4e3gnUtfsDVwC7h77GQLvQ==}
+
+  '@tauri-apps/plugin-shell@2.3.3':
+    resolution: {integrity: sha512-Xod+pRcFxmOWFWEnqH5yZcA7qwAMuaaDkMR1Sply+F8VfBj++CGnj2xf5UoialmjZ2Cvd8qrvSCbU+7GgNVsKQ==}
 
   '@types/archiver@6.0.4':
     resolution: {integrity: sha512-ULdQpARQ3sz9WH4nb98mJDYA0ft2A8C4f4fovvUcFwINa1cgGjY36JCAYuP5YypRq4mco1lJp1/7jEMS2oR0Hg==}
@@ -2863,6 +2918,10 @@ snapshots:
       '@tauri-apps/api': 2.9.1
 
   '@tauri-apps/plugin-fs@2.4.4':
+    dependencies:
+      '@tauri-apps/api': 2.9.1
+
+  '@tauri-apps/plugin-shell@2.3.3':
     dependencies:
       '@tauri-apps/api': 2.9.1
 

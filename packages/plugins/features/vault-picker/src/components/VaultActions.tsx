@@ -70,8 +70,8 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
         <div style={styles.container}>
             {/* Logo Section */}
             <div style={styles.logoSection}>
-                <Icon name="disc" size={80} className="opacity-90" />
-                <Label variant="logo" className="mt-4">notehub.md</Label>
+                <Icon name="app-logo" size={64} className="text-[var(--nh-accent-primary)] mb-4" />
+                <Label variant="logo">notehub.md</Label>
                 <Label variant="caption" className="mt-2">Gather your data together</Label>
             </div>
 

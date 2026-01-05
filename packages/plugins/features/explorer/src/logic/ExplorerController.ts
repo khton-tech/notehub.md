@@ -85,6 +85,17 @@ export class ExplorerController {
                 false
             );
             this.showHidden = showHidden ?? false;
+
+            // Restore expanded paths
+            const expanded = await this.app.api.invoke<string[] | undefined>(
+                'config:get',
+                'explorer.expanded-paths',
+                []
+            );
+            if (Array.isArray(expanded)) {
+                // Filter out paths that don't belong to current root to avoid clutter (optional)
+                this.expandedPaths = new Set(expanded);
+            }
         } catch {
             this.showHidden = false;
         }
@@ -98,14 +109,14 @@ export class ExplorerController {
         this.app.events.on('config:updated', configHandler);
         this.eventCleanups.push(() => this.app.events.off('config:updated', configHandler));
 
-        const fileOpenedHandler = (payload: any) => {
+        const fileOpenedHandler = async (payload: any) => {
             const path = typeof payload === 'string' ? payload : payload?.path;
             if (path && path !== this._activeFilePath) {
                 this._activeFilePath = path;
                 this._selectedPath = path;
 
                 // Ensure the path to the file is expanded
-                this.expandToPath(path);
+                await this.expandToPath(path);
                 this.notify();
             }
         };
@@ -669,6 +680,7 @@ export class ExplorerController {
 
         if (!this.expandedPaths.has(path)) {
             this.expandedPaths.add(path);
+            this.saveExpandedPaths();
         }
 
         // Always reload to be fresh when expanding by user action
@@ -676,7 +688,7 @@ export class ExplorerController {
         this.notify();
     }
 
-    private expandToPath(path: string) {
+    async expandToPath(path: string): Promise<void> {
         let parent = getParentPath(path);
         const root = this.rootPath;
         if (!root) return;
@@ -689,13 +701,31 @@ export class ExplorerController {
         }
         if (parent === root) pathParts.push(root);
 
-        // Expand downwards
-        pathParts.reverse().forEach(p => this.expandedPaths.add(p));
+        // Expand downwards and load
+        const toExpand = pathParts.reverse();
+        for (const p of toExpand) {
+            if (!this.expandedPaths.has(p)) {
+                this.expandedPaths.add(p);
+            }
+            // Ensure loaded
+            await this.loadDir(p);
+        }
+        this.saveExpandedPaths();
     }
 
     collapseDir(path: string): void {
         this.expandedPaths.delete(path);
+        this.saveExpandedPaths();
         this.notify();
+    }
+
+    private saveTimeout: NodeJS.Timeout | null = null;
+    private saveExpandedPaths() {
+        if (this.saveTimeout) clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => {
+            const paths = Array.from(this.expandedPaths);
+            this.app.api.invoke('config:set', 'explorer.expanded-paths', paths).catch(console.error);
+        }, 1000);
     }
 
     // ========== Creation ==========

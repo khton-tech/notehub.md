@@ -1,5 +1,6 @@
 import React, { useState, useEffect, type FC } from 'react';
 import type { NotehubCore } from '@notehub/core';
+import { Icon } from '@notehub/icon-manager';
 import { Package, RotateCw, FolderOpen } from 'lucide-react';
 
 interface PluginMetadata {
@@ -165,7 +166,7 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
                                 className="group flex items-start p-4 bg-[var(--nh-bg-surface)] rounded-lg border border-[var(--nh-border-subtle)] hover:border-[var(--nh-border-focus)] transition-all"
                             >
                                 <div className="p-3 mr-4 bg-[var(--nh-bg-main)] rounded-md text-[var(--nh-accent-color)]">
-                                    <Package size={24} />
+                                    <Icon name="plugin-default" size={24} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">

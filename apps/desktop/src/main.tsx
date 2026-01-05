@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { NotehubCore, NotehubProvider, type IPlugin } from '@notehub/core';
 import { Bootloader, type LoadablePlugin, type PluginManifest } from '@notehub/bootloader';
 import { LayoutRenderer } from '@notehub/layout-manager';
-import { Hexagon } from 'lucide-react';
+import { AppLogo } from '@notehub/icon-manager';
 import './index.css';
 
 /**
@@ -108,6 +108,8 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/explorer');
         case '@notehub/editor':
             return import('@notehub/editor');
+        case '@notehub/about':
+            return import('@notehub/about');
 
         default:
             throw new Error(`Unknown plugin package: ${packageName}`);
@@ -330,7 +332,7 @@ function App(): React.ReactElement {
                     {/* Icon */}
                     <div className="relative z-10 flex items-center justify-center">
                         <div className="text-purple-400 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-                            <Hexagon size={48} strokeWidth={1.5} className="animate-pulse" />
+                            <AppLogo size={48} className="animate-pulse" />
                         </div>
                     </div>
                 </div>

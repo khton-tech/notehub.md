@@ -171,6 +171,11 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                     <nav className="
                         w-52 shrink-0 bg-[var(--nh-bg-sidebar)] border-r border-[var(--nh-border-secondary)]
                         overflow-y-auto py-2
+                        [&::-webkit-scrollbar]:w-1.5
+                        [&::-webkit-scrollbar-track]:bg-transparent
+                        [&::-webkit-scrollbar-thumb]:bg-[var(--nh-ring-focus)]
+                        [&::-webkit-scrollbar-thumb]:rounded-full
+                        hover:[&::-webkit-scrollbar-thumb]:bg-[var(--nh-accent-primary)]
                     ">
                         {structure.tabs.length === 0 ? (
                             <div className="px-4 py-8 text-center text-sm text-[var(--nh-text-muted)]">
@@ -207,11 +212,22 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                     {/* Content */}
                     <div
                         ref={contentRef}
-                        className="flex-1 overflow-y-auto bg-[var(--nh-bg-main)] p-6"
+                        className="
+                            flex-1 overflow-y-auto bg-[var(--nh-bg-main)] p-6
+                            [&::-webkit-scrollbar]:w-1.5
+                            [&::-webkit-scrollbar-track]:bg-transparent
+                            [&::-webkit-scrollbar-thumb]:bg-[var(--nh-ring-focus)]
+                            [&::-webkit-scrollbar-thumb]:rounded-full
+                            hover:[&::-webkit-scrollbar-thumb]:bg-[var(--nh-accent-primary)]
+                        "
                     >
                         {!activeTab ? (
                             <div className="flex items-center justify-center h-full text-[var(--nh-text-muted)]">
                                 Select a category from the sidebar
+                            </div>
+                        ) : activeTab.customView ? (
+                            <div className="h-full">
+                                <activeTab.customView />
                             </div>
                         ) : activeTab.groups.length === 0 ? (
                             <div className="flex items-center justify-center h-full text-[var(--nh-text-muted)]">

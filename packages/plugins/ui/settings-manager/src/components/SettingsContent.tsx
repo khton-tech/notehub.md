@@ -88,7 +88,14 @@ export const SettingsContent: FC<SettingsContentProps> = ({
             </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="
+                flex-1 overflow-y-auto p-8
+                [&::-webkit-scrollbar]:w-1.5
+                [&::-webkit-scrollbar-track]:bg-transparent
+                [&::-webkit-scrollbar-thumb]:bg-[var(--nh-ring-focus)]
+                [&::-webkit-scrollbar-thumb]:rounded-full
+                hover:[&::-webkit-scrollbar-thumb]:bg-[var(--nh-accent-primary)]
+            ">
                 {!tabData ? (
                     <div className="flex items-center justify-center h-full text-[var(--nh-text-muted)]">
                         Select a category from the sidebar

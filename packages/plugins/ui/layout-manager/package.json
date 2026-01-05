@@ -23,7 +23,8 @@
         "@notehub/icon-manager": "workspace:*",
         "@notehub/controllers-manager": "workspace:*",
         "@notehub/ck-standard": "workspace:*",
-        "@notehub/theme-manager": "workspace:*"
+        "@notehub/theme-manager": "workspace:*",
+        "@tauri-apps/api": "^2.0.0"
     },
     "peerDependencies": {
         "react": "^18.0.0"

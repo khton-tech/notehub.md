@@ -84,8 +84,8 @@ function createEditorSlotComponent(controller: EditorController, app: NotehubCor
      * EditorSlotWrapper - The actual React component that renders in the main area
      */
     return function EditorSlotWrapper() {
-        const [content, setContent] = useState<string>('');
-        const [filePath, setFilePath] = useState<string | null>(null);
+        const [content, setContent] = useState<string>(() => controller.getCurrentContent());
+        const [filePath, setFilePath] = useState<string | null>(() => controller.activePath);
         const [settings, setSettings] = useState<EditorSettings>(() => controller.getSettings());
 
         useEffect(() => {
@@ -286,6 +286,10 @@ export class EditorPlugin implements IPlugin {
 
         // Load settings from config-manager
         await this.controller.loadSettings();
+
+        // Restore last opened file
+        // We don't await this to avoid blocking the UI render
+        this.controller.restoreLastFile();
 
         // Create the slot component with controller in closure
         const EditorSlotComponent = createEditorSlotComponent(this.controller, app);
