@@ -5,7 +5,9 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
-
+# plugins test 
+tests/
+server/
 # Tauri / Rust
 target/
 src-tauri/target/

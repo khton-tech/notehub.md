@@ -121,6 +121,7 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
                         'react/jsx-runtime',
                         '@notehub/api',
                         '@notehub/core',
+                        '@notehub/ui',
                     ],
                     output: {
                         format: 'system',

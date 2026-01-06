@@ -36,6 +36,7 @@ import {
     Palette,
     FlaskConical,
     Package,
+    Bug,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -109,6 +110,7 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     'palette': Palette,
     'flask-conical': FlaskConical,
     'package': Package,
+    'bug': Bug,
 };
 
 /**

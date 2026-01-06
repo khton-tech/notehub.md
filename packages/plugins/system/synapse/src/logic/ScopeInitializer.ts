@@ -2,7 +2,7 @@
  * @fileoverview Shared Scope Initializer for SystemJS
  * 
  * This module sets up the "shared scope" by registering the host application's
- * React, ReactDOM, @notehub/core, and @notehub/api instances with SystemJS.
+ * React, ReactDOM, @notehub/core, @notehub/api, and @notehub/ui instances with SystemJS.
  * This enables external plugins to import these dependencies and receive the
  * same instances used by the host application.
  * 
@@ -12,6 +12,7 @@
  * import React from 'react';
  * import { NotehubCore } from '@notehub/core';
  * import { NotehubPlugin, PluginContext } from '@notehub/api';
+ * import { Button, Card, Input } from '@notehub/ui';
  * ```
  * And receive the host's instances instead of bundling their own.
  */
@@ -21,6 +22,7 @@ import * as ReactDOM from 'react-dom';
 import * as ReactDOMClient from 'react-dom/client';
 import * as NotehubCore from '@notehub/core';
 import * as NotehubApi from '@notehub/api';
+import * as NotehubUI from '@notehub/ck-standard';
 
 // SystemJS global type declaration (SystemJS 6.x)
 // Includes addImportMap for programmatic import map registration
@@ -53,6 +55,7 @@ let scopeInitialized = false;
  * - `react-dom/client` - ReactDOM client API (createRoot, hydrateRoot)
  * - `@notehub/core` - Notehub core library
  * - `@notehub/api` - Notehub public API SDK for plugin development
+ * - `@notehub/ui` - Notehub UI component kit (ck-standard)
  * 
  * After calling this, external plugins loaded via SystemJS can import
  * these modules and receive the host's instances.
@@ -76,6 +79,7 @@ export function initSharedScope(): void {
         'react-dom/client': `${SHARED_SCOPE_PREFIX}react-dom-client`,
         '@notehub/core': `${SHARED_SCOPE_PREFIX}notehub-core`,
         '@notehub/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
+        '@notehub/ui': `${SHARED_SCOPE_PREFIX}notehub-ui`,
     };
 
     // Step 1: Add import map to map bare specifiers to our synthetic URLs
@@ -136,8 +140,15 @@ export function initSharedScope(): void {
         __esModule: true,
     });
 
+    // Register @notehub/ui - UI Component Kit (ck-standard)
+    System.set(moduleUrls['@notehub/ui'], {
+        ...NotehubUI,
+        default: NotehubUI,
+        __esModule: true,
+    });
+
     scopeInitialized = true;
-    console.log('[ScopeInitializer] Shared scope initialized with React, ReactDOM, @notehub/core, and @notehub/api');
+    console.log('[ScopeInitializer] Shared scope initialized with React, ReactDOM, @notehub/core, @notehub/api, and @notehub/ui');
 }
 
 /**
@@ -154,4 +165,3 @@ export function isScopeInitialized(): boolean {
 export function resetScope(): void {
     scopeInitialized = false;
 }
-
