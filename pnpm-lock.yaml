@@ -503,6 +503,9 @@ importers:
       '@notehub/api':
         specifier: workspace:*
         version: link:../../../api
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../../ui/ck-standard
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core
