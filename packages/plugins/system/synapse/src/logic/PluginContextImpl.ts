@@ -33,6 +33,14 @@ export class PluginContextImpl implements PluginContext {
     /** List of event unsubscriber functions (for cleanup) */
     private eventUnsubscribers: (() => void)[] = [];
 
+    /** List of registered widget IDs (for cleanup) */
+    private registeredWidgets: string[] = [];
+
+    /** Lists of registered settings resources (for cleanup) */
+    private registeredSettingsTabs: string[] = [];
+    private registeredSettingsGroups: string[] = [];
+    private registeredSettingsItems: string[] = [];
+
     /** Whether the context has been cleaned up */
     private disposed = false;
 
@@ -71,21 +79,6 @@ export class PluginContextImpl implements PluginContext {
             throw error;
         }
     }
-
-    /**
-     * Invoke an API method registered by Core or another plugin.
-     * 
-     * @param name - API method name to invoke
-     * @param args - Arguments to pass to the API method
-     * @returns Promise resolving to the API method's return value
-     */
-    /** List of registered widget IDs (for cleanup) */
-    private registeredWidgets: string[] = [];
-
-    /** Lists of registered settings resources (for cleanup) */
-    private registeredSettingsTabs: string[] = [];
-    private registeredSettingsGroups: string[] = [];
-    private registeredSettingsItems: string[] = [];
 
     /**
      * Invoke an API method registered by Core or another plugin.

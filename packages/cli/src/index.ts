@@ -62,10 +62,14 @@ program
     .description('Build and package the plugin in the current directory')
     .option('-o, --output <dir>', 'Output directory for the .nhp file', '.')
     .option('--no-minify', 'Disable minification')
+    .option('--sourcemap', 'Generate inline source maps for debugging')
+    .option('-w, --watch', 'Watch mode - rebuild on file changes')
     .action(async (options) => {
         await buildCommand({
             outputDir: options.output,
             minify: options.minify !== false,
+            sourcemap: options.sourcemap || false,
+            watch: options.watch || false,
         });
     });
 

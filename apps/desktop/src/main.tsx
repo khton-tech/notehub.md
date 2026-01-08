@@ -77,6 +77,8 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/config-manager');
         case '@notehub/synapse':
             return import('@notehub/synapse');
+        case '@notehub/drag-drop':
+            return import('@notehub/drag-drop');
         case '@notehub/bootloader':
             return import('@notehub/bootloader');
 
