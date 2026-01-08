@@ -27,6 +27,7 @@
         "@notehub/settings-manager": "workspace:*",
         "@notehub/state-manager": "workspace:*",
         "@notehub/synapse": "workspace:*",
+        "@notehub/drag-drop": "workspace:*",
         "@notehub/theme-manager": "workspace:*",
         "@notehub/vault-picker": "workspace:*",
         "@notehub/workbench": "workspace:*",

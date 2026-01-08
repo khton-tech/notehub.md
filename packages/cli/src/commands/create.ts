@@ -157,12 +157,12 @@ function generatePackageJson(id: string, name: string): string {
         },
         dependencies: {},
         devDependencies: {
-            '@notehub/api': '^0.1.0',
-            '@types/react': '^18.2.0',
-            typescript: '^5.3.0',
+            '@notehub/api': 'workspace:*',
+            '@types/react': '^18.3.0',
+            typescript: '^5.6.0',
         },
         peerDependencies: {
-            react: '^18.2.0',
+            react: '^18.3.0',
         },
     };
     return JSON.stringify(pkg, null, 4) + '\n';

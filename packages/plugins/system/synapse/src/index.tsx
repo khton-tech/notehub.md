@@ -60,7 +60,7 @@ export class SynapsePlugin implements IPlugin {
     private loader: PluginLoader | null = null;
     private watcherUnsubscribe: (() => void) | null = null;
     private pendingEvents: Map<string, { path: string; type: string }> = new Map();
-    private debounceTimer: any = null; // using any for timer to avoid node/window type conflicts
+    private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     /**
      * Log a message via the Logger plugin
@@ -95,7 +95,7 @@ export class SynapsePlugin implements IPlugin {
             (app.api.register as any)('synapse:get-details', this.getPluginsDetails.bind(this));
 
             // Subscribe to vault-opened event to scan for external plugins
-            app.events.on('app:vault-opened', this.handleVaultOpened.bind(this));
+            app.events.on('app:vault-opened', this.handleVaultOpened);
             this.log('info', 'Subscribed to app:vault-opened event');
 
             this.log('info', 'Synapse Engine loaded successfully');
@@ -108,8 +108,9 @@ export class SynapsePlugin implements IPlugin {
 
     /**
      * Handle vault opened event - scan for external plugins
+     * Arrow function to ensure stable reference for event subscription/unsubscription
      */
-    private async handleVaultOpened(payload: unknown): Promise<void> {
+    private handleVaultOpened = async (payload: unknown): Promise<void> => {
         // Event payload is { path: string, name: string }
         const eventData = payload as { path?: string; name?: string } | undefined;
         const vaultPath = eventData?.path;
@@ -128,7 +129,7 @@ export class SynapsePlugin implements IPlugin {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.log('error', `Error scanning for external plugins: ${errorMessage}`);
         }
-    }
+    };
 
     /**
      * Called after all internal plugins are loaded
@@ -188,10 +189,14 @@ export class SynapsePlugin implements IPlugin {
             await this.loader.unloadAll();
         }
 
+        // Unsubscribe from vault-opened event
+        app.events.off('app:vault-opened', this.handleVaultOpened);
+
         // Unregister API methods
         app.api.unregister('synapse:load-plugin');
         app.api.unregister('synapse:unload-plugin');
         app.api.unregister('synapse:list-plugins');
+        app.api.unregister('synapse:get-details');
 
         this.stopWatching();
         this.loader = null;
@@ -313,7 +318,8 @@ export class SynapsePlugin implements IPlugin {
                 await this.loader!.unloadPlugin(affectedPluginId);
 
                 if (sourcePath) {
-                    // Slight delay to ensure file system is stable (optional but safe)
+                    // Delay to ensure file system is stable before re-reading the file
+                    await new Promise(resolve => setTimeout(resolve, 100));
                     await this.loadPluginByPath(sourcePath);
                 }
                 return;

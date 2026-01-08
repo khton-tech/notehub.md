@@ -11,7 +11,7 @@
  * 4. Rename to [plugin-id].nhp
  */
 
-import { build as viteBuild } from 'vite';
+import { build as viteBuild, type LibraryFormats } from 'vite';
 import archiver from 'archiver';
 import chalk from 'chalk';
 import { existsSync, readFileSync, createWriteStream, unlinkSync, statSync } from 'node:fs';
@@ -25,6 +25,10 @@ export interface BuildOptions {
     outputDir: string;
     /** Whether to minify the output */
     minify: boolean;
+    /** Whether to generate source maps */
+    sourcemap: boolean;
+    /** Whether to watch for changes */
+    watch: boolean;
 }
 
 /**
@@ -70,6 +74,15 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
         process.exit(1);
     }
 
+    // Validate plugin ID format
+    const validIdPattern = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$/;
+    if (!validIdPattern.test(manifest.id)) {
+        console.error(chalk.red('✖ Error: Invalid plugin ID format'));
+        console.error(chalk.gray('  Use format: ext.my-plugin or my-org.plugin-name'));
+        console.error(chalk.gray('  Only lowercase letters, numbers, dots, and hyphens allowed'));
+        process.exit(1);
+    }
+
     console.log(chalk.white(`Plugin: ${chalk.bold(manifest.name)} (${manifest.id})`));
     console.log(chalk.white(`Version: ${manifest.version}\n`));
 
@@ -100,45 +113,60 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
     // Step 3: Run Vite build
     console.log(chalk.yellow('⚙ Building with Vite...'));
 
-    try {
-        await viteBuild({
-            root: cwd,
-            build: {
-                lib: {
-                    entry: actualEntry,
-                    // NOTE: Do NOT set 'name' here - it would create a named System.register()
-                    // which fails when loaded dynamically via Blob URL
-                    formats: ['system'],
-                    fileName: () => 'main.js',
-                },
-                outDir: 'dist',
-                emptyOutDir: true,
-                minify: options.minify ? 'esbuild' : false,
-                rollupOptions: {
-                    external: [
-                        'react',
-                        'react-dom',
-                        'react/jsx-runtime',
-                        '@notehub/api',
-                        '@notehub/core',
-                        '@notehub/ui',
-                    ],
-                    output: {
-                        format: 'system',
-                        entryFileNames: 'main.js',
-                        // Don't use named exports - we need anonymous module
-                        exports: 'auto',
-                    },
-                },
-                // Suppress console output from Vite
-                reportCompressedSize: false,
+    const viteConfig = {
+        root: cwd,
+        build: {
+            lib: {
+                entry: actualEntry,
+                // NOTE: Do NOT set 'name' here - it would create a named System.register()
+                // which fails when loaded dynamically via Blob URL
+                formats: ['system'] as LibraryFormats[],
+                fileName: () => 'main.js',
             },
-            logLevel: 'warn',
-        });
+            outDir: 'dist',
+            emptyOutDir: true,
+            minify: options.minify ? 'esbuild' as const : false as const,
+            sourcemap: options.sourcemap ? 'inline' as const : false as const,
+            rollupOptions: {
+                external: [
+                    'react',
+                    'react-dom',
+                    'react-dom/client',
+                    'react/jsx-runtime',
+                    '@notehub/api',
+                    '@notehub/core',
+                    '@notehub/ui',
+                    'lucide-react',
+                ],
+                output: {
+                    format: 'system' as const,
+                    entryFileNames: 'main.js',
+                    // Don't use named exports - we need anonymous module
+                    exports: 'auto' as const,
+                },
+            },
+            // Watch mode configuration
+            watch: options.watch ? {} : null,
+            // Suppress console output from Vite
+            reportCompressedSize: false,
+        },
+        logLevel: 'warn' as const,
+    };
+
+    try {
+        if (options.watch) {
+            console.log(chalk.cyan('👁 Watch mode enabled - press Ctrl+C to stop\n'));
+        }
+        await viteBuild(viteConfig);
     } catch (error) {
         console.error(chalk.red('\n✖ Build failed'));
         console.error(chalk.gray(`  ${error instanceof Error ? error.message : error}`));
         process.exit(1);
+    }
+
+    // In watch mode, don't continue to packaging
+    if (options.watch) {
+        return;
     }
 
     console.log(chalk.green('✓ Build complete\n'));

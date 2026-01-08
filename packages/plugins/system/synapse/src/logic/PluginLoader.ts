@@ -14,6 +14,7 @@ import type { IPlugin, NotehubCore } from '@notehub/core';
 import type { ExternalPluginManifest, LoadedPluginRecord, PluginLoadResult, DiscoveredPluginRecord } from '../types.js';
 import { PluginContextImpl } from './PluginContextImpl.js';
 import { ZipLoader, type NhpLoadResult } from './ZipLoader.js';
+import { parseManifest, withTimeout, PLUGIN_LOAD_TIMEOUT_MS } from './ManifestParser.js';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 // SystemJS global type declaration (SystemJS 6.x)
@@ -83,7 +84,7 @@ export class PluginLoader {
             try {
                 if (await this.app.api.invoke('fs:exists', manifestPath)) {
                     const manifestJson = await this.app.api.invoke('fs:read-text-file', manifestPath);
-                    const manifest = this.parseManifest(manifestJson, pluginPath);
+                    const manifest = parseManifest(manifestJson as string, pluginPath);
                     if (manifest) {
                         const isLoaded = this.loadedPlugins.has(manifest.id);
                         this.discoveredPlugins.set(manifest.id, {
@@ -177,7 +178,7 @@ export class PluginLoader {
 
             // Step 2: Read and parse manifest
             const manifestJson = await this.app.api.invoke('fs:read-text-file', manifestPath);
-            const manifest = this.parseManifest(manifestJson, pluginPath);
+            const manifest = parseManifest(manifestJson as string, pluginPath);
             if (!manifest) {
                 return { success: false, error: 'Invalid manifest.json format' };
             }
@@ -200,8 +201,12 @@ export class PluginLoader {
 
             this.log('info', `Loading external plugin: ${manifest.id} from ${url}`);
 
-            // Step 5: Dynamic import via SystemJS
-            const module = await System.import(url);
+            // Step 5: Dynamic import via SystemJS with timeout
+            const module = await withTimeout(
+                System.import(url),
+                PLUGIN_LOAD_TIMEOUT_MS,
+                `Plugin ${manifest.id} load timeout after ${PLUGIN_LOAD_TIMEOUT_MS / 1000}s`
+            );
 
             // Step 6: Get and validate the plugin class/instance
             const plugin = this.extractPlugin(module, manifest.id);
@@ -389,10 +394,16 @@ export class PluginLoader {
      * Load an external plugin from an NHP file buffer
      */
     async loadFromNhp(buffer: ArrayBuffer, sourcePath: string): Promise<PluginLoadResult> {
+        let blobUrl: string | undefined;
+        let manifest: ExternalPluginManifest | undefined;
+        let cssInjected = false;
+
         try {
             const zipLoader = new ZipLoader();
             const nhpResult: NhpLoadResult = await zipLoader.loadFromBuffer(buffer, sourcePath);
-            const { manifest, blobUrl, css } = nhpResult;
+            manifest = nhpResult.manifest;
+            blobUrl = nhpResult.blobUrl;
+            const css = nhpResult.css;
 
             if (this.loadedPlugins.has(manifest.id)) {
                 this.log('warn', `Plugin ${manifest.id} is already loaded, skipping`);
@@ -413,14 +424,16 @@ export class PluginLoader {
                 styleTag.id = `style-${manifest.id}`;
                 styleTag.textContent = css;
                 document.head.appendChild(styleTag);
+                cssInjected = true;
             }
 
-            const module = await System.import(blobUrl);
+            const module = await withTimeout(
+                System.import(blobUrl),
+                PLUGIN_LOAD_TIMEOUT_MS,
+                `NHP plugin ${manifest.id} load timeout after ${PLUGIN_LOAD_TIMEOUT_MS / 1000}s`
+            );
             const plugin = this.extractPlugin(module, manifest.id);
             if (!plugin) {
-                URL.revokeObjectURL(blobUrl);
-                const styleTag = document.getElementById(`style-${manifest.id}`);
-                if (styleTag) styleTag.remove();
                 return { success: false, error: 'Module does not export a valid plugin' };
             }
 
@@ -442,6 +455,10 @@ export class PluginLoader {
                 sourcePath,
                 loadedAt: new Date(),
             });
+
+            // Transfer ownership to loadedPlugins, don't revoke in finally
+            blobUrl = undefined;
+            cssInjected = false; // CSS is now owned by loaded plugin
 
             const stats = context ? ` (${context.getStats().registeredApis} APIs, ${context.getStats().eventSubscriptions} subscriptions)` : '';
             this.log('info', `NHP plugin loaded: ${manifest.id} v${manifest.version}${stats}`);
@@ -465,39 +482,15 @@ export class PluginLoader {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.log('error', `Failed to load NHP plugin from ${sourcePath}: ${errorMessage}`);
             return { success: false, error: errorMessage };
-        }
-    }
-
-    /**
-     * Parse and validate manifest JSON
-     */
-    private parseManifest(json: string, path: string): ExternalPluginManifest | null {
-        try {
-            const parsed = JSON.parse(json);
-
-            if (!parsed.id || typeof parsed.id !== 'string') {
-                this.log('error', `Invalid manifest at ${path}: missing or invalid 'id'`);
-                return null;
+        } finally {
+            // Cleanup on failure: revoke blob URL and remove CSS if not transferred to loadedPlugins
+            if (blobUrl) {
+                URL.revokeObjectURL(blobUrl);
             }
-            if (!parsed.name || typeof parsed.name !== 'string') {
-                this.log('error', `Invalid manifest at ${path}: missing or invalid 'name'`);
-                return null;
+            if (cssInjected && manifest) {
+                const styleTag = document.getElementById(`style-${manifest.id}`);
+                if (styleTag) styleTag.remove();
             }
-            if (!parsed.version || typeof parsed.version !== 'string') {
-                this.log('error', `Invalid manifest at ${path}: missing or invalid 'version'`);
-                return null;
-            }
-
-            return {
-                id: parsed.id,
-                name: parsed.name,
-                version: parsed.version,
-                main: parsed.main,
-                dependencies: parsed.dependencies,
-            };
-        } catch (error) {
-            this.log('error', `Failed to parse manifest at ${path}: ${error}`);
-            return null;
         }
     }
 
