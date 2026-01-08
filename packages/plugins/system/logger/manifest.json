@@ -1,7 +1,7 @@
 {
     "id": "nh.system.logger",
     "name": "Logger",
-    "version": "0.0.0",
+    "version": "0.1.2",
     "type": "system",
     "description": "Centralized logging system with level-based filtering and event emission",
     "dependencies": []

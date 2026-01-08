@@ -1,7 +1,7 @@
 {
     "id": "nh.features.about",
     "name": "About",
-    "version": "1.0.0",
+    "version": "0.1.2",
     "type": "feature",
     "description": "Displays application information and credits",
     "dependencies": [

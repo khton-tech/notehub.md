@@ -17,8 +17,8 @@ flowchart LR
     nh_ui_controllers-manager["ControllersManager"]
     nh_ui_dialog-manager["DialogManager"]
     nh_ui_icon-manager["IconManager"]
-    nh_ui_settings-manager["SettingsManager"]
     nh_ui_layout-manager["LayoutManager"]
+    nh_ui_settings-manager["SettingsManager"]
     nh_ui_theme-manager["ThemeManager"]
     nh_features_about --> nh_ui_settings-manager
     nh_features_about --> nh_ui_icon-manager
@@ -74,15 +74,15 @@ flowchart LR
     nh_ui_dialog-manager --> nh_system_logger
     nh_ui_dialog-manager --> nh_ui_ck-standard
     nh_ui_icon-manager --> nh_system_logger
-    nh_ui_settings-manager --> nh_system_config-manager
-    nh_ui_settings-manager --> nh_ui_ck-standard
-    nh_ui_settings-manager --> nh_ui_icon-manager
-    nh_ui_settings-manager --> nh_ui_dialog-manager
     nh_ui_layout-manager --> nh_system_logger
     nh_ui_layout-manager --> nh_ui_theme-manager
     nh_ui_layout-manager --> nh_ui_icon-manager
     nh_ui_layout-manager --> nh_ui_controllers-manager
     nh_ui_layout-manager --> nh_ui_ck-standard
+    nh_ui_settings-manager --> nh_system_config-manager
+    nh_ui_settings-manager --> nh_ui_ck-standard
+    nh_ui_settings-manager --> nh_ui_icon-manager
+    nh_ui_settings-manager --> nh_ui_dialog-manager
     nh_ui_theme-manager --> nh_system_logger
     nh_ui_theme-manager --> nh_system_config-manager
 
@@ -93,4 +93,4 @@ flowchart LR
     class nh_features_about,nh_features_vault-picker feature
     class nh_features_editor,nh_features_explorer,nh_features_workbench feature
     class nh_system_bootloader,nh_system_config-manager,nh_system_drag-drop,nh_system_fs-driver-tauri,nh_system_fs-manager,nh_system_logger,nh_system_state-manager,nh_system_synapse system
-    class nh_ui_ck-standard,nh_ui_context-menu,nh_ui_controllers-manager,nh_ui_dialog-manager,nh_ui_icon-manager,nh_ui_settings-manager,nh_ui_layout-manager,nh_ui_theme-manager ui
+    class nh_ui_ck-standard,nh_ui_context-menu,nh_ui_controllers-manager,nh_ui_dialog-manager,nh_ui_icon-manager,nh_ui_layout-manager,nh_ui_settings-manager,nh_ui_theme-manager ui

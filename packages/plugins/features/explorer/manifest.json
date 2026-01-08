@@ -1,7 +1,7 @@
 {
     "id": "nh.features.explorer",
     "name": "Explorer",
-    "version": "0.0.2",
+    "version": "0.1.2",
     "type": "features",
     "description": "File Explorer for Notehub",
     "dependencies": [

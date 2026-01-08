@@ -1,7 +1,7 @@
 {
     "id": "nh.ui.theme-manager",
     "name": "ThemeManager",
-    "version": "0.0.0",
+    "version": "0.1.2",
     "type": "ui",
     "dependencies": [
         "nh.system.logger",

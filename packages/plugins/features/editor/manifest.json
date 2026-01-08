@@ -1,7 +1,7 @@
 {
     "id": "nh.features.editor",
     "name": "Editor",
-    "version": "0.0.1",
+    "version": "0.1.2",
     "type": "features",
     "description": "Markdown Editor for Notehub",
     "dependencies": [
