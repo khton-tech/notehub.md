@@ -1,6 +1,6 @@
 {
     "name": "notehub.md",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "private": true,
     "type": "module",
     "scripts": {
@@ -11,7 +11,7 @@
         "predev": "tsx scripts/link-plugins.ts",
         "dev:desktop": "pnpm predev && pnpm --filter @notehub/desktop tauri dev",
         "dev:desktop:debug": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri dev",
-        "desktop:build": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri build"
+        "build:desktop": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri build"
     },
     "devDependencies": {
         "@types/prompts": "^2.4.9",
