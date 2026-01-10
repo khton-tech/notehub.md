@@ -98,8 +98,13 @@ export class EditorController {
     /** Currently open file path (null if no file open) */
     private currentPath: string | null = null;
 
-    /** Original content when file was opened (for dirty detection) */
-    private originalContent: string = '';
+
+
+    /** 
+     * The latest content pushed from the UI.
+     * This is the SINGLE SOURCE OF TRUTH for saving.
+     */
+    private lastKnownContent: string = '';
 
     /** Whether content has been modified since last save */
     private isDirty: boolean = false;
@@ -109,13 +114,24 @@ export class EditorController {
 
     // ========== CodeMirror Integration ==========
 
-    /** Reference to the CodeMirror EditorView (set by UI component) */
-    private editorView: EditorView | null = null;
+    // EditorView reference removed as we rely on React state flow
 
     // ========== Debounce Configuration ==========
 
     /** Timer ID for debounced save */
     private saveTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    /** 
+     * Flag to indicate content is being loaded programmatically.
+     * When true, markDirty() is skipped to prevent saving old content.
+     */
+    private isLoadingContent: boolean = false;
+
+    /**
+     * Map of active file open promises.
+     * Used to deduplicate concurrent requests for the same file.
+     */
+    private activeOpens: Map<string, Promise<string>> = new Map();
 
     /** Debounce delay in milliseconds (1 second) */
     private readonly SAVE_DEBOUNCE_MS = 1000;
@@ -287,8 +303,14 @@ export class EditorController {
      * Called by the UI component when the editor mounts/unmounts.
      * @param view - The EditorView instance, or null on unmount
      */
-    setEditorView(view: EditorView | null): void {
-        this.editorView = view;
+    /**
+     * Set the CodeMirror EditorView reference.
+     * Called by the UI component when the editor mounts/unmounts.
+     * @param view - The EditorView instance, or null on unmount
+     */
+    setEditorView(_view: EditorView | null): void {
+        // We don't need to store the view reference anymore
+        // keeping method for API compatibility
     }
 
     /**
@@ -301,14 +323,10 @@ export class EditorController {
 
     /**
      * Get the current content from the editor.
-     * Reads directly from CodeMirror if available.
-     * @returns The current document content as a string
+     * @returns The last known content buffer
      */
     getCurrentContent(): string {
-        if (this.editorView) {
-            return this.editorView.state.doc.toString();
-        }
-        return this.originalContent;
+        return this.lastKnownContent;
     }
 
     /**
@@ -317,6 +335,22 @@ export class EditorController {
      */
     getIsDirty(): boolean {
         return this.isDirty;
+    }
+
+    /**
+     * Signal that content is being loaded programmatically (not user edit).
+     * Call this before dispatching content to CodeMirror on file switch.
+     */
+    beginContentLoad(): void {
+        this.isLoadingContent = true;
+    }
+
+    /**
+     * Signal that content loading is complete.
+     * Call this after dispatching content to CodeMirror.
+     */
+    endContentLoad(): void {
+        this.isLoadingContent = false;
     }
 
     // ========== Public API: Settings ==========
@@ -406,52 +440,90 @@ export class EditorController {
      * ```
      */
     async openFile(path: string): Promise<string> {
-        this.log('info', `Opening file: ${path}`);
-        this.status = 'opening';
-
-        // Extract filename for status message
-        const filename = path.split(/[\\/]/).pop() || path;
-        this.emitStatusReport('ready', `Opening ${filename}...`);
-
-        try {
-            // Read file via fs-manager API
-            const content = await this.app.api.invoke('fs:read-text-file', path) as string;
-
-            // Update internal state
-            this.currentPath = path;
-            this.originalContent = content;
-            this.isDirty = false;
-            this.status = 'ready';
-
-            this.emitStatusReport('ready', 'Ready');
-            this.log('info', `File opened successfully: ${path}`);
-
-            // Emit file opened event for other plugins (and our own UI)
-            this.app.events.emit('editor:file-opened', { path, content });
-
-            // Persist last opened file
-            this.app.api.invoke('config:set', 'editor.last-opened', path).catch(err => {
-                this.log('warn', `Failed to save last opened file: ${err}`);
-            });
-
-            return content;
-        } catch (error) {
-            this.status = 'error';
-            const errorMessage = error instanceof Error ? error.message : String(error);
-
-            this.log('error', `Failed to open file: ${errorMessage}`);
-            this.emitStatusReport('error', `Error: ${errorMessage}`);
-
-            // Show error dialog to user
-            try {
-                await this.app.api.invoke('dialog:alert', 'Error Opening File', errorMessage);
-            } catch {
-                // Dialog manager might not be available
-            }
-
-            throw error;
+        // Guard against duplicate opens of the same file
+        if (this.currentPath === path) {
+            this.log('info', `File already open, skipping reload: ${path}`);
+            return this.lastKnownContent;
         }
+
+        // Return existing promise if file is already being opened (Promise Lock)
+        if (this.activeOpens.has(path)) {
+            this.log('info', `Joining existing open request for: ${path}`);
+            return this.activeOpens.get(path)!;
+        }
+
+        const openPromise = (async () => {
+            this.log('info', `Opening file: ${path}`);
+            this.status = 'opening';
+
+            // Extract filename for status message
+            const filename = path.split(/[\\/]/).pop() || path;
+            this.emitStatusReport('ready', `Opening ${filename}...`);
+
+            try {
+                // Read file via fs-manager API
+                const content = await this.app.api.invoke('fs:read-text-file', path) as string;
+
+                // Sync source of truth IMMEDIATELY after load, before any await
+                this.currentPath = path;
+                this.lastKnownContent = content;
+                this.isDirty = false;
+                this.status = 'ready';
+
+                this.emitStatusReport('ready', 'Ready');
+                this.log('info', `File opened successfully: ${path}`);
+
+                // Emit file opened event for other plugins (and our own UI)
+                this.app.events.emit('editor:file-opened', { path, content });
+
+                // Update title bar with file name
+                const fileTitle = filename.replace('.md', '');
+                this.app.api.invoke('titlebar:set-title', fileTitle);
+                this.app.api.invoke('titlebar:set-icon', 'file-text');
+
+                // Persist last opened file
+                this.app.api.invoke('config:set', 'editor.last-opened', path).catch(err => {
+                    this.log('warn', `Failed to save last opened file: ${err}`);
+                });
+
+                return content;
+            } catch (error) {
+                this.status = 'error';
+                const errorMessage = error instanceof Error ? error.message : String(error);
+
+                this.log('error', `Failed to open file: ${errorMessage}`);
+                this.emitStatusReport('error', `Error: ${errorMessage}`);
+
+                // Show error dialog to user
+                try {
+                    await this.app.api.invoke('dialog:alert', 'Error Opening File', errorMessage);
+                } catch {
+                    // Dialog manager might not be available
+                }
+
+                throw error;
+            } finally {
+                // Clear the promise from map so future opens can proceed fresh
+                this.activeOpens.delete(path);
+            }
+        })();
+
+        this.activeOpens.set(path, openPromise);
+        return openPromise;
     }
+
+
+    /**
+     * Update the known content state.
+     * Called by the UI component when content changes.
+     * 
+     * @param content - The new content string
+     */
+    updateContent(content: string): void {
+        this.lastKnownContent = content;
+        this.markDirty();
+    }
+
 
     /**
      * Mark the current content as changed.
@@ -463,6 +535,12 @@ export class EditorController {
      * 3. Triggers the debounced save
      */
     markDirty(): void {
+        // Skip if we're programmatically loading content (file switch, not user edit)
+        if (this.isLoadingContent) {
+            this.log('info', 'Skipping markDirty during content load');
+            return;
+        }
+
         if (!this.isDirty) {
             this.isDirty = true;
             this.status = 'ready';
@@ -531,16 +609,16 @@ export class EditorController {
 
         this.status = 'saving';
         this.emitStatusReport('saving', 'Saving...');
-        this.log('info', `Saving file: ${this.currentPath}`);
+
+        // Use lastKnownContent as the source of truth
+        const contentToSave = this.lastKnownContent;
+        this.log('info', `Saving file: ${this.currentPath} (Length: ${contentToSave.length})`);
 
         try {
-            const content = this.getCurrentContent();
-
             // Write file via fs-manager API
-            await this.app.api.invoke('fs:write-text-file', this.currentPath, content);
+            await this.app.api.invoke('fs:write-text-file', this.currentPath, contentToSave);
 
             // Update internal state
-            this.originalContent = content;
             this.isDirty = false;
             this.status = 'saved';
 
@@ -594,14 +672,17 @@ export class EditorController {
             this.saveTimeoutId = null;
         }
 
-        // Clear state
         this.currentPath = null;
-        this.originalContent = '';
+        this.lastKnownContent = '';
         this.isDirty = false;
         this.status = 'idle';
 
         // Update status bar
         this.emitStatusReport('ready', 'No file open');
+
+        // Reset title bar
+        this.app.api.invoke('titlebar:set-title', 'Notehub');
+        this.app.api.invoke('titlebar:set-icon', null);
 
         // Notify UI
         this.app.events.emit('editor:file-closed', {});
@@ -659,11 +740,11 @@ export class EditorController {
         }
 
         // Clear references
-        this.editorView = null;
         this.currentPath = null;
-        this.originalContent = '';
+        this.lastKnownContent = '';
         this.isDirty = false;
         this.status = 'idle';
+        this.activeOpens.clear();
     }
 
     // ========== Public API: Widgets ==========

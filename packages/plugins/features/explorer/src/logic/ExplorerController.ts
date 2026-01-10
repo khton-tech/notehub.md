@@ -837,6 +837,9 @@ export class ExplorerController {
         const node = this.nodes.get(path);
 
         if (node && !node.isDir) {
+            // Update activeFilePath immediately BEFORE emitting event and notify()
+            // This prevents race condition where FileTree sync effect sees old path
+            this._activeFilePath = path;
             this.app.events.emit('explorer:file-selected', { path });
         }
         this.notify();

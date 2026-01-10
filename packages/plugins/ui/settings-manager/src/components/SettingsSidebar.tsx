@@ -8,6 +8,7 @@
 
 import { useState, useEffect, type FC } from 'react';
 import type { NotehubCore } from '@notehub/core';
+import { X } from 'lucide-react';
 import { SettingsRegistry } from '../logic/SettingsRegistry';
 import type { SettingsTab } from '../types';
 
@@ -46,6 +47,10 @@ interface SettingsSidebarProps {
     onTabChange: (tabId: string) => void;
     /** Reference to NotehubCore for API access */
     app: NotehubCore;
+    /** Callback when a tab is selected on mobile */
+    onMobileClick?: () => void;
+    /** Callback to close settings */
+    onClose?: () => void;
 }
 
 // ============================================================================
@@ -60,11 +65,14 @@ interface SettingsSidebarProps {
  * - Active state highlighting with accent color
  * - Dynamic icons via icon:get API
  * - Subscribes to registry changes
+ * - Close button for mobile
  */
 export const SettingsSidebar: FC<SettingsSidebarProps> = ({
     activeTab,
     onTabChange,
-    app
+    app,
+    onMobileClick,
+    onClose
 }) => {
     const [tabs, setTabs] = useState<SettingsTab[]>([]);
 
@@ -83,13 +91,31 @@ export const SettingsSidebar: FC<SettingsSidebarProps> = ({
         return unsubscribe;
     }, []);
 
+    const handleTabClick = (tabId: string) => {
+        onTabChange(tabId);
+        onMobileClick?.();
+    };
+
     return (
         <nav className="flex flex-col h-full">
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-[var(--nh-border-subtle)]">
+            {/* Header with Close Button */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nh-border-subtle)]">
                 <h1 className="text-lg font-semibold text-[var(--nh-text-primary)]">
                     Settings
                 </h1>
+                {onClose && (
+                    <button
+                        onClick={onClose}
+                        className="
+                            p-2 rounded-xl text-[var(--nh-text-muted)]
+                            hover:text-white hover:bg-[var(--nh-bg-hover)]
+                            transition-all duration-200
+                        "
+                        aria-label="Close settings"
+                    >
+                        <X size={20} strokeWidth={2.5} />
+                    </button>
+                )}
             </div>
 
             {/* Tab List */}
@@ -109,7 +135,7 @@ export const SettingsSidebar: FC<SettingsSidebarProps> = ({
                     tabs.map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => onTabChange(tab.id)}
+                            onClick={() => handleTabClick(tab.id)}
                             className={`
                                 w-full flex items-center gap-3 px-5 py-2.5 text-left
                                 transition-colors

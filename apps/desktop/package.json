@@ -1,6 +1,6 @@
 {
     "name": "@notehub/desktop",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "private": true,
     "type": "module",
     "scripts": {
@@ -28,6 +28,7 @@
         "@notehub/state-manager": "workspace:*",
         "@notehub/synapse": "workspace:*",
         "@notehub/drag-drop": "workspace:*",
+        "@notehub/titlebar": "workspace:*",
         "@notehub/theme-manager": "workspace:*",
         "@notehub/vault-picker": "workspace:*",
         "@notehub/workbench": "workspace:*",

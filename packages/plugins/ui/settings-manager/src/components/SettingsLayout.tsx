@@ -30,13 +30,15 @@ interface SettingsLayoutProps {
  * SettingsLayout - Full-screen settings layout
  * 
  * Features:
- * - Grid layout: 280px sidebar + flexible content
+ * - Grid layout: 280px sidebar + flexible content (Desktop)
+ * - Master-Detail layout: Sidebar OR Content (Mobile)
  * - Manages active tab state internally
  * - Close button returns to editor layout
  * - Keyboard navigation (Escape to close)
  */
 export const SettingsLayout: FC<SettingsLayoutProps> = ({ app }) => {
     const [activeTab, setActiveTab] = useState<string>('');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(true);
 
     // Set initial active tab from first available
     useEffect(() => {
@@ -83,6 +85,15 @@ export const SettingsLayout: FC<SettingsLayoutProps> = ({ app }) => {
         setActiveTab(tabId);
     }, []);
 
+    // Handle navigation logic
+    const handleMobileClick = useCallback(() => {
+        setIsMobileMenuOpen(false);
+    }, []);
+
+    const handleBack = useCallback(() => {
+        setIsMobileMenuOpen(true);
+    }, []);
+
     if (!app) {
         return (
             <div className="flex items-center justify-center h-screen w-screen bg-[var(--nh-bg-main)]">
@@ -93,24 +104,35 @@ export const SettingsLayout: FC<SettingsLayoutProps> = ({ app }) => {
 
     return (
         <div
-            className="grid h-screen w-screen"
-            style={{ gridTemplateColumns: '280px 1fr' }}
+            className="flex flex-col h-screen w-screen md:grid"
+            style={{ gridTemplateColumns: '280px 1fr' }} // Inline styles apply only when display is grid (desktop)
         >
-            {/* Sidebar */}
-            <div className="bg-[var(--nh-bg-sidebar)] border-r border-[var(--nh-border-subtle)] overflow-hidden">
+            {/* Sidebar (Master) */}
+            <div className={`
+                bg-[var(--nh-bg-sidebar)] border-r border-[var(--nh-border-subtle)] overflow-hidden
+                ${!isMobileMenuOpen ? 'hidden' : 'w-full h-full'}
+                md:block md:w-auto md:h-auto
+            `}>
                 <SettingsSidebar
                     activeTab={activeTab}
                     onTabChange={handleTabChange}
                     app={app}
+                    onMobileClick={handleMobileClick}
+                    onClose={handleClose}
                 />
             </div>
 
-            {/* Content */}
-            <div className="bg-[var(--nh-bg-main)] overflow-hidden">
+            {/* Content (Detail) */}
+            <div className={`
+                bg-[var(--nh-bg-main)] overflow-hidden
+                ${isMobileMenuOpen ? 'hidden' : 'w-full h-full'}
+                md:block md:w-auto md:h-auto
+            `}>
                 <SettingsContent
                     activeTab={activeTab}
                     app={app}
                     onClose={handleClose}
+                    onBack={handleBack}
                 />
             </div>
         </div>

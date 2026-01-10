@@ -1,7 +1,7 @@
 /**
- * @fileoverview Input Component - Styled text/number input
+ * @fileoverview Input Component - Modern glass-style text/number input
  * 
- * A styled input component for settings and forms.
+ * A styled input with glassmorphism aesthetic.
  * 
  * @module @notehub/ck-standard/components/Input
  */
@@ -38,12 +38,13 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
 // ============================================================================
 
 /**
- * Input - Styled text/number input
+ * Input - Modern glass-style text/number input
  * 
  * Features:
- * - Dark theme styling with CSS variables
- * - Focus state with accent color
- * - Support for text and number types
+ * - Glass background with subtle transparency
+ * - Border only visible on focus (floating aesthetic)
+ * - Inner shadow for depth perception
+ * - Smooth focus transitions
  * 
  * @example
  * ```tsx
@@ -83,14 +84,19 @@ export const Input: React.FC<InputProps> = ({
             max={max}
             step={step}
             className={`
-                px-3 py-1.5 text-sm rounded-md
-                bg-[var(--nh-bg-secondary)] border border-[var(--nh-border-subtle)]
-                text-[var(--nh-text-primary)] placeholder:text-[var(--nh-text-muted)]
-                focus:outline-none focus:border-[var(--nh-accent-primary)]
-                focus:ring-1 focus:ring-[var(--nh-accent-primary)]
-                transition-colors
+                px-3 py-2 text-sm rounded-xl
+                bg-[var(--nh-bg-secondary,#1A1A1A)]
+                border border-transparent
+                shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]
+                text-[var(--nh-text-primary,#E0E0E0)]
+                placeholder:text-[var(--nh-text-muted,rgba(255,255,255,0.4))]
+                focus:outline-none
+                focus:border-[var(--nh-accent-primary,#7c3aed)]
+                focus:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2),0_0_0_2px_var(--nh-bg-main),0_0_0_4px_var(--nh-accent-primary)]
+                transition-all duration-200
+                hover:bg-[var(--nh-bg-hover,#1E1E1E)]
                 ${type === 'number' ? 'w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none' : 'w-full max-w-xs'}
-                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                ${disabled ? 'opacity-40 cursor-not-allowed' : ''}
                 ${className}
             `}
             {...rest}
@@ -99,3 +105,4 @@ export const Input: React.FC<InputProps> = ({
 };
 
 export default Input;
+

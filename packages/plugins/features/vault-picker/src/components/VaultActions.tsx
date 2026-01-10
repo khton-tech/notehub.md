@@ -67,27 +67,28 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
     };
 
     return (
-        <div style={styles.container}>
+        <div className="flex flex-col items-center justify-center h-full gap-4 w-full">
             {/* Logo Section */}
-            <div style={styles.logoSection}>
+            <div className="flex flex-col items-center text-[var(--nh-text-primary)]">
                 <Icon name="app-logo" size={64} className="text-[var(--nh-accent-primary)] mb-4" />
                 <Label variant="logo">notehub.md</Label>
-                <Label variant="caption" className="mt-2">Gather your data together</Label>
+                <Label variant="caption" className="mt-2 text-center px-4">Gather your data together</Label>
             </div>
 
             {/* Spacer */}
-            <div style={styles.spacer} />
+            <div className="h-10" />
 
             {/* Actions Section */}
-            <div style={styles.actionsSection}>
+            <div className="flex flex-col items-center gap-5 w-full max-w-[300px]">
                 {/* Open Vault Button (primary action - open existing folder) */}
-                <div style={styles.actionGroup}>
+                <div className="flex flex-col items-center w-full">
                     <Button
-                        variant="purple"
+                        variant="primary"
                         size="xl"
                         icon="folder-open"
                         onClick={handleAddVault}
                         isLoading={isOpening}
+                        className="w-full"
                     >
                         {isOpening ? 'Opening...' : 'Open Vault'}
                     </Button>
@@ -97,13 +98,14 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
                 </div>
 
                 {/* Create Vault Button (secondary action - create new) */}
-                <div style={styles.actionGroup}>
+                <div className="flex flex-col items-center w-full">
                     <Button
                         variant="secondary"
                         size="xl"
                         icon="plus-circle"
                         onClick={handleOpenVault}
                         isLoading={isCreating}
+                        className="w-full"
                     >
                         {isCreating ? 'Creating...' : 'Create Vault'}
                     </Button>
@@ -116,42 +118,4 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
     );
 };
 
-/**
- * Styles for VaultActions
- */
-const styles: Record<string, React.CSSProperties> = {
-    container: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        gap: '16px',
-    },
-    logoSection: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        color: 'var(--nh-text-primary, #e0e0e0)',
-    },
-    spacer: {
-        height: '40px',
-    },
-    actionsSection: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '20px',
-        width: '100%',
-        maxWidth: '300px',
-    },
-    actionGroup: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-    },
-};
-
 export default VaultActions;
-

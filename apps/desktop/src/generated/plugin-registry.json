@@ -154,6 +154,17 @@
     ]
   },
   {
+    "id": "nh.system.titlebar",
+    "name": "TitleBar",
+    "version": "0.1.2",
+    "type": "system",
+    "description": "Smart custom title bar with window controls",
+    "dependencies": [
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager"
+    ]
+  },
+  {
     "id": "nh.ui.ck-standard",
     "name": "CKStandard",
     "version": "0.1.2",
