@@ -137,9 +137,10 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
             <div
                 className="
                     w-[800px] h-[600px] max-w-[90vw] max-h-[85vh]
-                    bg-[var(--nh-bg-surface)] rounded-xl border border-[var(--nh-border-secondary)]
-                    shadow-2xl overflow-hidden flex flex-col
-                    animate-[settingsSlideIn_0.2s_ease-out]
+                    bg-[var(--nh-glass-bg,rgba(20,20,20,0.85))] backdrop-blur-xl
+                    rounded-2xl border border-[var(--nh-glass-border,rgba(255,255,255,0.08))]
+                    shadow-[var(--nh-shadow-lg)] overflow-hidden flex flex-col
+                    animate-[settingsSlideIn_0.25s_ease-out]
                 "
                 onClick={(e) => e.stopPropagation()}
             >
@@ -148,6 +149,7 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                     flex items-center justify-between px-5 py-4
                     border-b border-[var(--nh-border-secondary)]
                     bg-[var(--nh-bg-sidebar)]
+                    shrink-0 z-10
                 ">
                     <h1 className="text-lg font-semibold text-[var(--nh-text-primary)]">
                         Settings
@@ -155,13 +157,15 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                     <button
                         onClick={onClose}
                         className="
-                            p-1.5 rounded-md text-[var(--nh-text-muted)]
-                            hover:text-[var(--nh-text-primary)] hover:bg-[var(--nh-bg-main)]
-                            transition-colors
+                            p-2 md:p-1.5 rounded-xl 
+                            text-white/80 hover:text-white
+                            hover:bg-[var(--nh-bg-hover)]
+                            transition-all duration-200
+                            flex items-center justify-center
                         "
                         aria-label="Close settings"
                     >
-                        <X size={18} />
+                        <X size={24} className="md:w-[18px] md:h-[18px]" strokeWidth={2.5} />
                     </button>
                 </div>
 
@@ -169,14 +173,32 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                 <div className="flex flex-1 overflow-hidden">
                     {/* Sidebar */}
                     <nav className="
-                        w-52 shrink-0 bg-[var(--nh-bg-sidebar)] border-r border-[var(--nh-border-secondary)]
+                        w-52 shrink-0 bg-[var(--nh-bg-sidebar)]/50
                         overflow-y-auto py-2
                         [&::-webkit-scrollbar]:w-1.5
                         [&::-webkit-scrollbar-track]:bg-transparent
-                        [&::-webkit-scrollbar-thumb]:bg-[var(--nh-ring-focus)]
+                        [&::-webkit-scrollbar-thumb]:bg-[var(--nh-border-secondary)]
                         [&::-webkit-scrollbar-thumb]:rounded-full
                         hover:[&::-webkit-scrollbar-thumb]:bg-[var(--nh-accent-primary)]
                     ">
+                        {/* Mobile Close Button - Only visible on small screens */}
+                        <div className="md:hidden px-4 pb-4 mb-2 border-b border-[var(--nh-border-secondary)]">
+                            <button
+                                onClick={onClose}
+                                className="
+                                    w-full flex items-center justify-center gap-2
+                                    p-2.5 rounded-xl 
+                                    text-white/80 hover:text-white
+                                    hover:bg-[var(--nh-bg-hover)]
+                                    transition-all duration-200
+                                "
+                                aria-label="Close settings"
+                            >
+                                <X size={20} strokeWidth={2.5} />
+                                <span className="text-sm font-medium">Close Settings</span>
+                            </button>
+                        </div>
+
                         {structure.tabs.length === 0 ? (
                             <div className="px-4 py-8 text-center text-sm text-[var(--nh-text-muted)]">
                                 No settings registered

@@ -8,7 +8,7 @@
 
 import { useState, useEffect, type FC } from 'react';
 import type { NotehubCore } from '@notehub/core';
-import { X } from 'lucide-react';
+import { X, ChevronLeft } from 'lucide-react';
 import { SettingsRegistry } from '../logic/SettingsRegistry';
 import type { SettingsStructure } from '../types';
 import { SettingField } from './SettingField';
@@ -24,6 +24,8 @@ interface SettingsContentProps {
     app: NotehubCore;
     /** Callback when close button is clicked */
     onClose: () => void;
+    /** Callback when back button is clicked (mobile only) */
+    onBack?: () => void;
 }
 
 // ============================================================================
@@ -42,7 +44,8 @@ interface SettingsContentProps {
 export const SettingsContent: FC<SettingsContentProps> = ({
     activeTab,
     app,
-    onClose
+    onClose,
+    onBack
 }) => {
     const [structure, setStructure] = useState<SettingsStructure>({ tabs: [] });
 
@@ -67,19 +70,36 @@ export const SettingsContent: FC<SettingsContentProps> = ({
         <div className="flex flex-col h-full">
             {/* Header */}
             <header className="
-                flex items-center justify-between px-8 py-4
+                flex items-center justify-between px-4 py-4 md:px-8
                 border-b border-[var(--nh-border-subtle)]
                 bg-[var(--nh-bg-main)]
             ">
-                <h2 className="text-lg font-semibold text-[var(--nh-text-primary)]">
-                    {tabData?.label || 'Settings'}
-                </h2>
+                <div className="flex items-center flex-1 shadow-sm min-w-0">
+                    {/* Mobile Back Button */}
+                    <button
+                        onClick={onBack}
+                        className="
+                            md:hidden mr-2 p-1.5 -ml-2 rounded-md
+                            text-[var(--nh-text-secondary)]
+                            hover:text-[var(--nh-text-primary)] hover:bg-[var(--nh-bg-surface)]
+                            transition-colors
+                        "
+                        aria-label="Back to menu"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+
+                    <h2 className="text-lg font-semibold text-[var(--nh-text-primary)] truncate">
+                        {tabData?.label || 'Settings'}
+                    </h2>
+                </div>
+
                 <button
                     onClick={onClose}
                     className="
                         p-1.5 rounded-md text-[var(--nh-text-muted)]
                         hover:text-[var(--nh-text-primary)] hover:bg-[var(--nh-bg-surface)]
-                        transition-colors
+                        transition-colors ml-4
                     "
                     aria-label="Close settings"
                 >
@@ -89,7 +109,7 @@ export const SettingsContent: FC<SettingsContentProps> = ({
 
             {/* Content */}
             <div className="
-                flex-1 overflow-y-auto p-8
+                flex-1 overflow-y-auto p-4 md:p-8
                 [&::-webkit-scrollbar]:w-1.5
                 [&::-webkit-scrollbar-track]:bg-transparent
                 [&::-webkit-scrollbar-thumb]:bg-[var(--nh-ring-focus)]
@@ -115,7 +135,7 @@ export const SettingsContent: FC<SettingsContentProps> = ({
                                     No settings in this category
                                 </div>
                             ) : (
-                                <div className="space-y-8 max-w-3xl">
+                                <div className="space-y-8 max-w-3xl mx-auto md:mx-0">
                                     {tabData.groups.map(group => (
                                         <section key={group.id}>
                                             {/* Group Header */}

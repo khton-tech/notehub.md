@@ -4,24 +4,35 @@ import { Check } from 'lucide-react';
 interface CheckboxProps {
     checked: boolean;
     onChange?: () => void;
-    // Allow onClick to bubble or be captured
-    // We will attach the handler in the widget wrapper mostly, 
-    // but the component should be UI only.
 }
 
+/**
+ * Checkbox - Modern rounded checkbox with glow effect
+ * 
+ * Features:
+ * - Rounded corners (rounded-lg)
+ * - Glow effect when checked
+ * - Scale animation on check
+ */
 export const Checkbox: React.FC<CheckboxProps> = ({ checked }) => {
-    console.log('[Checkbox] Rendering. Checked:', checked);
     return (
         <div
             className={`
-                w-4 h-4 rounded border flex items-center justify-center transition-colors
+                w-[18px] h-[18px] rounded-lg border-2 flex items-center justify-center 
+                transition-all duration-200 ease-out cursor-pointer
                 ${checked
-                    ? 'border-[var(--nh-accent-primary)] bg-[var(--nh-accent-primary)]'
-                    : 'border-[var(--nh-text-muted)] bg-transparent hover:border-[var(--nh-accent-primary)]'
+                    ? 'border-[var(--nh-accent-primary)] bg-[var(--nh-accent-primary)] shadow-[0_0_10px_rgba(124,58,237,0.5)] scale-100'
+                    : 'border-[var(--nh-text-muted)] bg-transparent hover:border-[var(--nh-accent-primary)] hover:bg-[var(--nh-accent-secondary)] hover:scale-105'
                 }
             `}
         >
-            {checked && <Check size={12} className="text-[var(--nh-bg-main)]" strokeWidth={3} />}
+            {checked && (
+                <Check
+                    size={12}
+                    className="text-[var(--nh-button-text)] animate-in zoom-in-50 duration-150"
+                    strokeWidth={3}
+                />
+            )}
         </div>
     );
 };

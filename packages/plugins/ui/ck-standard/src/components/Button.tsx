@@ -6,7 +6,7 @@ import { Icon } from '@notehub/icon-manager';
  */
 export interface ButtonProps {
     /** Button variant style */
-    variant?: 'primary' | 'ghost' | 'danger' | 'purple' | 'secondary';
+    variant?: 'primary' | 'ghost' | 'danger' | 'secondary' | 'glass';
     /** Button size */
     size?: 'sm' | 'md' | 'lg' | 'xl';
     /** Icon name from icon-manager registry */
@@ -24,40 +24,71 @@ export interface ButtonProps {
 }
 
 /**
- * Size class mappings - Tailwind utility classes
+ * Size class mappings - rounded-xl for softer corners
  */
 const sizeClasses: Record<string, string> = {
-    sm: 'px-2 py-1 text-xs gap-1',
-    md: 'px-3 py-1.5 text-sm gap-1.5',
-    lg: 'px-4 py-2 text-base gap-2',
-    xl: 'px-8 py-3 text-base gap-3 min-w-[200px]',
+    sm: 'px-3 py-1.5 text-xs gap-1.5',
+    md: 'px-4 py-2 text-sm gap-2',
+    lg: 'px-5 py-2.5 text-base gap-2',
+    xl: 'px-8 py-3.5 text-base gap-3 min-w-[200px]',
 };
 
 /**
  * Icon sizes per button size
  */
 const iconSizes: Record<string, number> = {
-    sm: 12,
+    sm: 14,
     md: 16,
-    lg: 20,
-    xl: 22,
+    lg: 18,
+    xl: 20,
 };
 
 /**
  * Variant class mappings - using CSS variables for theming
+ * Now includes glass variant and hover glow effects
  */
 const variantClasses: Record<string, string> = {
-    primary: 'bg-[var(--nh-accent-primary,#6b5ce7)] text-[var(--nh-button-text,#ffffff)] border-none',
-    secondary: 'bg-[var(--nh-accent-secondary,#3a3a3a)] text-[var(--nh-text-primary,#e0e0e0)] border-none',
-    ghost: 'bg-transparent text-[var(--nh-text-primary,#e0e0e0)] border-none',
-    danger: 'bg-[var(--nh-danger,#dc2626)] text-[var(--nh-button-text,#ffffff)] border-none',
+    primary: [
+        'bg-[var(--nh-accent-primary,#7c3aed)]',
+        'text-[var(--nh-button-text,#ffffff)]',
+        'shadow-[var(--nh-shadow-sm)]',
+        'hover:shadow-[0_0_20px_rgba(124,58,237,0.4)]',
+        'hover:brightness-110',
+    ].join(' '),
+    secondary: [
+        'bg-[var(--nh-bg-secondary,#1A1A1A)]',
+        'text-[var(--nh-text-primary,#E0E0E0)]',
+        'border border-[var(--nh-border-secondary)]',
+        'hover:bg-[var(--nh-bg-hover)]',
+        'hover:border-[var(--nh-text-muted)]',
+    ].join(' '),
+    ghost: [
+        'bg-transparent',
+        'text-[var(--nh-text-primary,#E0E0E0)]',
+        'hover:bg-[var(--nh-bg-hover,#1E1E1E)]',
+    ].join(' '),
+    danger: [
+        'bg-[var(--nh-danger,#ef4444)]',
+        'text-[var(--nh-button-text,#ffffff)]',
+        'shadow-[var(--nh-shadow-sm)]',
+        'hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]',
+        'hover:brightness-110',
+    ].join(' '),
+    glass: [
+        'bg-[var(--nh-glass-bg,rgba(20,20,20,0.7))]',
+        'backdrop-blur-md',
+        'text-[var(--nh-text-primary,#E0E0E0)]',
+        'border border-[var(--nh-glass-border,rgba(255,255,255,0.08))]',
+        'hover:bg-[rgba(255,255,255,0.1)]',
+        'hover:border-[rgba(255,255,255,0.15)]',
+    ].join(' '),
 };
 
 /**
  * Button Component
  *
- * Themeable button with icon support using Tailwind CSS and CSS variables.
- * Includes hover, focus, disabled, and loading states.
+ * Modern themeable button with glassmorphism support.
+ * Features rounded-xl corners, hover glow effects, and smooth transitions.
  */
 export const Button: FC<ButtonProps> = ({
     variant = 'primary',
@@ -73,19 +104,16 @@ export const Button: FC<ButtonProps> = ({
         // Layout
         'inline-flex items-center justify-center',
         // Typography
-        'font-medium font-sans',
-        // Shape
-        'rounded-lg',
-        // Transitions - specific properties only to avoid "jelly effect"
-        'transition-[filter,background-color,box-shadow] duration-150 ease-out',
-        // Focus states
-        'outline-none focus:ring-2 focus:ring-[var(--nh-accent-primary,#6b5ce7)] focus:ring-offset-1 focus:ring-offset-transparent',
-        // Hover states
-        'hover:brightness-[1.15]',
-        // Active states
-        'active:brightness-95',
+        'font-medium',
+        // Shape - softer corners
+        'rounded-xl',
+        // Transitions - smooth for glow effect
+        'transition-all duration-200 ease-out',
+        // Focus states - glow ring
+        'outline-none',
+        'focus-visible:ring-2 focus-visible:ring-[var(--nh-accent-primary,#7c3aed)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nh-bg-main)]',
         // Disabled states
-        'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100',
+        'disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:brightness-100',
         // Cursor
         'cursor-pointer',
     ].join(' ');
@@ -112,4 +140,3 @@ export const Button: FC<ButtonProps> = ({
 };
 
 export default Button;
-

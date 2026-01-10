@@ -32,12 +32,12 @@ export interface SelectProps {
 // ============================================================================
 
 /**
- * Select - Styled dropdown component
+ * Select - Modern glassmorphism dropdown
  * 
  * Features:
- * - Custom styled trigger and dropdown
- * - Seamless theme integration
- * - Click outside handling
+ * - Floating panel with backdrop blur
+ * - Scale animation on open
+ * - Hover glow effect on selected item
  */
 export const Select: React.FC<SelectProps> = ({
     value,
@@ -87,15 +87,15 @@ export const Select: React.FC<SelectProps> = ({
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
                 className={`
-                    w-full flex items-center justify-between px-3 py-1.5
-                    text-sm rounded-md border text-left
-                    transition-colors duration-200
+                    w-full flex items-center justify-between px-3 py-2
+                    text-sm rounded-xl text-left
+                    transition-all duration-200
                     ${isOpen
-                        ? 'border-[var(--nh-accent-primary)] ring-1 ring-[var(--nh-accent-primary)]'
-                        : 'border-[var(--nh-border-subtle)] hover:border-[var(--nh-text-muted)]'
+                        ? 'border-[var(--nh-accent-primary)] shadow-[0_0_0_2px_var(--nh-bg-main),0_0_0_4px_var(--nh-accent-primary)]'
+                        : 'border-[var(--nh-border-secondary)] hover:border-[var(--nh-text-muted)]'
                     }
-                    bg-[var(--nh-bg-secondary,#2a2a2a)] text-[var(--nh-text-primary)]
-                    ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    border bg-[var(--nh-bg-secondary,#1A1A1A)] text-[var(--nh-text-primary)]
+                    ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
                 `}
             >
                 <span className="truncate mr-2">
@@ -110,20 +110,21 @@ export const Select: React.FC<SelectProps> = ({
                 />
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Dropdown Menu - Glass Panel */}
             {isOpen && (
                 <div className="
-                    absolute z-50 mt-1 w-full 
-                    bg-[var(--nh-bg-surface)] 
-                    border border-[var(--nh-border-subtle)] 
-                    rounded-md shadow-lg overflow-hidden
-                    animate-in fade-in zoom-in-95 duration-100
+                    absolute z-50 mt-2 w-full 
+                    bg-[var(--nh-glass-bg,rgba(20,20,20,0.85))]
+                    backdrop-blur-xl
+                    border border-[var(--nh-glass-border,rgba(255,255,255,0.08))]
+                    rounded-xl shadow-[var(--nh-shadow-lg)] overflow-hidden
+                    animate-in fade-in zoom-in-95 duration-150
                 ">
                     <div className="
                         max-h-60 overflow-auto py-1
                         [&::-webkit-scrollbar]:w-1.5
                         [&::-webkit-scrollbar-track]:bg-transparent
-                        [&::-webkit-scrollbar-thumb]:bg-[var(--nh-border-subtle)]
+                        [&::-webkit-scrollbar-thumb]:bg-[var(--nh-border-secondary)]
                         [&::-webkit-scrollbar-thumb]:rounded-full
                         hover:[&::-webkit-scrollbar-thumb]:bg-[var(--nh-text-muted)]
                     ">
@@ -140,11 +141,11 @@ export const Select: React.FC<SelectProps> = ({
                                     key={option.value}
                                     onClick={() => handleSelect(option.value)}
                                     className={`
-                                        flex items-center justify-between px-3 py-2 text-sm cursor-pointer
-                                        transition-colors
+                                        flex items-center justify-between px-3 py-2.5 text-sm cursor-pointer
+                                        transition-all duration-150 rounded-lg mx-1
                                         ${isSelected
-                                            ? 'bg-[var(--nh-accent-primary)] text-white'
-                                            : 'text-[var(--nh-text-primary)] hover:bg-[var(--nh-bg-secondary)]'
+                                            ? 'bg-[var(--nh-accent-primary)] text-white shadow-[0_0_12px_rgba(124,58,237,0.3)]'
+                                            : 'text-[var(--nh-text-primary)] hover:bg-[var(--nh-bg-hover)]'
                                         }
                                     `}
                                 >
@@ -163,3 +164,4 @@ export const Select: React.FC<SelectProps> = ({
 };
 
 export default Select;
+

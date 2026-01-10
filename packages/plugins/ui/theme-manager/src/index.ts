@@ -43,70 +43,105 @@ export interface ThemePalette {
     'font-family': string;
     /** Monospace font family */
     'font-family-mono'?: string;
+    /** Small shadow for elevation 1 */
+    'shadow-sm'?: string;
+    /** Medium shadow for elevation 2 */
+    'shadow-md'?: string;
     /** Additional custom properties */
     [key: string]: string | undefined;
 }
 
 /**
- * Deep Space theme - VS Code-like dark theme with purple accents
+ * Deep Space theme - Rich Black with floating glassmorphism
+ * Redesigned for modern "floating" aesthetic with layered depth
  */
 const DEEP_SPACE_THEME: ThemePalette = {
-    // Backgrounds - Deep dark palette
-    'bg-main': '#1a1a1a',
-    'bg-sidebar': '#232323',
-    'bg-surface': '#2a2a2a',
-    'bg-secondary': '#2a2a2a',
-    'bg-hover': '#3a3a3a',
-    // Accents - Purple primary, gray secondary
-    'accent-primary': '#6b5ce7',
-    'accent-secondary': '#3a3a3a',
-    // Borders
-    'border-accent': '#6b5ce7',
-    'border-secondary': '#3a3a3a',
-    'border-subtle': '#333333',
+    // Backgrounds - Rich Black layered system
+    'bg-main': '#0A0A0A',      // Rich Black (primary)
+    'bg-sidebar': '#101010',   // Slightly elevated
+    'bg-surface': '#141414',   // Cards & containers
+    'bg-secondary': '#1A1A1A', // Inputs, dropdowns
+    'bg-hover': '#1E1E1E',     // Hover states
+
+    // Glassmorphism tokens
+    'glass-bg': 'rgba(20, 20, 20, 0.7)',
+    'glass-border': 'rgba(255, 255, 255, 0.08)',
+
+    // Accents - Purple primary, transparent secondary
+    'accent-primary': '#7c3aed', // Violet-600
+    'accent-secondary': 'rgba(124, 58, 237, 0.12)', // Transparent violet
+
+    // Borders - all semi-transparent for floating effect
+    'border-accent': '#7c3aed',
+    'border-secondary': 'rgba(255, 255, 255, 0.08)', // Subtle alpha border
+    'border-subtle': 'rgba(255, 255, 255, 0.04)', // Very subtle divider
+
+    // Shadows for depth and glow
+    'shadow-sm': '0 2px 8px rgba(0, 0, 0, 0.3)',
+    'shadow-md': '0 8px 24px rgba(0, 0, 0, 0.4)',
+    'shadow-lg': '0 16px 48px rgba(0, 0, 0, 0.5)',
+
     // Text
-    'text-primary': '#e0e0e0',
-    'text-secondary': '#a0a0a0',
-    'text-muted': '#888888',
-    'text-error': '#ff6b6b',
+    'text-primary': '#E0E0E0', // Slightly warmer white
+    'text-secondary': '#A0A0A0',
+    'text-muted': 'rgba(255, 255, 255, 0.45)',
+    'text-error': '#f87171', // Red-400 (softer)
+
     // Button
     'button-text': '#ffffff',
+
     // Danger
-    'danger': '#dc2626',
+    'danger': '#ef4444', // Red-500
+
     // Typography
-    'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    'font-family-mono': 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+    'font-family': '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    'font-family-mono': '"JetBrains Mono", "Fira Code", Consolas, monospace',
 };
 
 /**
- * Light theme - Standard light mode
+ * Light theme - Modern light mode with floating aesthetic
  */
 const LIGHT_THEME: ThemePalette = {
-    // Backgrounds - Light palette
-    'bg-main': '#ffffff',
-    'bg-sidebar': '#f3f4f6', // gray-100
-    'bg-surface': '#ffffff',
-    'bg-secondary': '#f9fafb', // gray-50
-    'bg-hover': '#f3f4f6', // gray-100
+    // Backgrounds - Light palette with subtle layers
+    'bg-main': '#FAFAFA',
+    'bg-sidebar': '#F5F5F5',
+    'bg-surface': '#FFFFFF',
+    'bg-secondary': '#F0F0F0',
+    'bg-hover': '#EBEBEB',
+
+    // Glassmorphism tokens
+    'glass-bg': 'rgba(255, 255, 255, 0.8)',
+    'glass-border': 'rgba(0, 0, 0, 0.06)',
+
     // Accents
-    'accent-primary': '#6b5ce7',
-    'accent-secondary': '#e2e8f0', // gray-200
-    // Borders
-    'border-accent': '#6b5ce7',
-    'border-secondary': '#e5e7eb', // gray-200
-    'border-subtle': '#f3f4f6', // gray-100
+    'accent-primary': '#7c3aed',
+    'accent-secondary': 'rgba(124, 58, 237, 0.08)',
+
+    // Borders - subtle for floating effect
+    'border-accent': '#7c3aed',
+    'border-secondary': 'rgba(0, 0, 0, 0.08)',
+    'border-subtle': 'rgba(0, 0, 0, 0.04)',
+
+    // Shadows - enhanced for depth
+    'shadow-sm': '0 2px 8px rgba(0, 0, 0, 0.08)',
+    'shadow-md': '0 8px 24px rgba(0, 0, 0, 0.12)',
+    'shadow-lg': '0 16px 48px rgba(0, 0, 0, 0.16)',
+
     // Text
-    'text-primary': '#111827', // gray-900
-    'text-secondary': '#4b5563', // gray-600
-    'text-muted': '#9ca3af', // gray-400
-    'text-error': '#ef4444',
+    'text-primary': '#1A1A1A',
+    'text-secondary': '#525252',
+    'text-muted': 'rgba(0, 0, 0, 0.45)',
+    'text-error': '#dc2626',
+
     // Button
     'button-text': '#ffffff',
+
     // Danger
     'danger': '#dc2626',
+
     // Typography
-    'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    'font-family-mono': 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+    'font-family': '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    'font-family-mono': '"JetBrains Mono", "Fira Code", Consolas, monospace',
 };
 
 /**
@@ -179,18 +214,73 @@ export class ThemeManagerPlugin implements IPlugin {
         this.styleElement = document.createElement('style');
         this.styleElement.id = 'nh-theme-global-styles';
         this.styleElement.textContent = `
+            /* Base styles */
             html, body {
-                background-color: var(--nh-bg-main, #1a1a1a);
+                background-color: var(--nh-bg-main, #0A0A0A);
                 height: 100%;
                 margin: 0;
                 padding: 0;
                 overflow: hidden;
-                font-family: var(--nh-font-family, system-ui, sans-serif);
-                color: var(--nh-text-primary, #e0e0e0);
+                font-family: var(--nh-font-family, "Inter", system-ui, sans-serif);
+                color: var(--nh-text-primary, #E0E0E0);
+                line-height: 1.5;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
             }
+            
             #root {
                 height: 100%;
                 overflow: hidden;
+            }
+
+            /* Glassmorphism utility classes */
+            .nh-glass {
+                background: var(--nh-glass-bg, rgba(20, 20, 20, 0.7));
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid var(--nh-glass-border, rgba(255, 255, 255, 0.08));
+            }
+
+            .nh-glass-strong {
+                background: var(--nh-glass-bg, rgba(20, 20, 20, 0.85));
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid var(--nh-glass-border, rgba(255, 255, 255, 0.08));
+            }
+
+            /* Enhanced scrollbar styling */
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: var(--nh-border-secondary, rgba(255, 255, 255, 0.08));
+                border-radius: 4px;
+                transition: background 0.2s ease;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: var(--nh-text-muted, rgba(255, 255, 255, 0.2));
+            }
+
+            ::-webkit-scrollbar-corner {
+                background: transparent;
+            }
+
+            /* Smooth transitions for interactive elements */
+            button, a, input, select, textarea {
+                transition: all 0.2s ease;
+            }
+
+            /* Focus ring utility */
+            .nh-focus-ring:focus {
+                outline: none;
+                box-shadow: 0 0 0 2px var(--nh-bg-main), 0 0 0 4px var(--nh-accent-primary);
             }
         `;
         document.head.appendChild(this.styleElement);

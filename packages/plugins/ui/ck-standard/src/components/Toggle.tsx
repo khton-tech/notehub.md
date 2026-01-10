@@ -1,7 +1,7 @@
 /**
- * @fileoverview Toggle Component - iOS/Obsidian-style boolean switch
+ * @fileoverview Toggle Component - Modern iOS-style boolean switch
  * 
- * A styled toggle switch for boolean settings.
+ * A styled toggle switch with glow effects and smooth animations.
  * 
  * @module @notehub/ck-standard/components/Toggle
  */
@@ -30,13 +30,13 @@ export interface ToggleProps {
 // ============================================================================
 
 /**
- * Toggle - iOS/Obsidian-style boolean switch
+ * Toggle - Modern iOS-style boolean switch
  * 
  * Features:
- * - Rounded pill container (w-10 h-6)
- * - Sliding circle knob (w-4 h-4)
- * - Smooth transition animation
- * - Gray when off, Accent when on
+ * - Larger pill container (w-11 h-7)
+ * - Sliding circle knob with shadow
+ * - Glow effect when checked
+ * - Smooth spring animation (300ms)
  * 
  * @example
  * ```tsx
@@ -77,16 +77,16 @@ export const Toggle: React.FC<ToggleProps> = ({
             onClick={handleClick}
             onKeyDown={handleKeyDown}
             className={`
-                relative inline-flex w-10 h-6 shrink-0 cursor-pointer rounded-full
-                border-2 border-transparent transition-all duration-200 ease-in-out
-                focus:outline-none focus:ring-2 focus:ring-[var(--nh-accent-primary)] focus:ring-offset-2
-                focus:ring-offset-[var(--nh-bg-surface)]
+                relative inline-flex w-11 h-7 shrink-0 cursor-pointer rounded-full
+                border-2 border-transparent transition-all duration-300 ease-out
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nh-accent-primary)]
+                focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nh-bg-surface)]
                 ${checked
-                    ? 'bg-[var(--nh-accent-primary,#6b5ce7)]'
-                    : 'bg-[var(--nh-border-secondary,#3a3a3a)]'
+                    ? 'bg-[var(--nh-accent-primary,#7c3aed)] shadow-[0_0_12px_rgba(124,58,237,0.5)]'
+                    : 'bg-[var(--nh-bg-secondary,#1A1A1A)]'
                 }
                 ${disabled
-                    ? 'opacity-50 cursor-not-allowed'
+                    ? 'opacity-40 cursor-not-allowed'
                     : ''
                 }
                 ${className}
@@ -95,8 +95,8 @@ export const Toggle: React.FC<ToggleProps> = ({
             {/* Sliding Knob */}
             <span
                 className={`
-                    pointer-events-none inline-block w-4 h-4 transform rounded-full
-                    bg-white shadow-lg ring-0 transition-all duration-200 ease-in-out
+                    pointer-events-none inline-block w-5 h-5 transform rounded-full
+                    bg-white shadow-md transition-all duration-300 ease-out
                     ${checked ? 'translate-x-[18px]' : 'translate-x-[2px]'}
                     my-auto
                 `}
@@ -106,3 +106,4 @@ export const Toggle: React.FC<ToggleProps> = ({
 };
 
 export default Toggle;
+

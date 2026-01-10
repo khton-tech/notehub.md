@@ -1,6 +1,5 @@
 import { useState, useEffect, type FC } from 'react';
 import { Icon } from '@notehub/icon-manager';
-import { Card } from '@notehub/ck-standard';
 import { Label } from '@notehub/ck-standard';
 import type { VaultService, VaultHistoryEntry } from '../logic/VaultService.js';
 
@@ -14,8 +13,10 @@ interface VaultListProps {
 /**
  * VaultList - Displays list of recently opened vaults
  *
- * Shows vault history with interactive cards.
- * Each card has: Cube icon, Name, Path, and Delete action.
+ * Visual Polish:
+ * - Header "Recent Vaults"
+ * - Styled cards with hover effects
+ * - Delete button visible on hover (desktop)
  */
 export const VaultList: FC<VaultListProps> = ({ service }) => {
     const [vaults, setVaults] = useState<VaultHistoryEntry[]>([]);
@@ -37,102 +38,69 @@ export const VaultList: FC<VaultListProps> = ({ service }) => {
         // TODO: Implement vault deletion from history
     };
 
-    if (vaults.length === 0) {
-        return (
-            <div style={styles.emptyState}>
-                <Icon name="folder-open" size={48} className="opacity-30" />
-                <Label variant="caption" className="mt-4">No recent vaults</Label>
-                <Label variant="muted" className="mt-1">Open or create a vault to get started</Label>
-            </div>
-        );
-    }
-
     return (
-        <div style={styles.container}>
-            {vaults.map((vault) => (
-                <Card
-                    key={vault.path}
-                    variant="interactive"
-                    padding="sm"
-                    onClick={() => handleVaultClick(vault.path)}
-                    className="flex items-center gap-3"
-                >
-                    <div style={styles.iconWrapper}>
-                        <Icon name="box" size={24} />
+        <div className="flex flex-col h-full overflow-hidden">
+            {/* Header */}
+            <div className="px-4 pt-4 pb-2 shrink-0">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--nh-text-muted)]">
+                    Recent Vaults
+                </h3>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto px-2 pb-2">
+                {vaults.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-32 text-[var(--nh-text-muted)] text-center">
+                        <Label variant="caption">No recent vaults</Label>
                     </div>
-                    <div style={styles.vaultInfo}>
-                        <Label variant="body" className="font-medium truncate block">
-                            {vault.name}
-                        </Label>
-                        <Label variant="muted" className="truncate block">
-                            {vault.path}
-                        </Label>
+                ) : (
+                    <div className="flex flex-col gap-1">
+                        {vaults.map((vault) => (
+                            <div
+                                key={vault.path}
+                                onClick={() => handleVaultClick(vault.path)}
+                                className="
+                                    group flex items-center gap-3 p-2 rounded-md cursor-pointer
+                                    transition-all duration-200
+                                    text-[var(--nh-text-secondary)]
+                                    hover:bg-[var(--nh-bg-hover)] hover:text-[var(--nh-text-primary)]
+                                "
+                            >
+                                {/* Icon */}
+                                <div className="shrink-0 text-[var(--nh-text-muted)] group-hover:text-[var(--nh-accent-primary)] transition-colors">
+                                    <Icon name="folder" size={18} />
+                                </div>
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0 flex flex-col">
+                                    <span className="font-medium text-sm truncate">
+                                        {vault.name}
+                                    </span>
+                                    <span className="text-xs text-[var(--nh-text-muted)] truncate opacity-70">
+                                        {vault.path}
+                                    </span>
+                                </div>
+
+                                {/* Actions */}
+                                <button
+                                    onClick={(e) => handleDeleteClick(e, vault.path)}
+                                    className="
+                                        shrink-0 p-1.5 rounded-md
+                                        opacity-0 group-hover:opacity-100 focus:opacity-100
+                                        text-[var(--nh-text-muted)] hover:text-[var(--nh-danger)] hover:bg-[var(--nh-bg-surface)]
+                                        transition-all duration-200
+                                    "
+                                    aria-label="Remove"
+                                >
+                                    <Icon name="x" size={14} />
+                                </button>
+                            </div>
+                        ))}
                     </div>
-                    <button
-                        style={styles.deleteButton}
-                        onClick={(e) => handleDeleteClick(e, vault.path)}
-                        aria-label="Remove from history"
-                    >
-                        <Icon name="trash-2" size={16} />
-                    </button>
-                </Card>
-            ))}
+                )}
+            </div>
         </div>
     );
 };
 
-/**
- * Styles for VaultList
- */
-const styles: Record<string, React.CSSProperties> = {
-    container: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-    },
-    emptyState: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flex: 1,
-        color: 'var(--nh-text-muted, #888888)',
-        textAlign: 'center',
-        padding: '20px',
-    },
-    iconWrapper: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '40px',
-        height: '40px',
-        borderRadius: '8px',
-        backgroundColor: 'var(--nh-bg-main, #1a1a1a)',
-        color: 'var(--nh-text-secondary, #a0a0a0)',
-        flexShrink: 0,
-    },
-    vaultInfo: {
-        flex: 1,
-        minWidth: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2px',
-    },
-    deleteButton: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '32px',
-        height: '32px',
-        borderRadius: '6px',
-        border: 'none',
-        background: 'transparent',
-        color: 'var(--nh-text-muted, #888888)',
-        cursor: 'pointer',
-        transition: 'color 0.15s ease, opacity 0.15s ease',
-        flexShrink: 0,
-    },
-};
-
 export default VaultList;
-

@@ -1,66 +1,31 @@
-import { useState, useEffect, type FC, type CSSProperties } from 'react';
+import { type FC } from 'react';
 import { Controller } from '@notehub/controllers-manager';
 
 /**
  * WelcomeLayout - Initial welcome screen layout
  *
- * Uses CSS Grid to create a 2-column layout with:
- * - Left sidebar (20rem) - for vault list
- * - Right content area (1fr) - centered logo and actions
- *
- * Responsive: Switches to single column on mobile (<768px)
- * All colors use CSS variables from theme-manager.
+ * Features:
+ * - Rich Black background with floating sidebar
+ * - Desktop: 2-column Split (Left Sidebar, Right Content)
+ * - Mobile: Vertical Stack (Sidebar Top, Content Bottom)
  */
 export const WelcomeLayout: FC = () => {
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-    useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    const containerStyle: CSSProperties = {
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '20rem 1fr',
-        gridTemplateRows: isMobile ? 'auto 1fr' : '1fr',
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'var(--nh-bg-main, #1a1a1a)',
-        color: 'var(--nh-text-primary, #e0e0e0)',
-        fontFamily: 'var(--nh-font-family, system-ui, -apple-system, sans-serif)',
-        overflow: 'hidden',
-    };
-
-    const sidebarStyle: CSSProperties = {
-        backgroundColor: 'var(--nh-bg-sidebar, #232323)',
-        borderRight: isMobile ? 'none' : '1px solid var(--nh-border-subtle, #333333)',
-        borderBottom: isMobile ? '1px solid var(--nh-border-subtle, #333333)' : 'none',
-        padding: '1.25rem',
-        display: 'flex',
-        flexDirection: 'column',
-        overflowY: 'auto',
-        maxHeight: isMobile ? '40vh' : 'none',
-    };
-
-    const contentStyle: CSSProperties = {
-        backgroundColor: 'var(--nh-bg-main, #1a1a1a)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2.5rem',
-    };
-
     return (
-        <div style={containerStyle}>
-            {/* Sidebar - Left Column: vault-list slot */}
-            <div style={sidebarStyle}>
+        <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-[var(--nh-bg-main)] text-[var(--nh-text-primary)] font-sans">
+            {/* Sidebar - Recent Vaults (Floating with shadow) */}
+            <div className="
+                flex-shrink-0 w-full md:w-80 lg:w-96 
+                bg-[var(--nh-bg-sidebar)] 
+                border-b md:border-b-0 md:border-r border-[var(--nh-border-secondary)]
+                shadow-[var(--nh-shadow-sm)]
+                flex flex-col
+                max-h-[40vh] md:max-h-full
+            ">
                 <Controller type="vault-list" />
             </div>
 
-            {/* Content - Right Column: vault-actions slot */}
-            <div style={contentStyle}>
+            {/* Main Area - Logo & Actions */}
+            <div className="flex-1 flex flex-col items-center justify-center p-8 relative">
                 <Controller type="vault-actions" />
             </div>
         </div>
