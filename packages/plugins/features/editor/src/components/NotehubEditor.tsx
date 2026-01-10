@@ -286,6 +286,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
     /**
      * Stable callback for handling content changes.
      * Notifies the controller when the document is modified.
+     * The controller handles the isLoadingContent check internally.
      */
     const handleChange = useCallback(() => {
         controller.markDirty();
@@ -374,6 +375,9 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
         // Only update if content actually differs
         const currentContent = view.state.doc.toString();
         if (currentContent !== content) {
+            // Set flag to prevent markDirty during programmatic content update
+            controller.beginContentLoad();
+
             // Replace entire document content
             const transaction = view.state.update({
                 changes: {
@@ -383,8 +387,12 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 },
             });
             view.dispatch(transaction);
+
+            // Clear flag after dispatch
+            // The update listener runs synchronously during dispatch, so we can clear immediately
+            controller.endContentLoad();
         }
-    }, [content, filePath]);
+    }, [content, filePath, controller]);
 
     /**
      * Reconfigure compartments when settings change.

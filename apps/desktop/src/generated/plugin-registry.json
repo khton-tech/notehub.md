@@ -28,20 +28,6 @@
     ]
   },
   {
-    "id": "nh.features.vault-picker",
-    "name": "VaultPicker",
-    "version": "0.1.2",
-    "type": "feature",
-    "dependencies": [
-      "nh.system.fs-manager",
-      "nh.system.config-manager",
-      "nh.system.state-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.layout-manager"
-    ]
-  },
-  {
     "id": "nh.features.explorer",
     "name": "Explorer",
     "version": "0.1.2",
@@ -57,6 +43,20 @@
       "nh.ui.theme-manager",
       "nh.ui.context-menu",
       "nh.ui.dialog-manager"
+    ]
+  },
+  {
+    "id": "nh.features.vault-picker",
+    "name": "VaultPicker",
+    "version": "0.1.2",
+    "type": "feature",
+    "dependencies": [
+      "nh.system.fs-manager",
+      "nh.system.config-manager",
+      "nh.system.state-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.layout-manager"
     ]
   },
   {
@@ -236,6 +236,17 @@
     "dependencies": [
       "nh.system.fs-manager",
       "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.system.titlebar",
+    "name": "TitleBar",
+    "version": "0.1.2",
+    "type": "system",
+    "description": "Smart custom title bar with window controls",
+    "dependencies": [
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager"
     ]
   }
 ]

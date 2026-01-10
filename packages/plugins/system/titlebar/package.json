@@ -1,0 +1,26 @@
+{
+    "name": "@notehub/titlebar",
+    "version": "0.1.2",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsup src/index.tsx --format esm --dts",
+        "dev": "tsup src/index.tsx --format esm --dts --watch"
+    },
+    "peerDependencies": {
+        "react": "^18.0.0",
+        "react-dom": "^18.0.0"
+    },
+    "dependencies": {
+        "@tauri-apps/api": "^2.0.0"
+    },
+    "devDependencies": {
+        "@notehub/core": "workspace:*",
+        "@notehub/icon-manager": "workspace:*",
+        "@types/react": "^18.0.0",
+        "@types/react-dom": "^18.0.0",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0"
+    }
+}

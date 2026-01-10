@@ -117,6 +117,18 @@ export class EditorController {
     /** Timer ID for debounced save */
     private saveTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+    /** 
+     * Flag to indicate content is being loaded programmatically.
+     * When true, markDirty() is skipped to prevent saving old content.
+     */
+    private isLoadingContent: boolean = false;
+
+    /**
+     * Path of file currently being opened.
+     * Used to prevent race condition from multiple parallel open calls.
+     */
+    private openingPath: string | null = null;
+
     /** Debounce delay in milliseconds (1 second) */
     private readonly SAVE_DEBOUNCE_MS = 1000;
 
@@ -319,6 +331,22 @@ export class EditorController {
         return this.isDirty;
     }
 
+    /**
+     * Signal that content is being loaded programmatically (not user edit).
+     * Call this before dispatching content to CodeMirror on file switch.
+     */
+    beginContentLoad(): void {
+        this.isLoadingContent = true;
+    }
+
+    /**
+     * Signal that content loading is complete.
+     * Call this after dispatching content to CodeMirror.
+     */
+    endContentLoad(): void {
+        this.isLoadingContent = false;
+    }
+
     // ========== Public API: Settings ==========
 
     /**
@@ -406,6 +434,23 @@ export class EditorController {
      * ```
      */
     async openFile(path: string): Promise<string> {
+        // Guard against duplicate opens of the same file
+        // This prevents multiple rapid opens from overwriting user's unsaved edits
+        if (this.currentPath === path) {
+            this.log('info', `File already open, skipping reload: ${path}`);
+            return this.getCurrentContent();
+        }
+
+        // Guard against concurrent opens (race condition)
+        // Multiple parallel calls to openFile for the same new path - only first proceeds
+        if (this.openingPath === path) {
+            this.log('info', `Already opening this file, skipping duplicate: ${path}`);
+            return '';
+        }
+
+        // Mark this path as being opened
+        this.openingPath = path;
+
         this.log('info', `Opening file: ${path}`);
         this.status = 'opening';
 
@@ -429,6 +474,11 @@ export class EditorController {
             // Emit file opened event for other plugins (and our own UI)
             this.app.events.emit('editor:file-opened', { path, content });
 
+            // Update title bar with file name
+            const fileTitle = filename.replace('.md', '');
+            this.app.api.invoke('titlebar:set-title', fileTitle);
+            this.app.api.invoke('titlebar:set-icon', 'file-text');
+
             // Persist last opened file
             this.app.api.invoke('config:set', 'editor.last-opened', path).catch(err => {
                 this.log('warn', `Failed to save last opened file: ${err}`);
@@ -450,8 +500,14 @@ export class EditorController {
             }
 
             throw error;
+        } finally {
+            // Clear the opening flag so other attempts can proceed
+            if (this.openingPath === path) {
+                this.openingPath = null;
+            }
         }
     }
+
 
     /**
      * Mark the current content as changed.
@@ -463,6 +519,12 @@ export class EditorController {
      * 3. Triggers the debounced save
      */
     markDirty(): void {
+        // Skip if we're programmatically loading content (file switch, not user edit)
+        if (this.isLoadingContent) {
+            this.log('info', 'Skipping markDirty during content load');
+            return;
+        }
+
         if (!this.isDirty) {
             this.isDirty = true;
             this.status = 'ready';
@@ -602,6 +664,10 @@ export class EditorController {
 
         // Update status bar
         this.emitStatusReport('ready', 'No file open');
+
+        // Reset title bar
+        this.app.api.invoke('titlebar:set-title', 'Notehub');
+        this.app.api.invoke('titlebar:set-icon', null);
 
         // Notify UI
         this.app.events.emit('editor:file-closed', {});
