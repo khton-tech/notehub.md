@@ -289,7 +289,10 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
      * The controller handles the isLoadingContent check internally.
      */
     const handleChange = useCallback(() => {
-        controller.markDirty();
+        if (viewRef.current) {
+            const content = viewRef.current.state.doc.toString();
+            controller.updateContent(content);
+        }
     }, [controller]);
 
     /**
