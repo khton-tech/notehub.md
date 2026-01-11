@@ -317,6 +317,11 @@ export class EditorPlugin implements IPlugin {
             }
         });
 
+        // ⚡ FIX E2: Register API for checking dirty state (used by titlebar on close)
+        (app.api.register as any)('editor:is-dirty', () => {
+            return this.controller?.getIsDirty() ?? false;
+        });
+
         this.log('info', 'Loaded successfully');
     }
 
@@ -350,6 +355,7 @@ export class EditorPlugin implements IPlugin {
         // Unregister API
         app.api.unregister('editor:register-widget');
         app.api.unregister('editor:unregister-widget');
+        app.api.unregister('editor:is-dirty');
 
         // 3. Dispose controller (clears debounce timers, internal state)
         if (this.controller) {

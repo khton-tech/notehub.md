@@ -193,6 +193,23 @@ export class EditorController {
         }
     };
 
+    // ⚡ FIX B1: Bound handlers for config events (for cleanup in dispose)
+    private readonly handleConfigUpdated = (payload: unknown): void => {
+        const { key, value } = payload as { key: string; value: unknown };
+        if (key.startsWith('editor.')) {
+            this.handleSettingChange(key, value);
+        }
+    };
+
+    private readonly handleConfigReloaded = (): void => {
+        this.log('info', 'Config reloaded, refreshing editor settings...');
+        this.loadSettings();
+        // Try to restore file if not already open
+        if (!this.currentPath) {
+            this.restoreLastFile();
+        }
+    };
+
     /**
      * Create a new EditorController
      * @param app - The NotehubCore instance for API and event access
@@ -200,24 +217,9 @@ export class EditorController {
     constructor(app: NotehubCore) {
         this.app = app;
 
-        // Subscribe to config changes
-        this.app.events.on('config:updated', (payload) => {
-            const { key, value } = payload as { key: string; value: unknown };
-            if (key.startsWith('editor.')) {
-                this.handleSettingChange(key, value);
-            }
-        });
-
-        // Subscribe to bulk config reloads
-        this.app.events.on('config:reloaded', () => {
-            this.log('info', 'Config reloaded, refreshing editor settings...');
-            this.loadSettings();
-
-            // Try to restore file if not already open (handles race condition where vault config loads after plugin init)
-            if (!this.currentPath) {
-                this.restoreLastFile();
-            }
-        });
+        // Subscribe to config changes (using bound methods for cleanup)
+        this.app.events.on('config:updated', this.handleConfigUpdated);
+        this.app.events.on('config:reloaded', this.handleConfigReloaded);
 
         // Subscribe to FS events for sync with Explorer
         this.app.events.on('fs:deleted', this.handleFsDeleted as (payload: unknown) => void);
@@ -444,6 +446,13 @@ export class EditorController {
         if (this.currentPath === path) {
             this.log('info', `File already open, skipping reload: ${path}`);
             return this.lastKnownContent;
+        }
+
+        // ⚡ FIX A1: Flush pending save BEFORE switching files
+        // This prevents race condition where debounced save overwrites new file
+        if (this.isDirty && this.currentPath) {
+            this.log('info', `Flushing unsaved changes before switching: ${this.currentPath}`);
+            await this.saveFile();
         }
 
         // Return existing promise if file is already being opened (Promise Lock)
@@ -732,6 +741,10 @@ export class EditorController {
         // Unsubscribe from FS events
         this.app.events.off('fs:deleted', this.handleFsDeleted as (payload: unknown) => void);
         this.app.events.off('fs:renamed', this.handleFsRenamed as (payload: unknown) => void);
+
+        // ⚡ FIX B1: Unsubscribe from config events
+        this.app.events.off('config:updated', this.handleConfigUpdated);
+        this.app.events.off('config:reloaded', this.handleConfigReloaded);
 
         // Clear pending save timer
         if (this.saveTimeoutId !== null) {

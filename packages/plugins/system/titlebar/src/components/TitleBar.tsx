@@ -162,6 +162,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({ controller, app }) => {
                         whiteSpace: 'nowrap',
                     }}
                 >
+                    {/* ⚡ FIX E1: Show unsaved indicator */}
+                    {state.isDirty && <span style={{ color: 'var(--nh-accent-primary)' }}>• </span>}
                     {state.title}
                 </span>
             </div>
@@ -228,8 +230,6 @@ const WindowButton: React.FC<WindowButtonProps> = ({ onClick, title, isClose, ch
                     : 'var(--nh-text-secondary)',
                 cursor: 'pointer',
                 transition: 'background-color 0.15s ease, color 0.15s ease',
-                borderTopRightRadius: isClose ? '0.75rem' : 0,
-                borderBottomRightRadius: isClose ? '0.75rem' : 0,
             }}
         >
             {children}
