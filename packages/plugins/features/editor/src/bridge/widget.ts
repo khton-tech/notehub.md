@@ -89,6 +89,43 @@ export abstract class ReactBridgeWidget<P = any> extends WidgetType {
         container.style.display = 'inline-block';
         container.dataset.portalId = this.id;
 
+        // CRITICAL: Prevent CodeMirror from walking into React-managed DOM
+        // This prevents "RangeError: Invalid child in posBefore" during position calculations
+        container.setAttribute('contenteditable', 'false');
+
+        // Additional CM6 hint that this content should not be parsed
+        container.setAttribute('data-cm-ignore', 'true');
+
+        // CSS safeguards
+        container.style.userSelect = 'none';
+        container.style.webkitUserSelect = 'none';
+
+        // NUCLEAR FIX (CAPTURE PHASE): Stop propagation during CAPTURE phase.
+        // This runs *down* the DOM tree before reaching the target and before bubbling up.
+        // It ensures CodeMirror (which listens on bubble) NEVER sees the event.
+        // We block mousedown, pointerdown, and touchstart to prevent all forms of CM selection/cursor placement.
+        const stopPropagation = (e: Event) => {
+            // console.log('[ReactBridgeWidget] Stopping propagation for:', e.type);
+            e.stopPropagation();
+            // e.preventDefault(); // Trying to see if stopPropagation alone is enough if we debug it.
+            // Actually, let's enable preventDefault for mousedown to be sure.
+            if (e.type === 'mousedown' || e.type === 'touchstart') {
+                e.preventDefault();
+            }
+        };
+
+        const captureOptions = { capture: true };
+        container.addEventListener('mousedown', stopPropagation, captureOptions);
+        container.addEventListener('pointerdown', stopPropagation, captureOptions);
+        container.addEventListener('touchstart', stopPropagation, captureOptions);
+        container.addEventListener('click', (e) => {
+            // Allow clicks to propagate to React, but stop them from reaching CM if needed?
+            // Usually CM handles click for selection, but we prevented mousedown.
+            // React onClick should still work if we don't stop propagation here?
+            // Actually, if we stop mousedown, focus might not move.
+            e.stopPropagation();
+        }, { capture: true });
+
         // Store reference
         this.container = container;
 
@@ -138,18 +175,46 @@ export abstract class ReactBridgeWidget<P = any> extends WidgetType {
     }
 
     /**
+     * Tells CodeMirror to ignore events inside this widget's DOM.
+     * 
+     * This prevents the `RangeError: Invalid child in posBefore` crash that occurs
+     * when CodeMirror tries to calculate cursor positions inside React-managed DOM
+     * during mouse events (click, mousedown, etc.).
+     * 
+     * @param _event - The DOM event
+     * @returns true to tell CodeMirror to ignore the event
+     */
+    ignoreEvent(_event: Event): boolean {
+        // Tell CodeMirror: "I handle my own events, don't try to calculate 
+        // cursor positions inside my React-managed DOM structure"
+        return true;
+    }
+
+    /**
      * Comparison function for widget equality.
-     * Override this in subclasses to customize equality behavior.
+     * Uses JSON comparison of props to prevent unnecessary re-renders/recreations.
      * 
      * @param other - Widget to compare against
-     * @returns true if widgets are equal
+     * @returns true if widgets are equal (same component, same props)
      */
     eq(other: WidgetType): boolean {
         if (!(other instanceof ReactBridgeWidget)) {
             return false;
         }
-        // Default: compare by id (same widget instance)
-        return this.id === other.id;
+
+        // Must be the same component type
+        if (this.component !== other.component) {
+            return false;
+        }
+
+        // Deep compare props using JSON serialization
+        // This prevents destroying/recreating widgets when props haven't changed
+        try {
+            return JSON.stringify(this.props) === JSON.stringify(other.props);
+        } catch {
+            // If props aren't serializable, fall back to reference equality
+            return this.props === other.props;
+        }
     }
 
     /**

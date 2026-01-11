@@ -33,6 +33,7 @@
         "@notehub/vault-picker": "workspace:*",
         "@notehub/workbench": "workspace:*",
         "@notehub/about": "workspace:*",
+        "@notehub/backlinks": "workspace:*",
         "@tauri-apps/api": "^2.0.0",
         "lucide-react": "^0.562.0",
         "react": "^18.2.0",
