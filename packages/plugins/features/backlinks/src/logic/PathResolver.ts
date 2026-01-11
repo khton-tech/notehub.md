@@ -83,7 +83,7 @@ export class PathResolver {
 
         // Only do deep search if it's potentially ambiguous (or always?).
         // Prompt implies always for "Magic".
-        const foundPath = await this.findFile(rootPath, targetFilename);
+        const foundPath = await this.findFile(rootPath, targetFilename, target);
         if (foundPath) {
             return foundPath;
         }
@@ -101,14 +101,35 @@ export class PathResolver {
         }
     }
 
-    private async findFile(dirPath: string, targetFilename: string): Promise<string | null> {
+    /**
+     * Recursively find a file matching the filename, optionally checking if it ends with a suffix.
+     * @param dirPath Current directory to search
+     * @param targetFilename The strictly matching filename (e.g. "note.md")
+     * @param searchSuffix Optional suffix to match against the full path (e.g. "1.1/note.md")
+     */
+    private async findFile(dirPath: string, targetFilename: string, searchSuffix?: string): Promise<string | null> {
         try {
             const entries = await this.app.api.invoke<DirEntry[]>('fs:read-dir', dirPath);
 
             // 1. Check files in current dir
             for (const entry of entries) {
                 if (!entry.isDirectory && entry.name === targetFilename) {
-                    return joinPath(dirPath, entry.name);
+                    const fullPath = joinPath(dirPath, entry.name);
+
+                    // If we have a suffix (e.g. "1.1/note.md"), verify matches
+                    if (searchSuffix) {
+                        // Normalize both to be safe
+                        const normalizedSuffix = normalizePath(searchSuffix);
+                        // Check if path ends with suffix. 
+                        // Note: normalizePath uses '/' separators.
+                        if (fullPath.endsWith('/' + normalizedSuffix) || fullPath === normalizedSuffix || fullPath.endsWith(normalizedSuffix)) {
+                            return fullPath;
+                        }
+                        // If strict suffix provided but didn't match, we behave like it wasn't found 
+                        // in this specific folder, so we continue searching.
+                    } else {
+                        return fullPath;
+                    }
                 }
             }
 
@@ -118,7 +139,7 @@ export class PathResolver {
                     if (PathResolver.IGNORED_FOLDERS.has(entry.name) || entry.name.startsWith('.')) {
                         continue;
                     }
-                    const found = await this.findFile(joinPath(dirPath, entry.name), targetFilename);
+                    const found = await this.findFile(joinPath(dirPath, entry.name), targetFilename, searchSuffix);
                     if (found) return found;
                 }
             }
