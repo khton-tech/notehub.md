@@ -41,6 +41,7 @@ import { NotehubEditor } from './components/NotehubEditor';
 import { registerEditorSettings, type EditorSettings } from './logic/EditorConfig';
 import { PortalRegistry } from './cm/portals/PortalRegistry';
 import type { PortalSpec } from './cm/portals/types';
+import { EditorPortalRenderer } from './bridge';
 
 
 /**
@@ -299,6 +300,9 @@ export class EditorPlugin implements IPlugin {
         // Register the UI component as 'editor-main' for EditorLayout to render
         app.api.invoke('controller:register', 'editor-main', EditorSlotComponent);
 
+        // Register the singleton Portal Renderer (to be placed in EditorLayout root)
+        app.api.invoke('controller:register', 'editor-portal-renderer', EditorPortalRenderer);
+
         // === Event Subscription via EventBus ===
         // Listen for file selection events from the explorer plugin
         app.events.on('explorer:file-selected', this.handleFileSelected);
@@ -343,6 +347,18 @@ export class EditorPlugin implements IPlugin {
             return this.controller?.getIsDirty() ?? false;
         });
 
+        // ⚡ FIX E3: Register API for opening files (used by Backlinks/WikiLinks)
+        app.api.register('editor:open', async (path: unknown) => {
+            if (typeof path === 'string' && this.controller) {
+                await this.controller.openFile(path);
+            }
+        });
+
+        // ⚡ FIX E4: Register API for getting active path
+        app.api.register('editor:get-active-path', () => {
+            return this.controller?.getCurrentPath() ?? null;
+        });
+
         this.log('info', 'Loaded successfully');
     }
 
@@ -372,11 +388,14 @@ export class EditorPlugin implements IPlugin {
 
         // 2. Unregister the controller component from the registry
         app.api.invoke('controller:unregister', 'editor-main');
+        app.api.invoke('controller:unregister', 'editor-portal-renderer');
 
         // Unregister API
         app.api.unregister('editor:register-widget');
         app.api.unregister('editor:unregister-widget');
         app.api.unregister('editor:is-dirty');
+        app.api.unregister('editor:open');
+        app.api.unregister('editor:get-active-path');
 
         // 3. Dispose controller (clears debounce timers, internal state)
         if (this.controller) {

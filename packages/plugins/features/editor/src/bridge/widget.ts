@@ -118,13 +118,10 @@ export abstract class ReactBridgeWidget<P = any> extends WidgetType {
         container.addEventListener('mousedown', stopPropagation, captureOptions);
         container.addEventListener('pointerdown', stopPropagation, captureOptions);
         container.addEventListener('touchstart', stopPropagation, captureOptions);
-        container.addEventListener('click', (e) => {
-            // Allow clicks to propagate to React, but stop them from reaching CM if needed?
-            // Usually CM handles click for selection, but we prevented mousedown.
-            // React onClick should still work if we don't stop propagation here?
-            // Actually, if we stop mousedown, focus might not move.
-            e.stopPropagation();
-        }, { capture: true });
+
+        // Allow click to propagate so React can see it (synthetic events rely on bubbling to root)
+        // But we rely on ignoreEvent() to prevent CodeMirror from handling it
+        // container.addEventListener('click', stopPropagation, captureOptions);
 
         // Store reference
         this.container = container;

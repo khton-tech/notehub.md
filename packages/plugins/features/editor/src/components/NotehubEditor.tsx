@@ -38,7 +38,7 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } f
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { notehubMarkdown } from '../lezer';
 import { exposeDebugFunction, removeDebugFunction } from '../debug/tree-visualizer';
-import { EditorPortalRenderer } from '../bridge';
+// EditorPortalRenderer moved to EditorLayout via controller registry
 import { livePreviewExtension } from '../cm/live-preview';
 import { inlineStylesExtension } from '../cm/inline-styles';
 import { listsExtension } from '../cm/lists';
@@ -460,7 +460,6 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                     border-radius: 4px;
                 }
             `}</style>
-            <EditorPortalRenderer />
         </>
     );
 };

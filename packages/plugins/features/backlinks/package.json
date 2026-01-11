@@ -12,6 +12,7 @@
     "dependencies": {
         "@notehub/core": "workspace:*",
         "@notehub/fs-manager": "workspace:*",
+        "@codemirror/view": "^6.39.7",
         "react": "^18.2.0"
     },
     "devDependencies": {

@@ -76,6 +76,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
             {/* Title Bar - Always visible at all screen sizes */}
             <div className="shrink-0">
                 <Controller type="titlebar" app={app} />
+                <Controller type="editor-portal-renderer" />
             </div>
 
             {/* Main Content Area */}

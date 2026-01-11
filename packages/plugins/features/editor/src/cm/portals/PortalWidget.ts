@@ -55,6 +55,8 @@ export class PortalWidget extends ReactBridgeWidget<PortalWidgetProps> {
     toDOM(view: EditorView): HTMLElement {
         const dom = super.toDOM(view);
         dom.dataset.bridgeId = this.id;
+        // CRITICAL FIX: Ensure no text content leaks from base or CM
+        dom.textContent = '';
         return dom;
     }
 

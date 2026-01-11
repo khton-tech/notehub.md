@@ -250,6 +250,9 @@ importers:
 
   packages/plugins/features/backlinks:
     dependencies:
+      '@codemirror/view':
+        specifier: ^6.39.7
+        version: 6.39.7
       '@notehub/core':
         specifier: workspace:*
         version: link:../../../core

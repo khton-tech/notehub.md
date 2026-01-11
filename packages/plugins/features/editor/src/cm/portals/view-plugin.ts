@@ -23,27 +23,32 @@ function ensureGlobal(regex: RegExp): RegExp {
 
 export class PortalViewPlugin {
     decorations: DecorationSet;
+    atomicDecorations: DecorationSet;
     private unsubscribe: () => void;
     private registry: PortalRegistry;
+    private view: EditorView;
 
     constructor(view: EditorView) {
+        this.view = view;
         this.registry = PortalRegistry.getInstance();
-        this.decorations = this.computeDecorations(view);
+        const { main, atomic } = this.computeDecorations(view);
+        this.decorations = main;
+        this.atomicDecorations = atomic;
 
         // Listen for registry updates (new portals registered)
         this.unsubscribe = this.registry.onUpdate(() => {
-            // Force re-decoration by dispatching a dummy effect or reconfiguring
-            // Since this is a ViewPlugin, we can't easily force a re-init, 
-            // but we can trigger a measure request which might help, 
-            // or we rely on the fact that computeDecorations reads from registry.
-            // Best way to force semantic update:
-            view.requestMeasure();
+            const { main, atomic } = this.computeDecorations(this.view);
+            this.decorations = main;
+            this.atomicDecorations = atomic;
+            this.view.requestMeasure();
         });
     }
 
     update(update: ViewUpdate) {
         if (update.docChanged || update.viewportChanged || update.selectionSet) {
-            this.decorations = this.computeDecorations(update.view);
+            const { main, atomic } = this.computeDecorations(update.view);
+            this.decorations = main;
+            this.atomicDecorations = atomic;
         }
     }
 
@@ -51,16 +56,20 @@ export class PortalViewPlugin {
         this.unsubscribe();
     }
 
-    private computeDecorations(view: EditorView): DecorationSet {
+    private computeDecorations(view: EditorView): { main: DecorationSet, atomic: DecorationSet } {
         const builder = new RangeSetBuilder<Decoration>();
+        const atomicBuilder = new RangeSetBuilder<Decoration>();
         const { state, visibleRanges } = view;
         const selectionPromises = state.selection.ranges;
         const portals = this.registry.getAll();
+        // console.log('[PortalViewPlugin] Compute decorations. Portals:', portals.map(p => p.id));
+        // console.log('[PortalViewPlugin] Visible ranges:', visibleRanges);
 
         // sort portals by some priority? For now, order of registration.
 
         for (const { from, to } of visibleRanges) {
             const text = state.doc.sliceString(from, to);
+            // console.log('[PortalViewPlugin] Scanning text:', text);
 
             // Iterate ALL portals
             for (const spec of portals) {
@@ -73,15 +82,13 @@ export class PortalViewPlugin {
                         const start = from + match.index;
                         const end = start + match[0].length;
 
+                        const matchRange = { from: start, to: end };
+
                         // LIVE PREVIEW CHECK:
-                        // If selection overlaps with the range, show source (Edit Mode)
-                        // otherwise show widget (View Mode)
+                        // If selection overlaps with the range (touching edges counts), show source (Edit Mode)
                         let isIntersecting = false;
                         for (const range of selectionPromises) {
-                            // Touch logic: if cursor touches the edges, it's inside?
-                            // Usually: range.from <= end && range.to >= start
-                            // Let's use strict overlap for now
-                            if (range.from <= end && range.to >= start) {
+                            if (range.from <= matchRange.to && range.to >= matchRange.from) {
                                 isIntersecting = true;
                                 break;
                             }
@@ -94,10 +101,12 @@ export class PortalViewPlugin {
                             }));
                         } else {
                             // View Mode: Replace with Widget
-                            builder.add(start, end, Decoration.replace({
+                            const widgetDeco = Decoration.replace({
                                 widget: new PortalWidget(spec, match),
-                                inclusive: false // allow cursor to enter from sides?
-                            }));
+                                inclusive: false
+                            });
+                            builder.add(start, end, widgetDeco);
+                            atomicBuilder.add(start, end, widgetDeco);
                         }
                     }
                 } catch (e) {
@@ -106,11 +115,11 @@ export class PortalViewPlugin {
             }
         }
 
-        return builder.finish();
+        return { main: builder.finish(), atomic: atomicBuilder.finish() };
     }
 }
 
 export const portalPlugin = ViewPlugin.fromClass(PortalViewPlugin, {
     decorations: v => v.decorations,
-    provide: plugin => EditorView.atomicRanges.of(view => view.plugin(plugin)?.decorations || Decoration.none)
+    provide: plugin => EditorView.atomicRanges.of(view => view.plugin(plugin)?.atomicDecorations || Decoration.none)
 });
