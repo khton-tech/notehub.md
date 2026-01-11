@@ -23,6 +23,7 @@ interface TitleBarState {
     title: string;
     icon: string | null;
     isMaximized: boolean;
+    isDirty: boolean;  // ⚡ FIX E1: Track unsaved changes
 }
 
 /**
@@ -44,9 +45,11 @@ export class TitleBarController {
         title: 'Notehub',
         icon: null,
         isMaximized: false,
+        isDirty: false,  // ⚡ FIX E1
     };
     private subscribers = new Set<StateSubscriber>();
     private tauriWindow: any = null;
+    private dirtyCheckInterval: ReturnType<typeof setInterval> | null = null;  // ⚡ FIX E1
 
     constructor(app: NotehubCore) {
         this.app = app;
@@ -67,6 +70,17 @@ export class TitleBarController {
 
             // Get initial maximized state
             this.state.isMaximized = await this.tauriWindow.isMaximized();
+
+            // ⚡ FIX E1: Poll dirty state from editor
+            this.dirtyCheckInterval = setInterval(async () => {
+                try {
+                    const isDirty = await this.app.api.invoke<boolean>('editor:is-dirty');
+                    if (this.state.isDirty !== isDirty) {
+                        this.state.isDirty = isDirty;
+                        this.notifySubscribers();
+                    }
+                } catch { /* editor not ready yet */ }
+            }, 500);
         } catch (error) {
             this.log('error', `Failed to initialize Tauri window: ${error}`);
         }
@@ -182,9 +196,43 @@ export class TitleBarController {
         if (!this.tauriWindow) return;
 
         try {
+            // ⚡ FIX E2: Check for unsaved changes before closing
+            const isDirty = await this.checkForUnsavedChanges();
+            if (isDirty) {
+                const confirmed = await this.confirmClose();
+                if (!confirmed) {
+                    return; // User cancelled
+                }
+            }
             await this.tauriWindow.close();
         } catch (error) {
             this.log('error', `Failed to close: ${error}`);
+        }
+    }
+
+    /**
+     * Check if editor has unsaved changes
+     */
+    private async checkForUnsavedChanges(): Promise<boolean> {
+        try {
+            return await this.app.api.invoke<boolean>('editor:is-dirty');
+        } catch {
+            return false; // API not available, assume no changes
+        }
+    }
+
+    /**
+     * Show confirmation dialog for closing with unsaved changes
+     */
+    private async confirmClose(): Promise<boolean> {
+        try {
+            return await this.app.api.invoke<boolean>(
+                'dialog:confirm',
+                'Unsaved Changes',
+                'You have unsaved changes. Close anyway?'
+            );
+        } catch {
+            return true; // Dialog not available, allow close
         }
     }
 
@@ -205,6 +253,11 @@ export class TitleBarController {
      * Cleanup controller
      */
     dispose(): void {
+        // ⚡ FIX E1: Clear dirty check interval
+        if (this.dirtyCheckInterval) {
+            clearInterval(this.dirtyCheckInterval);
+            this.dirtyCheckInterval = null;
+        }
         this.subscribers.clear();
         this.tauriWindow = null;
     }

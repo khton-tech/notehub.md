@@ -37,6 +37,9 @@ export class FsManagerPlugin implements IPlugin {
     private driverName: string = '';
     private app: NotehubCore | null = null;
 
+    // ⚡ FIX A2: Write locks per file path to prevent concurrent writes
+    private writeLocks = new Map<string, Promise<void>>();
+
     /**
      * Log a message via the Logger plugin
      */
@@ -139,11 +142,25 @@ export class FsManagerPlugin implements IPlugin {
     }
 
     private async writeFile(path: string, data: Uint8Array): Promise<void> {
-        return this.ensureDriver().writeFile(path, data);
+        // Wait for any pending write to the same path
+        while (this.writeLocks.has(path)) {
+            await this.writeLocks.get(path);
+        }
+
+        const writePromise = this.ensureDriver().writeFile(path, data);
+        this.writeLocks.set(path, writePromise.finally(() => this.writeLocks.delete(path)));
+        return writePromise;
     }
 
     private async writeTextFile(path: string, content: string): Promise<void> {
-        return this.ensureDriver().writeTextFile(path, content);
+        // Wait for any pending write to the same path
+        while (this.writeLocks.has(path)) {
+            await this.writeLocks.get(path);
+        }
+
+        const writePromise = this.ensureDriver().writeTextFile(path, content);
+        this.writeLocks.set(path, writePromise.finally(() => this.writeLocks.delete(path)));
+        return writePromise;
     }
 
     private async createDir(path: string, options?: CreateDirOptions): Promise<void> {
