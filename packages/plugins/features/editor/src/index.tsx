@@ -39,7 +39,10 @@ import { Icon } from '@notehub/icon-manager';
 import { EditorController } from './logic/EditorController';
 import { NotehubEditor } from './components/NotehubEditor';
 import { registerEditorSettings, type EditorSettings } from './logic/EditorConfig';
-import type { FC } from 'react';
+import { PortalRegistry } from './cm/portals/PortalRegistry';
+import type { PortalSpec } from './cm/portals/types';
+import { EditorPortalRenderer } from './bridge';
+
 
 /**
  * Payload structure for file selection events
@@ -297,29 +300,63 @@ export class EditorPlugin implements IPlugin {
         // Register the UI component as 'editor-main' for EditorLayout to render
         app.api.invoke('controller:register', 'editor-main', EditorSlotComponent);
 
+        // Register the singleton Portal Renderer (to be placed in EditorLayout root)
+        app.api.invoke('controller:register', 'editor-portal-renderer', EditorPortalRenderer);
+
         // === Event Subscription via EventBus ===
         // Listen for file selection events from the explorer plugin
         app.events.on('explorer:file-selected', this.handleFileSelected);
         this.eventCleanups.push(() => app.events.off('explorer:file-selected', this.handleFileSelected));
 
-        // Register API for dynamic widgets
-        (app.api.register as any)('editor:register-widget', (id: string, regex: RegExp, component: FC<any>) => {
-            if (this.controller) {
-                this.controller.registerWidget(id, regex, component);
-            } else {
-                this.log('warn', `Cannot register widget ${id}: controller not initialized`);
+        // Register API for Portals (replacing dynamic widgets)
+        (app.api.register as any)('editor:register-portal', (spec: PortalSpec) => {
+            // Validate incoming spec
+            if (!spec || !spec.id || !spec.component) {
+                this.log('warn', 'Invalid portal spec registered');
+                return;
             }
-        });
 
-        (app.api.register as any)('editor:unregister-widget', (id: string) => {
-            if (this.controller) {
-                this.controller.unregisterWidget(id);
+            // Convert string regex to RegExp if needed (for JSON-based plugins)
+            let regex = spec.regex;
+            if (typeof regex === 'string') {
+                try {
+                    // Start simplified: assume basic regex string, or full pattern?
+                    // Usually JSON passes string. Let's assume it might need parsing if it comes from JSON.
+                    // For now, let's just use the object references as requested by the user.
+                    // User said: "If spec.regex comes as a string ... convert it ... But preferably ... accept raw objects"
+                    // So we trust it's a RegExp or convertible.
+                    regex = new RegExp(regex);
+                } catch (e) {
+                    this.log('warn', `Invalid regex for portal ${spec.id}: ${e}`);
+                    return;
+                }
             }
+
+            // Normalize
+            const safeSpec: PortalSpec = {
+                ...spec,
+                regex: regex
+            };
+
+            PortalRegistry.getInstance().register(safeSpec);
+            this.log('info', `Registered portal: ${spec.id}`);
         });
 
         // ⚡ FIX E2: Register API for checking dirty state (used by titlebar on close)
         (app.api.register as any)('editor:is-dirty', () => {
             return this.controller?.getIsDirty() ?? false;
+        });
+
+        // ⚡ FIX E3: Register API for opening files (used by Backlinks/WikiLinks)
+        app.api.register('editor:open', async (path: unknown) => {
+            if (typeof path === 'string' && this.controller) {
+                await this.controller.openFile(path);
+            }
+        });
+
+        // ⚡ FIX E4: Register API for getting active path
+        app.api.register('editor:get-active-path', () => {
+            return this.controller?.getCurrentPath() ?? null;
         });
 
         this.log('info', 'Loaded successfully');
@@ -351,11 +388,14 @@ export class EditorPlugin implements IPlugin {
 
         // 2. Unregister the controller component from the registry
         app.api.invoke('controller:unregister', 'editor-main');
+        app.api.invoke('controller:unregister', 'editor-portal-renderer');
 
         // Unregister API
         app.api.unregister('editor:register-widget');
         app.api.unregister('editor:unregister-widget');
         app.api.unregister('editor:is-dirty');
+        app.api.unregister('editor:open');
+        app.api.unregister('editor:get-active-path');
 
         // 3. Dispose controller (clears debounce timers, internal state)
         if (this.controller) {

@@ -38,11 +38,12 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } f
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { notehubMarkdown } from '../lezer';
 import { exposeDebugFunction, removeDebugFunction } from '../debug/tree-visualizer';
-import { EditorPortalRenderer } from '../bridge';
+// EditorPortalRenderer moved to EditorLayout via controller registry
 import { livePreviewExtension } from '../cm/live-preview';
 import { inlineStylesExtension } from '../cm/inline-styles';
 import { listsExtension } from '../cm/lists';
-import { createDynamicWidgetExtension } from '../cm/DynamicWidgetPlugin';
+import { portalPlugin } from '../cm/portals';
+// import { PortalRegistry } from '../cm/portals/PortalRegistry';
 import type { EditorController } from '../logic/EditorController';
 import type { EditorSettings } from '../logic/EditorConfig';
 import { EDITOR_CONFIG_DEFAULTS } from '../logic/EditorConfig';
@@ -61,7 +62,7 @@ const lineWrappingCompartment = new Compartment();
 const fontSizeCompartment = new Compartment();
 
 /** Compartment for dynamic path/regex widgets */
-const dynamicWidgetsCompartment = new Compartment();
+const portalsCompartment = new Compartment();
 
 /**
  * Create a theme extension with dynamic font size.
@@ -310,7 +311,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 lineNumbersCompartment.of(settings.showLineNumbers ? lineNumbers() : []),
                 lineWrappingCompartment.of(settings.wordWrap ? EditorView.lineWrapping : []),
                 fontSizeCompartment.of(createFontSizeTheme(settings.fontSize)),
-                dynamicWidgetsCompartment.of(createDynamicWidgetExtension(controller.widgetRegistry)),
+                portalsCompartment.of(portalPlugin),
 
                 // Core functionality
                 highlightActiveLine(),
@@ -423,21 +424,21 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
     }, [settings.showLineNumbers, settings.wordWrap, settings.fontSize]);
 
     /**
-     * Subscribe to dynamic widget registry changes.
-     * Reconfigures the editor extensions when new widgets are registered.
+     * Subscribe to portal registry changes.
+     * With the new ViewPlugin, we might not need to reconfigure the compartment entirely,
+     * but if the registry updates, we want to make sure the plugin catches it.
+     * THE NEW PLUGIN listens to the registry itself!
+     * So we MIGHT NOT need this useEffect at all if the plugin is standalone.
+     * 
+     * However, if we want to support hot-reloading of the plugin extension itself (rare),
+     * we can keep it. But the requirement says the plugin listens to onUpdate.
+     * 
+     * Let's REMOVE this effect because the ViewPlugin handles updates internally 
+     * via `registry.onUpdate` -> `view.requestMeasure`.
      */
-    useEffect(() => {
-        return controller.widgetRegistry.subscribe(() => {
-            const view = viewRef.current;
-            if (view) {
-                view.dispatch({
-                    effects: dynamicWidgetsCompartment.reconfigure(
-                        createDynamicWidgetExtension(controller.widgetRegistry)
-                    )
-                });
-            }
-        });
-    }, [controller]);
+    // useEffect(() => {
+    //     return PortalRegistry.getInstance().onUpdate(() => { ... });
+    // }, []);
 
     return (
         <>
@@ -451,7 +452,14 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                     overflow: 'hidden',
                 }}
             />
-            <EditorPortalRenderer />
+            {/* Styles for Portal Source (Edit Mode) */}
+            <style>{`
+                .cm-portal-source {
+                    opacity: 0.5;
+                    background-color: rgba(128, 128, 128, 0.1);
+                    border-radius: 4px;
+                }
+            `}</style>
         </>
     );
 };

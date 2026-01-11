@@ -68,6 +68,9 @@ export class ExplorerPlugin implements IPlugin {
         // Register the UI component in the registry
         await app.api.invoke('controller:register', 'explorer-tree', ExplorerTreeComponent);
 
+        // Register API to get root path (needed for PathResolver)
+        app.api.register('explorer:get-root', () => this.controller?.root || null);
+
         // === Event Handlers with proper cleanup tracking ===
 
         // Handler for 'explorer:open' event
@@ -97,6 +100,9 @@ export class ExplorerPlugin implements IPlugin {
         this.log('info', 'Unloading...');
 
         // === LIFECYCLE HYGIENE: Proper cleanup ===
+
+        // 0. Unregister API
+        app.api.unregister('explorer:get-root');
 
         // 1. Cleanup context menu providers
         if (this.menuCleanup) {

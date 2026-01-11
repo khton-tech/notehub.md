@@ -114,6 +114,8 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/editor');
         case '@notehub/about':
             return import('@notehub/about');
+        case '@notehub/backlinks':
+            return import('@notehub/backlinks');
 
         default:
             throw new Error(`Unknown plugin package: ${packageName}`);
