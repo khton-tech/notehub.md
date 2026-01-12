@@ -125,9 +125,15 @@ class InlineStylesPlugin {
             });
         }
 
+        const sortFn = (a: Range<Decoration>, b: Range<Decoration>) => {
+            if (a.from !== b.from) return a.from - b.from;
+            if (a.value.startSide !== b.value.startSide) return a.value.startSide - b.value.startSide;
+            return a.to - b.to;
+        };
+
         return {
-            decorations: Decoration.set(widgets.sort((a, b) => a.from - b.from)),
-            atomicDeco: Decoration.set(atomicWidgets.sort((a, b) => a.from - b.from)),
+            decorations: Decoration.set(widgets.sort(sortFn)),
+            atomicDeco: Decoration.set(atomicWidgets.sort(sortFn)),
         };
     }
 }

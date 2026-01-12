@@ -22,7 +22,7 @@
  * @module @notehub/editor/lezer
  */
 
-import { markdown } from '@codemirror/lang-markdown';
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { GFM, type MarkdownConfig } from '@lezer/markdown';
 import type { Extension } from '@codemirror/state';
 import { CalloutExtension } from './callouts';
@@ -46,7 +46,8 @@ export const notehubMarkdownExtensions: MarkdownConfig[] = [
  * Create a CodeMirror extension for Notehub-flavored Markdown.
  * 
  * This wraps the standard `markdown()` language with our custom
- * Callout and WikiLink parsers.
+ * Callout and WikiLink parsers, and configures autocomplete
+ * for markdown special characters.
  * 
  * @returns CodeMirror extension with Notehub markdown support
  * 
@@ -59,9 +60,17 @@ export const notehubMarkdownExtensions: MarkdownConfig[] = [
  * ```
  */
 export function notehubMarkdown(): Extension {
-    return markdown({
-        extensions: notehubMarkdownExtensions,
-    });
+    return [
+        markdown({
+            extensions: notehubMarkdownExtensions,
+        }),
+        // Register auto-close pairs for Markdown syntax
+        markdownLanguage.data.of({
+            closeBrackets: {
+                brackets: ["(", "[", "{", "'", '"', "`", "*", "_", "~"]
+            }
+        })
+    ];
 }
 
 // Re-export node types for external use
