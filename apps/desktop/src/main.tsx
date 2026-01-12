@@ -4,6 +4,7 @@ import { NotehubCore, NotehubProvider, type IPlugin } from '@notehub/core';
 import { Bootloader, type LoadablePlugin, type PluginManifest } from '@notehub/bootloader';
 import { LayoutRenderer } from '@notehub/layout-manager';
 import { AppLogo } from '@notehub/icon-manager';
+import { open } from '@tauri-apps/plugin-shell';
 import './index.css';
 
 /**
@@ -158,6 +159,15 @@ async function initApp(onStatusUpdate: (status: string) => void): Promise<Notehu
     const core = new NotehubCore();
     coreInstance = core;
     window.__NOTEHUB__ = core; // Expose for DevTools debugging
+
+    // Register host capabilities
+    core.api.register('shell:open', async (url: string) => {
+        try {
+            await open(url);
+        } catch (error) {
+            console.error('[Desktop] Failed to open URL:', url, error);
+        }
+    });
 
     // ===== PHASE 1: Load Plugin Registry =====
     onStatusUpdate('Loading Plugin Registry...');

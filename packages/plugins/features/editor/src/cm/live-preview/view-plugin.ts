@@ -12,12 +12,33 @@ import {
     ViewPlugin,
     Decoration,
     EditorView,
+    WidgetType,
     type ViewUpdate,
     type DecorationSet
 } from '@codemirror/view';
 import { syntaxTree, ensureSyntaxTree } from '@codemirror/language';
 import { RangeSetBuilder, type EditorState, type Range } from '@codemirror/state';
 import { CalloutHeaderWidget } from '../widgets/CalloutWidget';
+
+/**
+ * HorizontalRuleWidget - Renders a styled <hr> element
+ */
+class HorizontalRuleWidget extends WidgetType {
+    toDOM(): HTMLElement {
+        const hr = document.createElement('div');
+        hr.className = 'cm-hr-widget';
+        hr.style.height = '2px';
+        hr.style.backgroundColor = 'var(--nh-text-muted, #666)'; // Solid color
+        hr.style.margin = '2px 0'; // Reduced from 4px
+        hr.style.width = '100%';
+        hr.style.borderRadius = '1px'; // Slight rounding
+        return hr;
+    }
+
+    eq(): boolean {
+        return true; // All HR widgets are equivalent
+    }
+}
 
 // ----------------------------------------------------------------------------
 // Types & Interfaces
@@ -198,6 +219,92 @@ function buildDecorations(view: EditorView): DecorationSet {
                     return false; // Don't descend into heading children
                 }
 
+                // --- Handle HorizontalRule (---) ---
+                if (node.name === 'HorizontalRule') {
+                    const hrLine = getLineRange(state, node.from);
+
+                    if (processedLines.has(hrLine.from)) {
+                        return false;
+                    }
+                    processedLines.add(hrLine.from);
+
+                    const cursorInside = cursorOverlapsRange(view, hrLine.from, hrLine.to);
+
+                    if (!cursorInside) {
+                        // Replace --- with styled hr
+                        decorations.push(
+                            Decoration.replace({
+                                widget: new HorizontalRuleWidget(),
+                            }).range(node.from, node.to)
+                        );
+                    } else {
+                        // Show raw syntax with muted styling
+                        decorations.push(
+                            Decoration.mark({ class: 'cm-hr-source' }).range(node.from, node.to)
+                        );
+                    }
+                    return false;
+                }
+
+                // --- Handle Blockquotes (plain > without Callout type) ---
+                if (node.name === 'Blockquote') {
+                    // Check if this is a Callout (has CalloutType child) - if so, skip here
+                    // We check text content because CalloutType might be nested in a Paragraph
+                    const text = state.sliceDoc(node.from, Math.min(node.to, node.from + 50));
+                    // Match pattern: > [!TYPE] or >[!TYPE]
+                    const hasCalloutType = /^>\s?\[![a-zA-Z0-9_-]+\]/.test(text.trimStart());
+
+                    if (!hasCalloutType) {
+                        // Plain blockquote - style all lines
+                        const blockFrom = node.from;
+                        const blockTo = node.to;
+
+                        // Get all lines in the blockquote
+                        const startLine = state.doc.lineAt(blockFrom);
+                        const endLine = state.doc.lineAt(blockTo);
+
+                        for (let lineNum = startLine.number; lineNum <= endLine.number; lineNum++) {
+                            const line = state.doc.line(lineNum);
+
+                            if (processedLines.has(line.from)) {
+                                continue;
+                            }
+                            processedLines.add(line.from);
+
+                            const cursorOnLine = cursorOverlapsRange(view, line.from, line.to);
+
+                            // Apply blockquote line styling
+                            decorations.push(
+                                Decoration.line({
+                                    class: 'cm-blockquote',
+                                    attributes: {
+                                        style: `
+                                            border-left: 3px solid var(--nh-text-muted, #666);
+                                            background-color: rgba(128, 128, 128, 0.08);
+                                            padding-left: 16px;
+                                            margin-left: 4px;
+                                            font-style: italic;
+                                        `.replace(/\s+/g, ' ')
+                                    }
+                                }).range(line.from)
+                            );
+
+                            // Hide the > marker when cursor is outside
+                            if (!cursorOnLine) {
+                                const markerMatch = line.text.match(/^(\s*>\s?)/);
+                                if (markerMatch && markerMatch[1]) {
+                                    const markerEnd = line.from + markerMatch[1].length;
+                                    decorations.push(
+                                        Decoration.replace({}).range(line.from, markerEnd)
+                                    );
+                                }
+                            }
+                        }
+                        return false; // Don't descend further
+                    }
+                    // If it's a callout, let it fall through to CalloutType handler
+                }
+
                 // --- Handle Callouts ---
                 if (node.name !== 'CalloutType') {
                     return;
@@ -225,10 +332,10 @@ function buildDecorations(view: EditorView): DecorationSet {
                     background-color: ${colors.bg};
                     border-left: 3px solid ${colors.border};
                     border-right: 1px solid ${colors.border};
-                    margin-left: 4px;
-                    margin-right: 4px;
-                    padding-left: 16px;
-                    padding-right: 16px;
+                    margin-left: 2px;  /* Reduced from 4px */
+                    margin-right: 2px; /* Reduced from 4px */
+                    padding-left: 8px; /* Reduced from 16px */
+                    padding-right: 8px; /* Reduced from 16px */
                     box-sizing: border-box;
                 `.replace(/\s+/g, ' ');
 
@@ -275,7 +382,7 @@ function buildDecorations(view: EditorView): DecorationSet {
                     let bodyStyle = `${commonStyle} border-top: none;`;
 
                     if (isFirstBodyLine) {
-                        bodyStyle += ' padding-top: 8px;';
+                        bodyStyle += ' padding-top: 2px;'; // Reduced from 8px
                         isFirstBodyLine = false;
                     }
 
@@ -284,8 +391,8 @@ function buildDecorations(view: EditorView): DecorationSet {
                             border-bottom: 1px solid ${colors.border};
                             border-bottom-left-radius: 4px;
                             border-bottom-right-radius: 4px;
-                            margin-bottom: 0.5em;
-                            padding-bottom: 12px;
+                            margin-bottom: 0.25em; /* Reduced from 0.5em */
+                            padding-bottom: 6px;   /* Reduced from 12px */
                         `.replace(/\s+/g, ' ');
                     }
 
@@ -306,8 +413,8 @@ function buildDecorations(view: EditorView): DecorationSet {
                     border-top: 1px solid ${colors.border};
                     border-top-left-radius: 4px;
                     border-top-right-radius: 4px;
-                    padding-top: 12px;
-                    padding-bottom: 12px;
+                    padding-top: 6px;    /* Reduced from 12px */
+                    padding-bottom: 6px; /* Reduced from 12px */
                 `.replace(/\s+/g, ' ');
 
                 if (!hasBody) {
@@ -324,6 +431,7 @@ function buildDecorations(view: EditorView): DecorationSet {
                         border-bottom: none;
                         border-bottom-left-radius: 0;
                         border-bottom-right-radius: 0;
+                        padding-bottom: 4px; // Reduced spacing to body
                     `.replace(/\s+/g, ' ');
                 }
 

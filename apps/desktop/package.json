@@ -10,6 +10,8 @@
         "tauri": "tauri"
     },
     "dependencies": {
+        "@notehub/about": "workspace:*",
+        "@notehub/backlinks": "workspace:*",
         "@notehub/bootloader": "workspace:*",
         "@notehub/ck-standard": "workspace:*",
         "@notehub/config-manager": "workspace:*",
@@ -17,6 +19,7 @@
         "@notehub/controllers-manager": "workspace:*",
         "@notehub/core": "workspace:*",
         "@notehub/dialog-manager": "workspace:*",
+        "@notehub/drag-drop": "workspace:*",
         "@notehub/editor": "workspace:*",
         "@notehub/explorer": "workspace:*",
         "@notehub/fs-driver-tauri": "workspace:*",
@@ -27,14 +30,12 @@
         "@notehub/settings-manager": "workspace:*",
         "@notehub/state-manager": "workspace:*",
         "@notehub/synapse": "workspace:*",
-        "@notehub/drag-drop": "workspace:*",
-        "@notehub/titlebar": "workspace:*",
         "@notehub/theme-manager": "workspace:*",
+        "@notehub/titlebar": "workspace:*",
         "@notehub/vault-picker": "workspace:*",
         "@notehub/workbench": "workspace:*",
-        "@notehub/about": "workspace:*",
-        "@notehub/backlinks": "workspace:*",
         "@tauri-apps/api": "^2.0.0",
+        "@tauri-apps/plugin-shell": "^2.0.0",
         "lucide-react": "^0.562.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0"

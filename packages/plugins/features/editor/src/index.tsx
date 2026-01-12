@@ -155,6 +155,7 @@ function createEditorSlotComponent(controller: EditorController, app: NotehubCor
         // Render the CodeMirror editor with current file content
         return (
             <NotehubEditor
+                app={app}
                 controller={controller}
                 content={content}
                 filePath={filePath}

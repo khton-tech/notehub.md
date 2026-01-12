@@ -495,6 +495,13 @@ export interface NotehubApiMap {
     'explorer:set-root': (path: string) => Promise<void>;
 
     // =========================================================================
+    // Shell Plugin (Host Capabilities)
+    // =========================================================================
+
+    /** Open a URL in the default browser */
+    'shell:open': (url: string) => Promise<void>;
+
+    // =========================================================================
     // Bootloader Plugin (nh.system.bootloader)
     // Note: Uses dot notation for legacy compatibility
     // =========================================================================

@@ -34,14 +34,18 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { EditorState, Compartment } from '@codemirror/state';
+import type { NotehubCore } from '@notehub/core';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { notehubMarkdown } from '../lezer';
 import { exposeDebugFunction, removeDebugFunction } from '../debug/tree-visualizer';
 // EditorPortalRenderer moved to EditorLayout via controller registry
 import { livePreviewExtension } from '../cm/live-preview';
 import { inlineStylesExtension } from '../cm/inline-styles';
 import { listsExtension } from '../cm/lists';
+import { linksExtension } from '../cm/links';
+import { codeBlocksExtension } from '../cm/code-blocks';
 import { portalPlugin } from '../cm/portals';
 // import { PortalRegistry } from '../cm/portals/PortalRegistry';
 import type { EditorController } from '../logic/EditorController';
@@ -80,6 +84,8 @@ function createFontSizeTheme(fontSize: number) {
  * Props for the NotehubEditor component
  */
 interface NotehubEditorProps {
+    /** Core application instance */
+    app: NotehubCore;
     /** Controller managing file operations and state */
     controller: EditorController;
     /** Initial/current content to display */
@@ -248,6 +254,42 @@ const inlineStylesTheme = EditorView.baseTheme({
         fontWeight: 'bold',
         color: 'var(--nh-text-muted, #999)',
     },
+
+    // Links
+    '.cm-md-link': {
+        color: 'var(--nh-accent-primary, #4a90e2)',
+        textDecoration: 'none',
+        cursor: 'pointer',
+        borderBottom: '1px solid transparent',
+        transition: 'border-color 0.2s ease',
+    },
+    '.cm-md-link:hover': {
+        borderBottomColor: 'var(--nh-accent-primary, #4a90e2)',
+    },
+    '.cm-md-link-source': {
+        color: 'var(--nh-text-muted, #666)',
+        fontStyle: 'italic',
+    },
+
+    // Horizontal Rule
+    '.cm-hr-source': {
+        color: 'var(--nh-text-muted, #666)',
+    },
+
+    // Blockquote (handled inline, but add base class)
+    '.cm-blockquote': {
+        color: 'var(--nh-text-secondary, #999)',
+    },
+
+    // Code Blocks
+    '.cm-code-info': {
+        color: 'var(--nh-text-muted, #666)',
+        fontSize: '0.85em',
+        fontStyle: 'italic',
+    },
+    '.cm-code-mark': {
+        color: 'var(--nh-text-muted, #666)',
+    },
 });
 
 
@@ -273,6 +315,7 @@ const inlineStylesTheme = EditorView.baseTheme({
  * @component
  */
 export const NotehubEditor: React.FC<NotehubEditorProps> = ({
+    app,
     controller,
     content,
     filePath,
@@ -317,11 +360,13 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 highlightActiveLine(),
                 drawSelection(),
                 history(),
+                closeBrackets(),
 
                 // Keymaps for editing
                 keymap.of([
                     ...defaultKeymap,
                     ...historyKeymap,
+                    ...closeBracketsKeymap,
                 ]),
 
                 // Notehub Markdown (with Callout + WikiLink parsers)
@@ -336,6 +381,8 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 ...livePreviewExtension,
                 ...inlineStylesExtension,
                 ...listsExtension,
+                ...linksExtension,
+                ...codeBlocksExtension,
 
                 // Document change listener
                 EditorView.updateListener.of((update) => {
@@ -367,6 +414,43 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
             viewRef.current = null;
         };
     }, []); // Only run on mount/unmount
+
+    /**
+     * Listen for external link events from editor widgets.
+     * This effect is added based on the user's instruction, assuming `app.api`
+     * is available in the scope where this component is used, or that `controller`
+     * provides a similar mechanism. For the purpose of this edit, `app.api`
+     * is treated as an external dependency that would be provided.
+     * The `editorContainer.current` is mapped to `containerRef.current`.
+     */
+    useEffect(() => {
+        // This part of the provided snippet seems to be from a different context
+        // if (editor.current) {
+        //     // Forward editor ready event
+        //     editor.current.focus();
+        // }
+
+        // Listen for external link events from editor widgets
+        const handleExternalLink = (e: Event) => {
+            const customEvent = e as CustomEvent<{ url: string }>;
+            if (customEvent.detail && customEvent.detail.url) {
+                app.api.invoke('shell:open', customEvent.detail.url).catch(err => {
+                    console.error('Failed to open external link:', err);
+                });
+            }
+        };
+
+        const currentContainer = containerRef.current; // Using containerRef.current as equivalent to editorContainer.current
+        if (currentContainer) {
+            currentContainer.addEventListener('notehub:external-link', handleExternalLink);
+        }
+
+        return () => {
+            if (currentContainer) {
+                currentContainer.removeEventListener('notehub:external-link', handleExternalLink);
+            }
+        };
+    }, [app]); // Only run on mount/unmount
 
     /**
      * Sync content when file changes.
