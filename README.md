@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/khton-tech/notehub.md/releases">
-    <img src="https://img.shields.io/badge/version-0.1.3--a-blueviolet?style=for-the-badge" alt="Version" />
+    <img src="https://img.shields.io/badge/version-0.1.5-blueviolet?style=for-the-badge" alt="Version" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge" alt="License" />
@@ -126,17 +126,17 @@ export default class MyPlugin extends NotehubPlugin {
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                      NotehubCore                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │   EventBus   │  │    ApiBus    │  │  Plugin Registry │   │
-│  │  (pub/sub)   │  │  (RPC calls) │  │  (lifecycle)     │   │
-│  └──────────────┘  └──────────────┘  └──────────────────┘   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐    │
+│  │   EventBus   │  │    ApiBus    │  │  Plugin Registry │    │ 
+│  │  (pub/sub)   │  │  (RPC calls) │  │  (lifecycle)     │    │
+│  └──────────────┘  └──────────────┘  └──────────────────┘    │
 └──────────────────────────────────────────────────────────────┘
          ▲                  ▲                   ▲
          │                  │                   │
-    ┌────┴────┐       ┌────┴────┐        ┌─────┴─────┐
-    │  Logger │       │  Editor │        │  Explorer │
-    │  Plugin │       │  Plugin │        │   Plugin  │
-    └─────────┘       └─────────┘        └───────────┘
+    ┌────┴────┐       ┌────┴────┐        ┌──────┴─────┐
+    │  Logger │       │  Editor │        │  Explorer  │
+    │  Plugin │       │  Plugin │        │   Plugin   │
+    └─────────┘       └─────────┘        └────────────┘
 ```
 
 ### Core Packages

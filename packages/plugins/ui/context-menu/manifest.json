@@ -1,7 +1,7 @@
 {
     "id": "nh.ui.context-menu",
     "name": "ContextMenu",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "ui",
     "dependencies": [
         "nh.ui.icon-manager",

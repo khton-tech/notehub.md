@@ -1,6 +1,6 @@
 [package]
 name = "notehub-desktop"
-version = "0.1.3"
+version = "0.1.5"
 description = "Notehub.md - A modular markdown note-taking app"
 authors = ["Notehub Team"]
 edition = "2021"

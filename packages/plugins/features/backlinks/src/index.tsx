@@ -10,7 +10,7 @@ export class BacklinksPlugin implements IPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.features.backlinks',
         name: 'Backlinks',
-        version: '0.1.3-a',
+        version: '0.1.5',
         type: 'feature',
         dependencies: [
             'nh.features.editor',

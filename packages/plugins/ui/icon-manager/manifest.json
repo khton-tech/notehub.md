@@ -1,7 +1,7 @@
 {
   "id": "nh.ui.icon-manager",
   "name": "IconManager",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "type": "ui",
   "dependencies": [
     "nh.system.logger"

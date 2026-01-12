@@ -1,7 +1,7 @@
 {
     "id": "nh.system.synapse",
     "name": "Synapse",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "description": "External plugin loader using SystemJS with shared scope injection",
     "dependencies": [

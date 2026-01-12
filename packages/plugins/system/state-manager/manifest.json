@@ -1,7 +1,7 @@
 {
     "id": "nh.system.state-manager",
     "name": "StateManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "description": "Runtime session state storage (non-persistent)",
     "dependencies": [

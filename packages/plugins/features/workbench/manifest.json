@@ -1,7 +1,7 @@
 {
   "id": "nh.features.workbench",
   "name": "Workbench",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "type": "features",
   "dependencies": [
     "nh.system.config-manager",

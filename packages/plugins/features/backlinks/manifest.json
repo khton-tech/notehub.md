@@ -1,7 +1,7 @@
 {
     "id": "nh.features.backlinks",
     "name": "Backlinks",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "type": "feature",
     "description": "WikiLinks and Backlinks support for Notehub",
     "dependencies": [
