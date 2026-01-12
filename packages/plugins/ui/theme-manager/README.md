@@ -1,171 +1,105 @@
-# Theme Manager Plugin
+<h1 align="center">🎨 Theme Manager Plugin</h1>
 
-CSS variable theming system for Notehub.md applications.
+<p align="center">
+  <code>nh.ui.theme-manager</code> • UI • CSS variable theming system
+</p>
+
+---
 
 ## Overview
 
-The Theme Manager provides a centralized way to manage application themes through CSS custom properties. It:
+Централизованная система тем на CSS-переменных для Notehub.md:
 
-- Registers and applies theme palettes as CSS variables
-- Persists user theme preference via `config-manager`
-- Emits events when theme changes
+- 🎭 Регистрация и применение тем
+- 💾 Сохранение выбранной темы через `config-manager`
+- 📡 События при смене темы
 
-## API Methods
+---
 
-### `theme:register(name: string, palette: ThemePalette)`
-Register a new theme.
+## 🔌 API Methods
+
+### `theme:register(name, palette)`
+
+Регистрация новой темы.
 
 ```typescript
-app.api.invoke('theme:register', 'my-theme', {
-  'bg-main': '#1a1b26',
-  'bg-surface': '#24283b',
-  'border-accent': '#7aa2f7',
-  'border-secondary': '#565f89',
-  'text-primary': '#c0caf5',
+await app.api.invoke('theme:register', 'my-theme', {
+    'bg-main': '#1a1b26',
+    'bg-surface': '#24283b',
+    'text-primary': '#c0caf5',
+    'accent-primary': '#7aa2f7',
 });
 ```
 
-### `theme:set(name: string): Promise<boolean>`
-Switch to a registered theme. Returns `true` if successful.
+### `theme:set(name): Promise<boolean>`
+
+Применение темы.
 
 ```typescript
 await app.api.invoke('theme:set', 'my-theme');
 ```
 
 ### `theme:get-current(): string`
-Get the currently active theme name.
 
-```typescript
-const current = app.api.invoke('theme:get-current');
-```
+Получение имени текущей темы.
 
 ### `theme:list(): string[]`
-List all registered theme names.
 
-```typescript
-const themes = app.api.invoke('theme:list');
-// ['deep-space', 'my-theme']
-```
+Список всех зарегистрированных тем.
 
-### `theme:get(name: string): ThemePalette | undefined`
-Get a theme palette by name.
+### `theme:get(name): ThemePalette | undefined`
 
-```typescript
-const palette = app.api.invoke('theme:get', 'deep-space');
-```
+Получение палитры темы по имени.
 
-## Events
+---
+
+## 📤 Events
 
 ### `theme:changed`
-Emitted when the active theme changes.
 
 ```typescript
 app.events.on('theme:changed', ({ name, palette }) => {
-  console.log(`Theme changed to: ${name}`);
+    console.log(`Theme changed to: ${name}`);
 });
 ```
 
-## CSS Variables
+---
 
-All theme variables use the `--nh-` prefix. The default "Deep Space" theme provides:
+## 🎨 CSS Variables
 
-| Variable | Default Value | Description |
-|----------|---------------|-------------|
-| `--nh-bg-main` | `#021024` | Main background |
-| `--nh-bg-surface` | `#052659` | Surface/card background |
-| `--nh-border-accent` | `#5483B3` | Primary accent/border |
-| `--nh-border-secondary` | `#7DA0CA` | Secondary border |
-| `--nh-text-primary` | `#C1E8FF` | Primary text |
-| `--nh-text-secondary` | `#7DA0CA` | Secondary text |
+Все переменные используют префикс `--nh-`:
 
-## Tailwind CSS Integration
+| Variable | Description |
+|----------|-------------|
+| `--nh-bg-main` | Основной фон |
+| `--nh-bg-sidebar` | Фон сайдбара |
+| `--nh-bg-surface` | Фон карточек/панелей |
+| `--nh-text-primary` | Основной текст |
+| `--nh-text-muted` | Приглушенный текст |
+| `--nh-accent-primary` | Основной акцент |
+| `--nh-border-subtle` | Тонкие границы |
 
-To use theme variables in Tailwind, configure your `tailwind.config.js`:
+---
 
-```javascript
-// tailwind.config.js
-export default {
-  content: [
-    './src/**/*.{js,ts,jsx,tsx}',
-  ],
-  theme: {
-    extend: {
-      colors: {
-        // Map Notehub theme variables to Tailwind colors
-        'nh-bg': {
-          main: 'var(--nh-bg-main)',
-          surface: 'var(--nh-bg-surface)',
-        },
-        'nh-border': {
-          accent: 'var(--nh-border-accent)',
-          secondary: 'var(--nh-border-secondary)',
-        },
-        'nh-text': {
-          primary: 'var(--nh-text-primary)',
-          secondary: 'var(--nh-text-secondary)',
-        },
-      },
-      backgroundColor: {
-        main: 'var(--nh-bg-main)',
-        surface: 'var(--nh-bg-surface)',
-      },
-      borderColor: {
-        accent: 'var(--nh-border-accent)',
-        secondary: 'var(--nh-border-secondary)',
-      },
-      textColor: {
-        primary: 'var(--nh-text-primary)',
-        secondary: 'var(--nh-text-secondary)',
-      },
-    },
-  },
-  plugins: [],
-};
+## 🌙 Встроенные темы
+
+### Deep Space (default)
+```css
+--nh-bg-main: #021024;
+--nh-accent-primary: #5483B3;
+--nh-text-primary: #C1E8FF;
 ```
 
-### Usage Examples
-
-With the above configuration, you can use theme colors like:
-
-```html
-<!-- Background colors -->
-<div class="bg-main">Main background</div>
-<div class="bg-surface">Card or panel</div>
-
-<!-- Text colors -->
-<p class="text-primary">Primary text</p>
-<p class="text-secondary">Secondary text</p>
-
-<!-- Border colors -->
-<div class="border border-accent">Accent border</div>
-<div class="border border-secondary">Secondary border</div>
-
-<!-- Using the color palette directly -->
-<div class="bg-nh-bg-main text-nh-text-primary border-nh-border-accent">
-  Full theme integration
-</div>
+### Light
+```css
+--nh-bg-main: #f8fafc;
+--nh-accent-primary: #3b82f6;
+--nh-text-primary: #1e293b;
 ```
 
-## Creating Custom Themes
+---
 
-Register custom themes that match your design needs:
+## 📦 Dependencies
 
-```typescript
-// Register a light theme
-app.api.invoke('theme:register', 'light-mode', {
-  'bg-main': '#ffffff',
-  'bg-surface': '#f5f5f5',
-  'border-accent': '#0066cc',
-  'border-secondary': '#cccccc',
-  'text-primary': '#1a1a1a',
-  'text-secondary': '#666666',
-});
-
-// Switch to light theme
-await app.api.invoke('theme:set', 'light-mode');
-```
-
-## Dependencies
-
-- `nh.system.logger` - For logging
-- `nh.system.config-manager` - For persisting theme preference
+- `nh.system.logger`
+- `nh.system.config-manager`

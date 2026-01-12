@@ -1,70 +1,69 @@
-# Icon Manager Plugin
+<h1 align="center">🎨 Icon Manager Plugin</h1>
 
-> `@notehub/icon-manager` - Centralized icon registry for Notehub.md
+<p align="center">
+  <code>nh.ui.icon-manager</code> • UI • Centralized icon registry
+</p>
+
+---
 
 ## Overview
 
-The Icon Manager provides a centralized registry for icons, using [Lucide React](https://lucide.dev/) as the default icon set. Other plugins can register custom icons via the API.
+Централизованный реестр иконок на базе [Lucide React](https://lucide.dev/). Плагины могут регистрировать свои иконки через API.
 
-## Available Icons (Core Set)
+---
 
-| Name          | Description               | Component     |
-|---------------|---------------------------|---------------|
-| `folder-open` | Open folder icon          | `FolderOpen`  |
-| `info`        | Information circle        | `Info`        |
-| `zap`         | Lightning bolt (actions)  | `Zap`         |
-| `plus`        | Plus sign (add/create)    | `Plus`        |
-| `settings`    | Gear icon                 | `Settings`    |
-| `x`           | Close/cancel              | `X`           |
-| `file-text`   | Document with text        | `FileText`    |
-| `help-circle` | Help/unknown (fallback)   | `HelpCircle`  |
+## 📦 Core Icons
 
-## Usage
+| Name | Component | Usage |
+|------|-----------|-------|
+| `folder-open` | FolderOpen | Explorer |
+| `file-text` | FileText | Files |
+| `settings` | Settings | Settings |
+| `plus` | Plus | Create actions |
+| `x` | X | Close/cancel |
+| `info` | Info | Information |
+| `zap` | Zap | Actions |
+| `help-circle` | HelpCircle | Fallback |
 
-### Using the Icon Component
+---
+
+## 🔌 API Methods
+
+### `icon:register(name, component)`
+
+```typescript
+import { Star } from 'lucide-react';
+await app.api.invoke('icon:register', 'star', Star);
+```
+
+### `icon:get(name)`
+
+```typescript
+const IconComponent = await app.api.invoke('icon:get', 'folder-open');
+```
+
+---
+
+## 💻 Usage
+
+### React Component
 
 ```tsx
 import { Icon } from '@notehub/icon-manager';
 
-// Basic usage
+// Basic
 <Icon name="folder-open" />
 
-// With size and className
-<Icon name="info" size={48} className="text-blue-400 mb-4" />
+// With size and styling
+<Icon name="info" size={48} className="text-blue-400" />
 
-// Unknown icon falls back to HelpCircle
-<Icon name="unknown-icon" size={24} />
+// Unknown icons fallback to HelpCircle
+<Icon name="unknown" />
 ```
 
-### Registering Custom Icons
+---
 
-```ts
-import type { LucideIcon } from 'lucide-react';
-import { Star } from 'lucide-react';
+## 📦 Dependencies
 
-// Register via API
-app.api.invoke('icon:register', 'star', Star);
-```
-
-### Getting an Icon Component
-
-```ts
-const IconComponent = app.api.invoke('icon:get', 'folder-open');
-// Use IconComponent in your JSX
-```
-
-## API
-
-| Method          | Arguments                                  | Returns              | Description                     |
-|-----------------|--------------------------------------------|----------------------|---------------------------------|
-| `icon:register` | `name: string, component: React.ElementType` | `void`               | Register a custom icon          |
-| `icon:get`      | `name: string`                             | `React.ElementType`  | Get icon component (or fallback)|
-
-## Dependencies
-
-- `lucide-react` - Icon library
-- `nh.system.logger` - Logging
-
-## License
-
-MIT
+- `lucide-react` — Icon library
+- `nh.system.logger` — Logging

@@ -1,41 +1,68 @@
-# Документация Notehub.md
+<h1 align="center">📚 Документация Notehub.md</h1>
 
-## 📚 Содержание
+<p align="center">
+  <em>Техническая документация для разработчиков и контрибьюторов</em>
+</p>
 
-### Архитектура и разработка
+---
 
-- [**Архитектура ядра**](./core-architecture.md) — Компоненты ядра: NotehubCore, EventBus, ApiBus
-- [**Разработка плагинов**](./plugin-development.md) — Руководство по созданию плагинов
-- [**CLI инструменты**](./cli-tools.md) — Описание команд и скриптов
+## 🗂 Содержание
 
-### Системные плагины
+### 📐 Архитектура и разработка
 
-- [**Logger**](./plugins/logger.md) — Централизованное логирование
-- [**FS Manager**](./plugins/fs-manager.md) — Абстракция файловой системы
-- [**FS Driver Tauri**](./plugins/fs-driver-tauri.md) — Реализация FS для Tauri v2
-- [**State Manager**](./plugins/state-manager.md) — Реактивное хранилище состояния
-- [**Config Manager**](./plugins/config-manager.md) — Управление настройками
-- [**Bootloader**](./plugins/bootloader.md) — Оркестратор загрузки с разрешением зависимостей
+| Документ | Описание |
+|----------|----------|
+| [Архитектура ядра](./core-architecture.md) | NotehubCore, EventBus, ApiBus |
+| [Разработка плагинов](./plugin-development.md) | Гайд по созданию плагинов |
+| [CLI инструменты](./cli-tools.md) | Команды и скрипты |
 
-### UI плагины
+### 🔌 Для разработчиков плагинов
 
-- [**Theme Manager**](./plugins/theme-manager.md) — CSS-переменные и темы
-- [**Icon Manager**](./plugins/icon-manager.md) — Реестр иконок (Lucide)
-- [**Layout Manager**](./plugins/layout-manager.md) — Система лейаутов
+| Язык | Ссылка |
+|------|--------|
+| 🇷🇺 Русский | **[Руководство разработчика плагинов](../forPluginMakers/ru/README.md)** |
+| 🇬🇧 English | **[Plugin Developer Guide](../forPluginMakers/en/README.md)** |
 
-### Отчёты
+---
 
-- [2024-12-24: Инициализация проекта](./reports/2024-12-24-project-init.md)
-- [2024-12-24: FS Layer](./reports/2024-12-24-fs-layer.md)
-- [2024-12-24: Config Manager](./reports/2024-12-24-config-manager.md)
-- [2024-12-24: UI Layer](./reports/2024-12-24-ui-layer.md)
+## ⚙️ Системные плагины
+
+| Плагин | ID | Описание |
+|--------|-----|----------|
+| [Logger](./plugins/logger.md) | `nh.system.logger` | Централизованное логирование |
+| [FS Manager](./plugins/fs-manager.md) | `nh.system.fs-manager` | Абстракция файловой системы |
+| [FS Driver Tauri](./plugins/fs-driver-tauri.md) | `nh.system.fs-driver-tauri` | Реализация FS для Tauri v2 |
+| [State Manager](./plugins/state-manager.md) | `nh.system.state-manager` | Реактивное хранилище состояния |
+| [Config Manager](./plugins/config-manager.md) | `nh.system.config-manager` | Управление настройками |
+| [Bootloader](./plugins/bootloader.md) | `nh.system.bootloader` | Оркестратор загрузки |
+| [Synapse](./plugins/synapse.md) | `nh.system.synapse` | Загрузчик внешних плагинов |
+
+## 🎨 UI плагины
+
+| Плагин | ID | Описание |
+|--------|-----|----------|
+| [Theme Manager](./plugins/theme-manager.md) | `nh.ui.theme-manager` | CSS-переменные и темы |
+| [Icon Manager](./plugins/icon-manager.md) | `nh.ui.icon-manager` | Реестр иконок (Lucide) |
+| [Layout Manager](./plugins/layout-manager.md) | `nh.ui.layout-manager` | Система лейаутов |
+| Settings Manager | `nh.ui.settings-manager` | Модальное окно настроек |
+| Dialog Manager | `nh.ui.dialog-manager` | Диалоги (alert, confirm, prompt) |
+| Context Menu | `nh.ui.context-menu` | Контекстные меню |
+
+## 🚀 Фича-плагины
+
+| Плагин | ID | Описание |
+|--------|-----|----------|
+| Editor | `nh.features.editor` | Markdown редактор на CodeMirror 6 |
+| Explorer | `nh.features.explorer` | Файловый проводник |
+| Backlinks | `nh.features.backlinks` | Панель обратных ссылок |
+| Vault Picker | `nh.features.vault-picker` | Выбор хранилища |
 
 ---
 
 ## 🚀 Быстрый старт
 
 ```bash
-# Установка
+# Установка зависимостей
 pnpm install
 
 # Сборка всех пакетов
@@ -48,75 +75,86 @@ pnpm dev:desktop
 pnpm gen:plugin
 ```
 
+---
+
 ## 📦 Структура проекта
 
 ```
 notehub.md/
 ├── packages/
-│   ├── core/                 # @notehub/core — ядро приложения
+│   ├── core/                    # @notehub/core — ядро приложения
+│   ├── api/                     # @notehub/api — SDK для плагинов
 │   └── plugins/
-│       ├── system/           # Системные плагины
-│       │   ├── bootloader/   # Оркестратор загрузки
-│       │   ├── logger/       # Централизованное логирование
-│       │   ├── fs-manager/   # Абстракция файловой системы
-│       │   ├── fs-driver-tauri/ # Tauri драйвер FS
-│       │   ├── state-manager/   # Хранилище состояния
-│       │   └── config-manager/  # Менеджер конфигурации
-│       ├── ui/               # UI плагины
+│       ├── system/              # Системные плагины
+│       │   ├── bootloader/      # Оркестратор загрузки
+│       │   ├── logger/          # Централизованное логирование
+│       │   ├── synapse/         # Загрузчик внешних плагинов
+│       │   └── ...
+│       ├── ui/                  # UI плагины
 │       │   ├── theme-manager/   # Темы и CSS-переменные
-│       │   ├── icon-manager/    # Реестр иконок
-│       │   └── layout-manager/  # Система лейаутов
-│       └── features/         # Фича-плагины
+│       │   ├── settings-manager/# Настройки
+│       │   └── ...
+│       └── features/            # Фича-плагины
+│           ├── editor/          # Markdown редактор
+│           ├── explorer/        # Файловый проводник
+│           └── ...
 ├── apps/
-│   └── desktop/              # Tauri Desktop приложение
-├── scripts/                  # CLI-скрипты
-└── docs/                     # Документация
-    └── ru/                   # Русская документация
+│   └── desktop/                 # Tauri Desktop приложение
+├── docs/
+│   ├── ru/                      # Русская документация
+│   └── forPluginMakers/         # Документация для разработчиков плагинов
+│       ├── en/                  # English
+│       └── ru/                  # Русский
+└── scripts/                     # CLI-скрипты
 ```
 
-## 🔌 Реестр плагинов
-
-### Системные плагины
-
-| Плагин | ID | Описание |
-|--------|-----|----------|
-| Logger | `nh.system.logger` | Централизованное логирование |
-| FS Manager | `nh.system.fs-manager` | Абстракция файловой системы |
-| FS Driver Tauri | `nh.system.fs-driver-tauri` | Реализация FS для Tauri v2 |
-| State Manager | `nh.system.state-manager` | Реактивное хранилище состояния |
-| Config Manager | `nh.system.config-manager` | Централизованное управление настройками |
-| Bootloader | `nh.system.bootloader` | Оркестратор загрузки плагинов |
-
-### UI плагины
-
-| Плагин | ID | Описание |
-|--------|-----|----------|
-| Theme Manager | `nh.ui.theme-manager` | CSS-переменные и темы |
-| Icon Manager | `nh.ui.icon-manager` | Реестр иконок на базе Lucide |
-| Layout Manager | `nh.ui.layout-manager` | Система React-лейаутов |
+---
 
 ## 🎨 Граф зависимостей
 
 ```mermaid
 graph TD
-    Logger[nh.system.logger]
-    FsManager[nh.system.fs-manager]
-    StateManager[nh.system.state-manager]
-    FsDriverTauri[nh.system.fs-driver-tauri]
-    ConfigManager[nh.system.config-manager]
-    ThemeManager[nh.ui.theme-manager]
-    IconManager[nh.ui.icon-manager]
-    LayoutManager[nh.ui.layout-manager]
+    subgraph System
+        Logger[nh.system.logger]
+        FsManager[nh.system.fs-manager]
+        StateManager[nh.system.state-manager]
+        ConfigManager[nh.system.config-manager]
+        Synapse[nh.system.synapse]
+    end
+    
+    subgraph UI
+        ThemeManager[nh.ui.theme-manager]
+        LayoutManager[nh.ui.layout-manager]
+        SettingsManager[nh.ui.settings-manager]
+    end
+    
+    subgraph Features
+        Editor[nh.features.editor]
+        Explorer[nh.features.explorer]
+    end
 
     FsManager --> Logger
     StateManager --> Logger
-    FsDriverTauri --> Logger
-    FsDriverTauri --> FsManager
     ConfigManager --> Logger
     ConfigManager --> FsManager
+    Synapse --> Logger
     ThemeManager --> Logger
-    IconManager --> Logger
+    ThemeManager --> ConfigManager
     LayoutManager --> Logger
-    LayoutManager --> ThemeManager
-    LayoutManager --> IconManager
+    SettingsManager --> ConfigManager
+    Editor --> ConfigManager
+    Explorer --> FsManager
 ```
+
+---
+
+## 📋 Отчёты и история
+
+### 2026
+- [2026-01-12: Design Revamp](./reports/2026-01-12-design-revamp.md)
+
+### 2024
+- [2024-12-24: Инициализация проекта](./reports/2024-12-24-project-init.md)
+- [2024-12-24: FS Layer](./reports/2024-12-24-fs-layer.md)
+- [2024-12-24: Config Manager](./reports/2024-12-24-config-manager.md)
+- [2024-12-24: UI Layer](./reports/2024-12-24-ui-layer.md)
