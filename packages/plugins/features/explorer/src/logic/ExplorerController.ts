@@ -46,6 +46,9 @@ export class ExplorerController {
     get selectedPath(): string | null { return this._selectedPath; }
     get root(): string | null { return this.rootPath; }
 
+    /** Возвращает Set раскрытых путей для синхронизации с react-arborist */
+    getExpandedPaths(): Set<string> { return this.expandedPaths; }
+
     // ========== Settings ==========
 
     private showHidden: boolean = false;
@@ -112,16 +115,18 @@ export class ExplorerController {
         const fileOpenedHandler = async (payload: any) => {
             const path = typeof payload === 'string' ? payload : payload?.path;
             if (path && path !== this._activeFilePath) {
-                this._activeFilePath = path;
-                this._selectedPath = path;
-
-                // Ensure the path to the file is expanded
-                await this.expandToPath(path);
-                this.notify();
+                await this.forceSelect(path);
             }
         };
+
+        // Listen to both events to be safe (WikiLinks might use editor:open)
         this.app.events.on('editor:file-opened', fileOpenedHandler);
-        this.eventCleanups.push(() => this.app.events.off('editor:file-opened', fileOpenedHandler));
+        this.app.events.on('editor:open', fileOpenedHandler);
+
+        this.eventCleanups.push(() => {
+            this.app.events.off('editor:file-opened', fileOpenedHandler);
+            this.app.events.off('editor:open', fileOpenedHandler);
+        });
     }
 
     cleanup(): void {
@@ -431,12 +436,6 @@ export class ExplorerController {
     }
 
     setRenaming(path: string | null): void {
-        // Cancel any pending rename operation if switching to a different file
-        if (this._renamingPath !== path && this.pendingRename) {
-            console.log('ExplorerController: Cancelling pending rename, switching to', path);
-            // Note: we don't await here, just let it finish in background
-            // The next submitRename will wait for it anyway
-        }
         this._renamingPath = path;
         this.notify();
     }
@@ -566,9 +565,13 @@ export class ExplorerController {
     // ========== Directory Loading ==========
 
     async setRoot(path: string) {
+        // Guard: если уже на том же root, не перезагружаем
+        if (this.rootPath === path) {
+            return;
+        }
+
         this.rootPath = path;
         this.nodes.clear();
-        this.expandedPaths.clear();
         this.watcherTimers.clear();
 
         const rootNode: FileNode = {
@@ -579,9 +582,42 @@ export class ExplorerController {
             children: []
         };
         this.nodes.set(path, rootNode);
-        this.expandedPaths.add(path);
 
+        // Восстанавливаем expandedPaths из конфига (для персистентности)
+        try {
+            const savedPaths = await this.app.api.invoke<string[] | undefined>(
+                'config:get',
+                'explorer.expanded-paths',
+                []
+            );
+            this.expandedPaths = new Set([path]);
+            if (Array.isArray(savedPaths)) {
+                for (const p of savedPaths) {
+                    if (p.startsWith(path)) {
+                        this.expandedPaths.add(p);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('[Explorer] Failed to load savedPaths:', err);
+            this.expandedPaths = new Set([path]);
+        }
+
+        // Загружаем root
         await this.loadDir(path);
+
+        // Загружаем expanded директории в порядке от корня к листьям
+        const sortedPaths = Array.from(this.expandedPaths)
+            .filter(p => p !== path)
+            .sort((a, b) => a.length - b.length);
+
+        for (const expandedPath of sortedPaths) {
+            const parentPath = getParentPath(expandedPath);
+            if (this.nodes.has(parentPath)) {
+                await this.loadDir(expandedPath);
+            }
+        }
+
         this.startWatching(path);
         this.notify();
     }
@@ -830,6 +866,30 @@ export class ExplorerController {
     getTree(): FileNode | null {
         if (!this.rootPath) return null;
         return this.nodes.get(this.rootPath) || null;
+    }
+
+    /**
+     * Forces the explorer to sync with an external file opening.
+     * Expands the tree to the file, loads necessary data, and selects it.
+     */
+    async forceSelect(path: string): Promise<void> {
+        this._activeFilePath = path;
+        this._selectedPath = path;
+
+        // 1. Expand properties first so we don't flash collapsed
+        await this.expandToPath(path);
+
+        // 2. Load the directory of the file itself (crucial for visual existence)
+        const parent = getParentPath(path);
+        if (parent && parent !== this.rootPath) {
+            await this.loadDir(parent);
+        } else if (this.rootPath) {
+            // If file is in root, ensure root is loaded
+            await this.loadDir(this.rootPath);
+        }
+
+        // 3. Notify UI
+        this.notify();
     }
 
     selectItem(path: string): void {
