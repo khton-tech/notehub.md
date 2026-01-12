@@ -93,6 +93,18 @@ const DEEP_SPACE_THEME: ThemePalette = {
     // Danger
     'danger': '#ef4444', // Red-500
 
+    // Callout semantic colors
+    'callout-info': '#60a5fa',       // Blue-400
+    'callout-tip': '#4ade80',        // Green-400
+    'callout-warning': '#fbbf24',    // Amber-400
+    'callout-danger': '#f87171',     // Red-400
+    'callout-question': '#c084fc',   // Purple-400
+    'callout-quote': '#a1a1aa',      // Zinc-400
+    'callout-abstract': '#22d3ee',   // Cyan-400
+
+    // Panel effects
+    'panel-glow': 'inset 0 0 0 1px rgba(255,255,255,0.05)',
+
     // Typography
     'font-family': '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     'font-family-mono': '"JetBrains Mono", "Fira Code", Consolas, monospace',
@@ -138,6 +150,18 @@ const LIGHT_THEME: ThemePalette = {
 
     // Danger
     'danger': '#dc2626',
+
+    // Callout semantic colors (darker shades for light theme)
+    'callout-info': '#3b82f6',       // Blue-500
+    'callout-tip': '#22c55e',        // Green-500
+    'callout-warning': '#f59e0b',    // Amber-500
+    'callout-danger': '#ef4444',     // Red-500
+    'callout-question': '#a855f7',   // Purple-500
+    'callout-quote': '#71717a',      // Zinc-500
+    'callout-abstract': '#06b6d4',   // Cyan-500
+
+    // Panel effects
+    'panel-glow': 'inset 0 0 0 1px rgba(0,0,0,0.03)',
 
     // Typography
     'font-family': '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',

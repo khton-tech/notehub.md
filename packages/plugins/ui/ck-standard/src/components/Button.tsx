@@ -76,11 +76,13 @@ const variantClasses: Record<string, string> = {
     ].join(' '),
     glass: [
         'bg-[var(--nh-glass-bg,rgba(20,20,20,0.7))]',
-        'backdrop-blur-md',
+        'bg-gradient-to-b from-white/[0.08] to-transparent',
+        'backdrop-blur-xl',
         'text-[var(--nh-text-primary,#E0E0E0)]',
-        'border border-[var(--nh-glass-border,rgba(255,255,255,0.08))]',
-        'hover:bg-[rgba(255,255,255,0.1)]',
-        'hover:border-[rgba(255,255,255,0.15)]',
+        'border border-[var(--nh-glass-border,rgba(255,255,255,0.1))]',
+        'shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]',
+        'hover:bg-[rgba(255,255,255,0.12)]',
+        'hover:border-[rgba(255,255,255,0.2)]',
     ].join(' '),
 };
 
@@ -109,11 +111,13 @@ export const Button: FC<ButtonProps> = ({
         'rounded-xl',
         // Transitions - smooth for glow effect
         'transition-all duration-200 ease-out',
+        // Tactile click feedback
+        'active:scale-[0.97]',
         // Focus states - glow ring
         'outline-none',
         'focus-visible:ring-2 focus-visible:ring-[var(--nh-accent-primary,#7c3aed)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nh-bg-main)]',
         // Disabled states
-        'disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:brightness-100',
+        'disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:brightness-100 disabled:active:scale-100',
         // Cursor
         'cursor-pointer',
     ].join(' ');

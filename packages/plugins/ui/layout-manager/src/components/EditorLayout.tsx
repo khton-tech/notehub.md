@@ -67,7 +67,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
     }, [isResizing, resize, stopResizing]);
 
     // Gap size for floating panels
-    const gap = 8;
+    const gap = 16;
 
     return (
         <div
@@ -103,7 +103,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     {/* Ribbon Area - Floating Panel */}
                     <div
                         style={{ gridArea: 'ribbon' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm)] flex flex-col items-center py-3 gap-2 overflow-hidden"
+                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] flex flex-col items-center py-3 gap-2 overflow-hidden"
                     >
                         <div className="flex-1 w-full">
                             <Controller type="ribbon-placeholder" app={app} />
@@ -116,7 +116,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     {/* Sidebar Area - Floating Panel */}
                     <div
                         style={{ gridArea: 'sidebar' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm)] relative overflow-hidden"
+                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] relative overflow-hidden"
                     >
                         <Controller type="explorer-tree" />
 
@@ -143,7 +143,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     {/* Main Editor Area - Floating Panel */}
                     <div
                         style={{ gridArea: 'main' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm)] overflow-auto relative"
+                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] overflow-auto relative"
                     >
                         <Controller type="editor-main" />
                     </div>
