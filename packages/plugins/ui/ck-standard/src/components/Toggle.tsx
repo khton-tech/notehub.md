@@ -83,7 +83,7 @@ export const Toggle: React.FC<ToggleProps> = ({
                 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nh-bg-surface)]
                 ${checked
                     ? 'bg-[var(--nh-accent-primary,#7c3aed)] shadow-[0_0_12px_rgba(124,58,237,0.5)]'
-                    : 'bg-[var(--nh-bg-secondary,#1A1A1A)]'
+                    : 'bg-black/50 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]'
                 }
                 ${disabled
                     ? 'opacity-40 cursor-not-allowed'
@@ -96,8 +96,8 @@ export const Toggle: React.FC<ToggleProps> = ({
             <span
                 className={`
                     pointer-events-none inline-block w-5 h-5 transform rounded-full
-                    bg-white shadow-md transition-all duration-300 ease-out
-                    ${checked ? 'translate-x-[18px]' : 'translate-x-[2px]'}
+                    bg-white transition-all duration-300 ease-out
+                    ${checked ? 'translate-x-[18px] shadow-[0_0_8px_rgba(124,58,237,0.6)]' : 'translate-x-[2px] shadow-md'}
                     my-auto
                 `}
             />

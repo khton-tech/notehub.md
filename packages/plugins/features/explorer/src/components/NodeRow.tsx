@@ -102,6 +102,7 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
     if (isHighlighted) {
         baseClasses.push(
             'text-white',
+            'mx-1.5 rounded-lg',
             'bg-[var(--nh-accent-secondary)]'
         );
     } else {
@@ -113,12 +114,10 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
 
     // Focused state (keyboard navigation) - removed thick ring in favor of subtle left border
 
-    // Icon color classes
+    // Icon color classes - monochrome for consistency
     const iconColorClass = isHighlighted
         ? 'text-white'
-        : data.isDir
-            ? 'text-yellow-500/80'
-            : 'text-[var(--nh-text-secondary)]';
+        : 'text-[var(--nh-text-muted)]';
 
     return (
         <div
