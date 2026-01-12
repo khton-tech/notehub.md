@@ -26,7 +26,6 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
     // Focus input when entering edit mode
     useEffect(() => {
         if (node.isEditing && inputRef.current) {
-            console.log('NodeRow: Entering edit mode for', data.id);
             inputRef.current.focus();
             // Select filename without extension
             const dotIndex = data.name.lastIndexOf('.');
@@ -47,15 +46,11 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
     // Auto-open files when focused via keyboard navigation
     useEffect(() => {
         if (node.isFocused && !data.isDir && !node.isEditing) {
-            // If we just finished editing, the data.id might be stale (pre-rename).
-            // Skip this trigger; the data update will trigger a re-render/effect soon.
+            // If we just finished editing, skip this trigger
             if (wasEditing.current) {
-                console.log('NodeRow: Skipping auto-open after edit for', data.id);
                 wasEditing.current = false;
                 return;
             }
-
-            console.log('NodeRow: Auto-opening focused file', data.id);
             app.events.emit('explorer:file-selected', { path: data.id });
         }
     }, [node.isFocused, data.isDir, data.id, node.isEditing, app.events]);
@@ -64,7 +59,6 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('NodeRow: Context Menu triggered on', data.id);
         app.api.invoke(
             'context-menu:trigger' as any,
             e.nativeEvent,
@@ -77,8 +71,6 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (node.isEditing) return;
-
-        console.log('NodeRow: Clicked', data.id);
         // Toggle folders when clicking on the row
         if (data.isDir) {
             node.toggle();
@@ -90,7 +82,6 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
     // Chevron click - only toggle, don't select
     const handleChevronClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        console.log('NodeRow: Chevron Clicked', data.id);
         node.toggle();
     };
 
@@ -176,23 +167,17 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
                         ref={inputRef}
                         type="text"
                         defaultValue={data.name}
-                        onBlur={() => {
-                            console.log('NodeRow: Input Blur');
-                            node.reset();
-                        }}
+                        onBlur={() => node.reset()}
                         onKeyDown={(e) => {
-                            console.log('NodeRow: KeyDown', e.key);
                             if (e.key === 'Enter') {
                                 const value = e.currentTarget.value.trim();
                                 if (value && value !== data.name) {
-                                    console.log('NodeRow: Submitting rename', value);
                                     node.submit(value);
                                 } else {
                                     node.reset();
                                 }
                             }
                             if (e.key === 'Escape') {
-                                console.log('NodeRow: Cancel rename');
                                 node.reset();
                             }
                         }}

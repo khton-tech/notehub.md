@@ -38,21 +38,25 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     const [rootName, setRootName] = useState<string>('');
     const [renamingId, setRenamingId] = useState<string | null>(null);
 
+    // ⚡ selectedId напрямую привязан к activeFilePath — единый источник правды
+    const selectedId = controller.activeFilePath;
+
     // Subscribe to controller changes
     useEffect(() => {
         const refresh = () => {
             // Force new array reference specifically to ensure react-arborist updates
             const treeData = controller.getTreeData();
-            console.log('FileTree: Refreshing data', treeData.length, 'nodes');
+            // console.log('FileTree: Refreshing data', treeData.length, 'nodes');
             setData([...treeData]);
 
             const tree = controller.getTree();
             setRootName(tree?.name || '');
 
-            // Sync renaming state
+            // Sync renaming state only
             if (controller.renamingPath !== renamingId) {
                 setRenamingId(controller.renamingPath);
             }
+            // selectedId теперь вычисляемое значение из activeFilePath, не state
         };
         refresh();
         const unsubscribe = controller.subscribe(refresh);
@@ -62,14 +66,12 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     // Sync renaming state to Arborist
     useEffect(() => {
         if (renamingId && treeRef.current) {
-            console.log('FileTree: Starting rename for', renamingId);
             treeRef.current.edit(renamingId);
         }
     }, [renamingId]);
 
     // Measure container height for virtualization
     useEffect(() => {
-        // ... existing height logic ...
         const updateHeight = () => {
             if (containerRef.current) {
                 setContainerHeight(containerRef.current.clientHeight);
@@ -81,31 +83,54 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
         return () => observer.disconnect();
     }, []);
 
-    // Sync active file with tree selection
+    // Ref для отслеживания предыдущего activeFilePath (избегаем кражи фокуса при ре-рендерах)
+    const prevActiveFileRef = useRef<string | null>(null);
+
+    // Sync expanded folders with react-arborist
+    // Это нужно потому что controller.expandToPath() добавляет пути в expandedPaths,
+    // но react-arborist имеет своё внутреннее состояние
     useEffect(() => {
-        if (controller.activeFilePath && treeRef.current) {
-            // Focus and select the active file
-            console.log('FileTree: Syncing active file', controller.activeFilePath);
+        if (!treeRef.current) return;
 
-            // 1. Expand ancestors visually
-            let parent = controller.activeFilePath;
-            while (parent && parent.length > (controller.root?.length || 0)) {
-                parent = parent.substring(0, Math.max(parent.lastIndexOf('/'), parent.lastIndexOf('\\')));
-                if (parent && parent.length >= (controller.root?.length || 0)) {
-                    treeRef.current.open(parent);
-                }
-            }
-
-            // 2. Select and Scroll
-            const node = treeRef.current.get(controller.activeFilePath);
-            if (node) {
-                if (!node.isSelected) {
-                    treeRef.current.select(controller.activeFilePath);
-                }
-                treeRef.current.scrollTo(controller.activeFilePath);
+        const expandedPaths = controller.getExpandedPaths();
+        for (const path of expandedPaths) {
+            // treeRef.open() работает только если node существует в data
+            if (treeRef.current.get(path)) {
+                treeRef.current.open(path);
             }
         }
-    }, [controller.activeFilePath, data]); // Add data dependency to retry if node wasn't loaded yet
+    }, [data]); // Зависимость от data — пытаемся расширить после каждого обновления
+
+    // Sync active file with tree selection — ЖЁСТКАЯ ПРИВЯЗКА
+    useEffect(() => {
+        const activeFile = controller.activeFilePath;
+        const prevActiveFile = prevActiveFileRef.current;
+
+        if (!activeFile || !treeRef.current) return;
+
+        const node = treeRef.current.get(activeFile);
+        const fileChanged = activeFile !== prevActiveFile;
+
+        // Обновляем ref только при реальном изменении
+        if (fileChanged) {
+            prevActiveFileRef.current = activeFile;
+        }
+
+        // Если node существует и файл изменился — немедленно sync
+        if (node && fileChanged) {
+            treeRef.current.select(activeFile);
+            treeRef.current.scrollTo(activeFile);
+            return;
+        }
+
+        // Если node появился в data (после загрузки папок), но prevActiveFile ещё null
+        // (первая загрузка после перезапуска) или node только что появился — sync
+        if (node && !prevActiveFile) {
+            prevActiveFileRef.current = activeFile;
+            treeRef.current.select(activeFile);
+            treeRef.current.scrollTo(activeFile);
+        }
+    }, [controller.activeFilePath, data]);
 
     // ... (click away handler) ...
     // Click-away and Escape handler for popup menu
@@ -131,7 +156,6 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
 
     // Handle node toggle (expand/collapse directories)
     const handleToggle = useCallback((id: string) => {
-        console.log('FileTree: Toggle', id);
         if (controller.isExpanded(id)) {
             controller.collapseDir(id);
         } else {
@@ -143,14 +167,16 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     const handleSelect = useCallback((nodes: any[]) => {
         if (nodes.length > 0) {
             const node = nodes[0];
-            console.log('FileTree: Selected', node.id);
             controller.selectItem(node.id);
+        } else {
+            // Selection cleared (e.g. background click). 
+            // We IGNORE this to maintain "Concrete Focus".
+            // Since we use the `selection` prop, react-arborist will revert to the prop value on next render.
         }
     }, [controller]);
 
     // Handle rename
     const handleRename = useCallback(({ id, name }: { id: string; name: string }) => {
-        console.log('FileTree: Rename submitted', id, '->', name);
         controller.onRename({ id, name });
     }, [controller]);
 
@@ -160,19 +186,16 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
         parentId: string | null;
         index: number;
     }) => {
-        console.log('FileTree: Move', args);
         controller.onMove(args);
     }, [controller]);
 
     // Create handlers
     const handleCreateNote = () => {
-        console.log('FileTree: Create Note Triggered');
         controller.createNote();
         setShowNewMenu(false);
     };
 
     const handleCreateFolder = () => {
-        console.log('FileTree: Create Folder Triggered');
         controller.createFolder();
         setShowNewMenu(false);
     };
@@ -211,7 +234,6 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
         // F2 - Rename
         if (e.key === 'F2') {
             const selected = controller.selectedPath;
-            console.log('FileTree: F2 pressed, selected:', selected);
             if (selected) {
                 e.preventDefault();
                 controller.setRenaming(selected);
@@ -221,7 +243,6 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
         // Delete - Delete Item
         if (e.key === 'Delete') {
             const selected = controller.selectedPath;
-            console.log('FileTree: Delete pressed, selected:', selected);
             if (selected) {
                 e.preventDefault();
                 controller.deleteItem(selected);
@@ -354,6 +375,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                             rowHeight={24}
                             indent={16}
                             searchTerm={searchTerm}
+                            selection={selectedId || ''}
                             searchMatch={(node, term) => {
                                 const lowerTerm = term.toLowerCase();
                                 return node.data.name.toLowerCase().includes(lowerTerm) ||
