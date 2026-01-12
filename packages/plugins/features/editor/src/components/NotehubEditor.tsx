@@ -35,7 +35,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { EditorState, Compartment } from '@codemirror/state';
 import type { NotehubCore } from '@notehub/core';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { notehubMarkdown } from '../lezer';
@@ -126,6 +126,11 @@ const notehubTheme = EditorView.theme({
     '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: 'var(--nh-accent-primary, #4a90e2)',
         borderLeftWidth: '2px',
+        transition: 'left 0.1s ease-out, top 0.1s ease-out',
+    },
+    // Disable transition while typing
+    '.cm-editor.is-typing .cm-cursor': {
+        transition: 'none !important',
     },
 
     // Selection styling
@@ -295,6 +300,43 @@ const inlineStylesTheme = EditorView.baseTheme({
 
 
 /**
+ * Plugin to manage cursor animation state.
+ * Adds 'is-typing' class to editor when content changes, removes it after a timeout.
+ * Removes it immediately on selection change (navigation).
+ */
+const cursorAnimationPlugin = ViewPlugin.fromClass(class {
+    typingTimeout: number = -1;
+
+    update(update: ViewUpdate) {
+        if (update.docChanged) {
+            // Content changed -> User is typing
+            update.view.dom.classList.add('is-typing');
+
+            // Clear existing timeout
+            if (this.typingTimeout > -1) {
+                clearTimeout(this.typingTimeout);
+            }
+
+            // Remove class after 100ms
+            this.typingTimeout = window.setTimeout(() => {
+                update.view.dom.classList.remove('is-typing');
+                this.typingTimeout = -1;
+            }, 100);
+        } else if (update.selectionSet && !update.docChanged) {
+            // Selection changed without content change -> Navigation
+            // Remove typing state immediately so movement is smooth
+            if (update.view.dom.classList.contains('is-typing')) {
+                update.view.dom.classList.remove('is-typing');
+                if (this.typingTimeout > -1) {
+                    clearTimeout(this.typingTimeout);
+                    this.typingTimeout = -1;
+                }
+            }
+        }
+    }
+});
+
+/**
  * NotehubEditor - CodeMirror 6 React wrapper component
  * 
  * Renders a fully-featured Markdown editor with:
@@ -355,6 +397,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 lineWrappingCompartment.of(settings.wordWrap ? EditorView.lineWrapping : []),
                 fontSizeCompartment.of(createFontSizeTheme(settings.fontSize)),
                 portalsCompartment.of(portalPlugin),
+                cursorAnimationPlugin,
 
                 // Core functionality
                 highlightActiveLine(),
