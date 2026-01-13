@@ -1,0 +1,19 @@
+{
+    "$schema": "../gen/schemas/mobile-schema.json",
+    "identifier": "mobile",
+    "description": "Capability for the mobile app",
+    "windows": [
+        "main"
+    ],
+    "permissions": [
+        "core:default",
+        "fs:default",
+        "fs:allow-app-read-recursive",
+        "fs:allow-app-write-recursive",
+        "fs:allow-document-read-recursive",
+        "fs:allow-document-write-recursive",
+        "dialog:default",
+        "os:default",
+        "opener:default"
+    ]
+}

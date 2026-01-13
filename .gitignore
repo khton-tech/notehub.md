@@ -50,3 +50,11 @@ temp/
 # Lock files (pnpm generates its own)
 package-lock.json
 yarn.lock
+
+# Android / Tauri Mobile
+apps/desktop/src-tauri/gen/android/.gradle/
+apps/desktop/src-tauri/gen/android/build/
+apps/desktop/src-tauri/gen/android/*/build/
+apps/desktop/src-tauri/gen/android/local.properties
+apps/desktop/src-tauri/gen/schemas/
+apps/desktop/src-tauri/gen/android/.idea/
