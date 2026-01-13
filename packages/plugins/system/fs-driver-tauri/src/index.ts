@@ -2,11 +2,14 @@ import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import type { IFileSystem, DirEntry, CreateDirOptions } from '@notehub/fs-manager';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
+import { platform } from '@tauri-apps/plugin-os';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * FsDriverTauriPlugin - Tauri V2 file system driver
  * 
- * Implements IFileSystem using @tauri-apps/plugin-fs.
+ * Implements IFileSystem using @tauri-apps/plugin-fs on desktop
+ * and custom Rust commands via tauri-plugin-android-fs on Android.
  * Registers itself with fs-manager on load.
  */
 export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
@@ -19,6 +22,9 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
     };
 
     private app: NotehubCore | null = null;
+
+    /** Whether running on Android (uses Rust commands for content:// URIs) */
+    private isAndroid: boolean = false;
 
     /** Active file watchers for cleanup on unload */
     private activeWatchers: Set<() => void> = new Set();
@@ -45,10 +51,19 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
             return;
         }
 
+        // Detect platform for Android-specific handling
+        try {
+            const currentPlatform = platform();
+            this.isAndroid = currentPlatform === 'android';
+            this.log('info', `Platform detected: ${currentPlatform}, isAndroid: ${this.isAndroid}`);
+        } catch (error) {
+            this.log('warn', `Could not detect platform: ${error}`);
+        }
+
         // Register this driver with fs-manager
         await app.api.invoke('fs:register-driver', this, 'Tauri');
 
-        this.log('info', 'Loaded and registered with fs-manager');
+        this.log('info', `Loaded and registered with fs-manager (Android mode: ${this.isAndroid})`);
     }
 
     /**
@@ -83,28 +98,97 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
     }
 
     // =============== IFileSystem Implementation ===============
+    // Each method checks isAndroid and routes to Rust commands or standard Tauri FS
+
+    /**
+     * Helper to resolve a path to { baseUri, relativePath } for Android SAF
+     * Expects path format: /saf-root/<ENCODED_URI>/<RELATIVE_PATH>
+     */
+    private resolveSafPath(path: string): { baseUri: string, relativePath: string } {
+        if (!path.startsWith('/saf-root/')) {
+            throw new Error(`Invalid SAF path format: ${path}`);
+        }
+
+        // Remove prefix
+        const cleanPath = path.substring('/saf-root/'.length);
+
+        // Find first slash which separates URI from relative path
+        const firstSlash = cleanPath.indexOf('/');
+
+        if (firstSlash === -1) {
+            // No slash means it's just the root URI
+            return {
+                baseUri: decodeURIComponent(cleanPath),
+                relativePath: ''
+            };
+        }
+
+        const encodedUri = cleanPath.substring(0, firstSlash);
+        const relativePath = cleanPath.substring(firstSlash + 1);
+
+        return {
+            baseUri: decodeURIComponent(encodedUri),
+            relativePath: relativePath
+        };
+    }
+
+    // =============== IFileSystem Implementation ===============
 
     async readFile(path: string): Promise<Uint8Array> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath } = this.resolveSafPath(path);
+            const data = await invoke<number[]>('android_fs_read_file', { baseUri, path: relativePath });
+            return new Uint8Array(data);
+        }
         return await tauriFs.readFile(path);
     }
 
     async readTextFile(path: string): Promise<string> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath } = this.resolveSafPath(path);
+            return await invoke<string>('android_fs_read_text_file', { baseUri, path: relativePath });
+        }
         return await tauriFs.readTextFile(path);
     }
 
     async writeFile(path: string, data: Uint8Array): Promise<void> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath } = this.resolveSafPath(path);
+            await invoke('android_fs_write_file', { baseUri, path: relativePath, data: Array.from(data) });
+            return;
+        }
         await tauriFs.writeFile(path, data);
     }
 
     async writeTextFile(path: string, content: string): Promise<void> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath } = this.resolveSafPath(path);
+            await invoke('android_fs_write_text_file', { baseUri, path: relativePath, content });
+            return;
+        }
         await tauriFs.writeTextFile(path, content);
     }
 
     async createDir(path: string, options?: CreateDirOptions): Promise<void> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath } = this.resolveSafPath(path);
+            const recursive = options?.recursive ?? false;
+            await invoke('android_fs_create_dir', { baseUri, path: relativePath, recursive });
+            return;
+        }
         await tauriFs.mkdir(path, { recursive: options?.recursive ?? false });
     }
 
     async readDir(path: string): Promise<DirEntry[]> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath } = this.resolveSafPath(path);
+            const entries = await invoke<Array<{ name: string; isDirectory: boolean; isFile: boolean; uri: string }>>('android_fs_read_dir', { baseUri, path: relativePath });
+            return entries.map(entry => ({
+                name: entry.name,
+                isDirectory: entry.isDirectory,
+                isFile: entry.isFile,
+            }));
+        }
         const entries = await tauriFs.readDir(path);
         return entries.map(entry => ({
             name: entry.name,
@@ -114,15 +198,98 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
     }
 
     async exists(path: string): Promise<boolean> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath } = this.resolveSafPath(path);
+            return await invoke<boolean>('android_fs_exists', { baseUri, path: relativePath });
+        }
         return await tauriFs.exists(path);
     }
 
     async pickDirectory(): Promise<string | null> {
+        this.log('info', '[pickDirectory] Starting directory picker...');
+
         try {
-            const result = await open({ directory: true });
-            return result ?? null;
+            // Detect current platform
+            let currentPlatform = 'unknown';
+            try {
+                currentPlatform = platform();
+                this.log('info', `[pickDirectory] Detected platform: ${currentPlatform}`);
+            } catch (platformError) {
+                this.log('warn', `[pickDirectory] Could not detect platform: ${platformError}`);
+            }
+
+            const isAndroid = currentPlatform === 'android';
+            this.log('info', `[pickDirectory] Is Android: ${isAndroid}`);
+
+            // On Android, use the native SAF folder picker
+            if (isAndroid) {
+                return await this.pickDirectoryAndroid();
+            }
+
+            // On Desktop, use the standard dialog
+            return await this.pickDirectoryDesktop();
         } catch (error) {
-            this.log('error', `pickDirectory failed: ${error}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : 'No stack trace';
+            this.log('error', `[pickDirectory] FAILED: ${errorMessage}`);
+            this.log('error', `[pickDirectory] Stack: ${errorStack}`);
+            return null;
+        }
+    }
+
+    /**
+     * Android-native folder picker using SAF (Storage Access Framework)
+     * Calls the custom Rust command that uses tauri-plugin-android-fs
+     */
+    private async pickDirectoryAndroid(): Promise<string | null> {
+        this.log('info', '[pickDirectoryAndroid] Using Android SAF picker via Rust command...');
+
+        try {
+            // Call our custom Rust command for Android folder picking
+            this.log('info', '[pickDirectoryAndroid] Invoking pick_folder_android command...');
+            const uri = await invoke<string | null>('pick_folder_android');
+
+            this.log('info', `[pickDirectoryAndroid] Command returned: ${uri ?? 'null'}`);
+
+            if (!uri) {
+                this.log('info', '[pickDirectoryAndroid] User cancelled or no folder selected');
+                return null;
+            }
+
+            // Encode the URI and prefix it so we can split it later
+            const finalPath = `/saf-root/${encodeURIComponent(uri)}`;
+            this.log('info', `[pickDirectoryAndroid] Final Path: ${finalPath}`);
+            return finalPath;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `[pickDirectoryAndroid] FAILED: ${errorMessage}`);
+            return null;
+        }
+    }
+
+    /**
+     * Desktop folder picker using standard Tauri dialog
+     */
+    private async pickDirectoryDesktop(): Promise<string | null> {
+        this.log('info', '[pickDirectoryDesktop] Using standard dialog picker...');
+
+        try {
+            const result = await open({
+                directory: true,
+                recursive: true,
+            });
+
+            this.log('info', `[pickDirectoryDesktop] open() returned: ${result === null ? 'null' : result}`);
+
+            if (result === null || result === undefined) {
+                this.log('info', '[pickDirectoryDesktop] User cancelled or no directory selected');
+                return null;
+            }
+
+            return typeof result === 'string' ? result : String(result);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `[pickDirectoryDesktop] FAILED: ${errorMessage}`);
             return null;
         }
     }
@@ -189,14 +356,33 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
     }
 
     async removeFile(path: string): Promise<void> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath } = this.resolveSafPath(path);
+            await invoke('android_fs_remove_file', { baseUri, path: relativePath });
+            return;
+        }
         await tauriFs.remove(path);
     }
 
     async removeDir(path: string, options?: { recursive?: boolean }): Promise<void> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath } = this.resolveSafPath(path);
+            const recursive = options?.recursive ?? false;
+            await invoke('android_fs_remove_dir', { baseUri, path: relativePath, recursive });
+            return;
+        }
         await tauriFs.remove(path, { recursive: options?.recursive ?? false });
     }
 
     async rename(oldPath: string, newPath: string): Promise<void> {
+        if (this.isAndroid) {
+            const { baseUri, relativePath: oldRelative } = this.resolveSafPath(oldPath);
+            // Rename only changes the name of the file at the location, not moving to a new path
+            // So we need the new NAME, not path.
+            const newName = newPath.split('/').pop() || newPath;
+            await invoke('android_fs_rename', { baseUri, oldPath: oldRelative, newName });
+            return;
+        }
         await tauriFs.rename(oldPath, newPath);
     }
 }
