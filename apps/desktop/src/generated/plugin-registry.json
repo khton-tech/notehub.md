@@ -2,7 +2,7 @@
   {
     "id": "nh.features.about",
     "name": "About",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "feature",
     "description": "Displays application information and credits",
     "dependencies": [
@@ -13,7 +13,7 @@
   {
     "id": "nh.features.backlinks",
     "name": "Backlinks",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "type": "feature",
     "description": "WikiLinks and Backlinks support for Notehub",
     "dependencies": [
@@ -22,9 +22,26 @@
     ]
   },
   {
+    "id": "nh.features.editor",
+    "name": "Editor",
+    "version": "0.1.5",
+    "type": "features",
+    "description": "Markdown Editor for Notehub",
+    "dependencies": [
+      "nh.system.config-manager",
+      "nh.ui.settings-manager",
+      "nh.system.fs-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.dialog-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager"
+    ]
+  },
+  {
     "id": "nh.features.explorer",
     "name": "Explorer",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "features",
     "description": "File Explorer for Notehub",
     "dependencies": [
@@ -40,26 +57,9 @@
     ]
   },
   {
-    "id": "nh.features.editor",
-    "name": "Editor",
-    "version": "0.1.2",
-    "type": "features",
-    "description": "Markdown Editor for Notehub",
-    "dependencies": [
-      "nh.system.config-manager",
-      "nh.ui.settings-manager",
-      "nh.system.fs-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.dialog-manager",
-      "nh.ui.icon-manager",
-      "nh.ui.theme-manager"
-    ]
-  },
-  {
     "id": "nh.features.vault-picker",
     "name": "VaultPicker",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "feature",
     "dependencies": [
       "nh.system.fs-manager",
@@ -73,7 +73,7 @@
   {
     "id": "nh.features.workbench",
     "name": "Workbench",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "features",
     "dependencies": [
       "nh.system.config-manager",
@@ -87,7 +87,7 @@
   {
     "id": "nh.ui.ck-standard",
     "name": "CKStandard",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "ui",
     "dependencies": [
       "nh.system.logger",
@@ -99,7 +99,7 @@
   {
     "id": "nh.ui.context-menu",
     "name": "ContextMenu",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "ui",
     "dependencies": [
       "nh.ui.icon-manager",
@@ -109,7 +109,7 @@
   {
     "id": "nh.ui.controllers-manager",
     "name": "ControllersManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "ui",
     "dependencies": [
       "nh.system.logger"
@@ -118,7 +118,7 @@
   {
     "id": "nh.ui.dialog-manager",
     "name": "DialogManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "ui",
     "dependencies": [
       "nh.system.logger",
@@ -128,7 +128,7 @@
   {
     "id": "nh.ui.icon-manager",
     "name": "IconManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "ui",
     "dependencies": [
       "nh.system.logger"
@@ -137,7 +137,7 @@
   {
     "id": "nh.ui.layout-manager",
     "name": "LayoutManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "ui",
     "dependencies": [
       "nh.system.logger",
@@ -150,7 +150,7 @@
   {
     "id": "nh.ui.settings-manager",
     "name": "SettingsManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "ui",
     "dependencies": [
       "nh.system.config-manager",
@@ -162,7 +162,7 @@
   {
     "id": "nh.ui.theme-manager",
     "name": "ThemeManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "ui",
     "dependencies": [
       "nh.system.logger",
@@ -172,7 +172,7 @@
   {
     "id": "nh.system.bootloader",
     "name": "Bootloader",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "dependencies": [
       "nh.system.logger"
@@ -181,7 +181,7 @@
   {
     "id": "nh.system.config-manager",
     "name": "ConfigManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "dependencies": [
       "nh.system.logger",
@@ -191,7 +191,7 @@
   {
     "id": "nh.system.drag-drop",
     "name": "DragDropInstaller",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "description": "Drag & Drop plugin installer with visual overlay",
     "dependencies": [
@@ -204,7 +204,7 @@
   {
     "id": "nh.system.fs-driver-tauri",
     "name": "FsDriverTauri",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "dependencies": [
       "nh.system.logger",
@@ -214,7 +214,7 @@
   {
     "id": "nh.system.fs-manager",
     "name": "FsManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "dependencies": [
       "nh.system.logger"
@@ -223,7 +223,7 @@
   {
     "id": "nh.system.logger",
     "name": "Logger",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "description": "Centralized logging system with level-based filtering and event emission",
     "dependencies": []
@@ -231,7 +231,7 @@
   {
     "id": "nh.system.state-manager",
     "name": "StateManager",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "description": "Runtime session state storage (non-persistent)",
     "dependencies": [
@@ -241,7 +241,7 @@
   {
     "id": "nh.system.synapse",
     "name": "Synapse",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "description": "External plugin loader using SystemJS with shared scope injection",
     "dependencies": [
@@ -252,7 +252,7 @@
   {
     "id": "nh.system.titlebar",
     "name": "TitleBar",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "type": "system",
     "description": "Smart custom title bar with window controls",
     "dependencies": [
