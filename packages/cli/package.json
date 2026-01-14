@@ -3,13 +3,34 @@
     "version": "0.1.6",
     "description": "CLI tool for building Notehub plugins",
     "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/khton-tech/notehub.md.git",
+        "directory": "packages/cli"
+    },
+    "homepage": "https://github.com/khton-tech/notehub.md/tree/main/docs/forPluginMakers",
+    "bugs": "https://github.com/khton-tech/notehub.md/issues",
+    "keywords": [
+        "notehub",
+        "plugin",
+        "markdown",
+        "cli",
+        "nhp",
+        "note-taking"
+    ],
+    "author": "khton-tech",
+    "license": "AGPL-3.0",
+    "publishConfig": {
+        "access": "public"
+    },
     "bin": {
         "nhp": "./dist/index.js"
     },
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "files": [
-        "dist"
+        "dist",
+        "templates"
     ],
     "scripts": {
         "build": "tsc",

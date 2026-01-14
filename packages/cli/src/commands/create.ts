@@ -8,14 +8,23 @@
  * ├── manifest.json
  * ├── package.json
  * ├── tsconfig.json
+ * ├── PLUGIN_GUIDE.md
  * ├── src/
  * │   └── index.ts
+ * ├── docs/
+ * │   └── index.html
  * └── styles.css (optional)
  */
 
 import chalk from 'chalk';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Get templates directory path
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const TEMPLATES_DIR = resolve(__dirname, '..', '..', 'templates');
 
 /**
  * Create command options
@@ -59,6 +68,7 @@ export async function createCommand(options: CreateOptions): Promise<void> {
     // Create directory structure
     mkdirSync(targetDir, { recursive: true });
     mkdirSync(join(targetDir, 'src'), { recursive: true });
+    mkdirSync(join(targetDir, 'docs'), { recursive: true });
 
     // Generate files
     writeFileSync(
@@ -93,13 +103,31 @@ export async function createCommand(options: CreateOptions): Promise<void> {
         console.log(chalk.green('  ✓ styles.css'));
     }
 
+    // Copy template files
+    try {
+        const pluginGuide = readFileSync(join(TEMPLATES_DIR, 'PLUGIN_GUIDE.md'), 'utf-8');
+        writeFileSync(join(targetDir, 'PLUGIN_GUIDE.md'), pluginGuide);
+        console.log(chalk.green('  ✓ PLUGIN_GUIDE.md'));
+    } catch {
+        console.log(chalk.yellow('  ⚠ PLUGIN_GUIDE.md (template not found)'));
+    }
+
+    try {
+        const docsHtml = readFileSync(join(TEMPLATES_DIR, 'docs.html'), 'utf-8');
+        writeFileSync(join(targetDir, 'docs', 'index.html'), docsHtml);
+        console.log(chalk.green('  ✓ docs/index.html'));
+    } catch {
+        console.log(chalk.yellow('  ⚠ docs/index.html (template not found)'));
+    }
+
     // Print next steps
     console.log(chalk.green('\n✓ Plugin created successfully!\n'));
     console.log(chalk.white('Next steps:'));
     console.log(chalk.gray(`  1. cd ${id}`));
-    console.log(chalk.gray('  2. pnpm install'));
-    console.log(chalk.gray('  3. pnpm build'));
+    console.log(chalk.gray('  2. npm install'));
+    console.log(chalk.gray('  3. npm run build'));
     console.log(chalk.gray('  4. nhp build'));
+    console.log(chalk.gray('  5. Open docs/index.html for documentation'));
     console.log();
 }
 
