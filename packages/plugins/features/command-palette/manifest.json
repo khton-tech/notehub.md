@@ -1,0 +1,14 @@
+{
+    "id": "nh.features.command-palette",
+    "name": "Command Palette",
+    "version": "0.1.5",
+    "type": "features",
+    "description": "Spotlight-style command palette for quick actions",
+    "dependencies": [
+        "nh.system.command-manager",
+        "nh.system.logger",
+        "nh.ui.controllers-manager",
+        "nh.ui.ck-standard",
+        "nh.ui.icon-manager"
+    ]
+}

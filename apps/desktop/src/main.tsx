@@ -84,6 +84,10 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/titlebar');
         case '@notehub/bootloader':
             return import('@notehub/bootloader');
+        case '@notehub/command-manager':
+            return import('@notehub/command-manager');
+        case '@notehub/keymap':
+            return import('@notehub/keymap');
 
         // UI plugins
         case '@notehub/theme-manager':
@@ -117,6 +121,8 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/about');
         case '@notehub/backlinks':
             return import('@notehub/backlinks');
+        case '@notehub/command-palette':
+            return import('@notehub/command-palette');
 
         default:
             throw new Error(`Unknown plugin package: ${packageName}`);

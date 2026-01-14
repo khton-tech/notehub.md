@@ -799,20 +799,63 @@ export class ExplorerController {
         await this.createItem(contextPath, 'folder');
     }
 
-    private async createItem(contextPath: string | undefined, type: 'file' | 'folder') {
-        let parentPath = contextPath || this._selectedPath || this.rootPath;
-        if (!parentPath) return;
+    private log(level: 'info' | 'warn' | 'error', message: string): void {
+        this.app.api.invoke(`logger:${level}`, 'nh.features.explorer', message);
+    }
 
+    private async createItem(contextPath: string | undefined, type: 'file' | 'folder') {
+        this.log('info', `Creating ${type}, contextPath: ${contextPath || 'none'}`);
+
+        let parentPath = contextPath || this._selectedPath || this.rootPath;
+        if (!parentPath) {
+            this.log('warn', 'Cannot create item: no parent path available');
+            return;
+        }
+
+        // Check if the path is a file, if so use its parent directory
         const node = this.nodes.get(parentPath);
         if (node && !node.isDir) {
             parentPath = getParentPath(parentPath);
+            this.log('info', `Context was a file, using parent: ${parentPath}`);
         }
 
-        const parentNode = this.nodes.get(parentPath!);
-        if (!parentNode) return;
+        // If the node is not in cache, check if it's a directory and load it
+        let parentNode = this.nodes.get(parentPath!);
+        if (!parentNode) {
+            this.log('info', `Parent node not in cache, checking if path exists: ${parentPath}`);
 
-        if (!this.expandedPaths.has(parentPath!)) {
-            this.expandedPaths.add(parentPath!);
+            // Check if the path exists and is a directory on disk
+            try {
+                const exists = await this.app.api.invoke<boolean>('fs:exists', parentPath);
+                if (!exists) {
+                    this.log('warn', `Parent path does not exist: ${parentPath}`);
+                    // Fall back to root
+                    parentPath = this.rootPath;
+                    parentNode = parentPath ? this.nodes.get(parentPath) : undefined;
+                } else {
+                    // Path exists on disk but not in cache - use root instead
+                    // (the path might be outside our current vault or in an unloaded area)
+                    this.log('info', `Parent path exists but not loaded, falling back to root`);
+                    parentPath = this.rootPath;
+                    parentNode = parentPath ? this.nodes.get(parentPath) : undefined;
+                }
+            } catch (error) {
+                this.log('error', `Failed to check path existence: ${error}`);
+                // Fall back to root
+                parentPath = this.rootPath;
+                parentNode = parentPath ? this.nodes.get(parentPath) : undefined;
+            }
+        }
+
+        if (!parentNode || !parentPath) {
+            this.log('error', 'Cannot create item: parent node not found even after fallback');
+            return;
+        }
+
+        this.log('info', `Creating ${type} in: ${parentPath}`);
+
+        if (!this.expandedPaths.has(parentPath)) {
+            this.expandedPaths.add(parentPath);
         }
 
         try {

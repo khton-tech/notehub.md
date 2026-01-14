@@ -567,6 +567,20 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
     //     return PortalRegistry.getInstance().onUpdate(() => { ... });
     // }, []);
 
+    /**
+     * Handle focus to set command context
+     */
+    const handleFocus = useCallback(() => {
+        app.api.invoke('command:set-context', 'editor');
+    }, [app]);
+
+    /**
+     * Handle blur to reset command context
+     */
+    const handleBlur = useCallback(() => {
+        app.api.invoke('command:set-context', 'global');
+    }, [app]);
+
     return (
         <>
             <div
@@ -578,6 +592,9 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                     backgroundColor: 'var(--nh-bg-main)',
                     overflow: 'hidden',
                 }}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                tabIndex={-1}
             />
             {/* Styles for Portal Source (Edit Mode) */}
             <style>{`

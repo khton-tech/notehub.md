@@ -93,6 +93,60 @@ export class ExplorerPlugin implements IPlugin {
         app.events.on('app:vault-opened', vaultOpenedHandler);
         this.eventCleanups.push(() => app.events.off('app:vault-opened', vaultOpenedHandler));
 
+        // === Command Registration ===
+        // Register commands for command palette (if command-manager is available)
+        try {
+            app.api.invoke('command:register', {
+                id: 'explorer:new-file',
+                name: 'New File',
+                handler: async () => {
+                    if (this.controller) {
+                        // Get context: try to get selected path from explorer, or current file from editor
+                        let contextPath: string | undefined;
+                        try {
+                            const activePath = await app.api.invoke('editor:get-active-path');
+                            if (activePath) {
+                                // Get the directory of the active file
+                                contextPath = (activePath as string).replace(/\/[^/]+$/, '');
+                            }
+                        } catch {
+                            // Fallback to root
+                        }
+                        await this.controller.createNote(contextPath);
+                    }
+                },
+                areas: ['palette'],
+                defaultHotkey: 'Mod+N',
+            });
+
+            app.api.invoke('command:register', {
+                id: 'explorer:new-folder',
+                name: 'New Folder',
+                handler: async () => {
+                    if (this.controller) {
+                        // Get context: try to get selected path from explorer, or current file from editor
+                        let contextPath: string | undefined;
+                        try {
+                            const activePath = await app.api.invoke('editor:get-active-path');
+                            if (activePath) {
+                                // Get the directory of the active file
+                                contextPath = (activePath as string).replace(/\/[^/]+$/, '');
+                            }
+                        } catch {
+                            // Fallback to root
+                        }
+                        await this.controller.createFolder(contextPath);
+                    }
+                },
+                areas: ['palette'],
+                defaultHotkey: 'Mod+Shift+N',
+            });
+
+            this.log('info', 'Registered file/folder commands');
+        } catch {
+            // Command manager not available, skip registration
+        }
+
         this.log('info', 'Loaded successfully');
     }
 

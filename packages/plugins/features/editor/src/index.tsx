@@ -364,6 +364,21 @@ export class EditorPlugin implements IPlugin {
             return this.controller?.getCurrentPath() ?? null;
         });
 
+        // === Command Registration (context-aware) ===
+        // Register save command only active when editor is focused
+        app.api.invoke('command:register', {
+            id: 'editor:save',
+            name: 'Save File',
+            handler: async () => {
+                if (this.controller) {
+                    await this.controller.saveFile();
+                }
+            },
+            areas: ['palette', 'global'],
+            context: 'editor',
+            defaultHotkey: 'Mod+S',
+        });
+
         this.log('info', 'Loaded successfully');
     }
 

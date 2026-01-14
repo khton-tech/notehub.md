@@ -6,6 +6,7 @@
     "description": "Markdown Editor for Notehub",
     "dependencies": [
         "nh.system.config-manager",
+        "nh.system.command-manager",
         "nh.ui.settings-manager",
         "nh.system.fs-manager",
         "nh.system.logger",
