@@ -35,7 +35,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { EditorState, Compartment } from '@codemirror/state';
 import type { NotehubCore } from '@notehub/core';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, ViewPlugin, ViewUpdate } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, ViewPlugin, ViewUpdate, tooltips } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { notehubMarkdown } from '../lezer';
@@ -47,6 +47,7 @@ import { listsExtension } from '../cm/lists';
 import { linksExtension } from '../cm/links';
 import { codeBlocksExtension } from '../cm/code-blocks';
 import { portalPlugin } from '../cm/portals';
+import { slashMenu } from '../cm/slash-commands';
 // import { PortalRegistry } from '../cm/portals/PortalRegistry';
 import type { EditorController } from '../logic/EditorController';
 import type { EditorSettings } from '../logic/EditorConfig';
@@ -295,6 +296,27 @@ const inlineStylesTheme = EditorView.baseTheme({
     '.cm-code-mark': {
         color: 'var(--nh-text-muted, #666)',
     },
+
+    // Slash Command Menu (Deep Space Theme)
+    '.cm-tooltip.cm-tooltip-autocomplete': {
+        backgroundColor: 'var(--nh-bg-surface) !important',
+        border: '1px solid var(--nh-border-subtle)',
+        borderRadius: '8px',
+        backdropFilter: 'blur(12px)',
+        padding: '4px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+        zIndex: '9999 !important', // Ensure it sits on top
+    },
+    '.cm-tooltip-autocomplete > ul > li': {
+        padding: '6px 8px',
+        borderRadius: '4px',
+        color: 'var(--nh-text-secondary)',
+        fontFamily: 'var(--nh-font-family-sans)',
+    },
+    '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+        backgroundColor: 'var(--nh-accent-primary)',
+        color: 'var(--nh-bg-main)', // or white, depending on contrast
+    },
 });
 
 
@@ -400,6 +422,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 cursorAnimationPlugin,
 
                 // Core functionality
+                tooltips(), // Default parent is editor wrapper, ensures consistent theming
                 highlightActiveLine(),
                 drawSelection(),
                 history(),
@@ -426,6 +449,9 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 ...listsExtension,
                 ...linksExtension,
                 ...codeBlocksExtension,
+
+                // Slash Menu (Must be last to override other autocompletions if any)
+                slashMenu(),
 
                 // Document change listener
                 EditorView.updateListener.of((update) => {
@@ -590,7 +616,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                     width: '100%',
                     height: '100%',
                     backgroundColor: 'var(--nh-bg-main)',
-                    overflow: 'hidden',
+                    // overflow: 'hidden', // Removed to prevent clipping of tooltips
                 }}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
