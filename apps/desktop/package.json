@@ -1,6 +1,6 @@
 {
     "name": "@notehub/desktop",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "private": true,
     "type": "module",
     "scripts": {
@@ -14,6 +14,8 @@
         "@notehub/backlinks": "workspace:*",
         "@notehub/bootloader": "workspace:*",
         "@notehub/ck-standard": "workspace:*",
+        "@notehub/command-manager": "workspace:*",
+        "@notehub/command-palette": "workspace:*",
         "@notehub/config-manager": "workspace:*",
         "@notehub/context-menu": "workspace:*",
         "@notehub/controllers-manager": "workspace:*",
@@ -25,6 +27,8 @@
         "@notehub/fs-driver-tauri": "workspace:*",
         "@notehub/fs-manager": "workspace:*",
         "@notehub/icon-manager": "workspace:*",
+        "@notehub/keybindings": "workspace:*",
+        "@notehub/keymap": "workspace:*",
         "@notehub/layout-manager": "workspace:*",
         "@notehub/logger": "workspace:*",
         "@notehub/settings-manager": "workspace:*",

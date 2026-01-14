@@ -242,6 +242,48 @@ export type MenuItem = MenuAction | MenuSeparator | SubMenu;
 export type MenuProvider = (payload: unknown) => MenuItem[] | Promise<MenuItem[]>;
 
 // ============================================================================
+// Command System Types
+// ============================================================================
+
+/**
+ * Areas where a command can be displayed/triggered
+ * - 'palette': Shown in the command palette (Mod+P)
+ * - 'slash-menu': Shown in slash-menu inside editor
+ * - 'global': Only accessible via hotkey, not listed anywhere
+ */
+export type CommandArea = 'palette' | 'slash-menu' | 'global';
+
+/**
+ * Command definition for registration
+ */
+export interface CommandDefinition {
+    /** Unique identifier (e.g., 'editor:save', 'palette:open') */
+    id: string;
+    /** Human-readable name shown in UI */
+    name: string;
+    /** Handler function to execute */
+    handler: () => void | Promise<void>;
+    /** Where this command should be listed visually */
+    areas?: CommandArea[];
+    /** Required context for execution (e.g., 'editor', 'explorer'). If null/undefined, always active. */
+    context?: string;
+    /** Default keybinding (e.g., 'Mod+B', 'Mod+Shift+P') */
+    defaultHotkey?: string;
+}
+
+/**
+ * Command info returned for palette display
+ */
+export interface VisibleCommand {
+    /** Command ID */
+    id: string;
+    /** Display name */
+    name: string;
+    /** Current hotkey (may differ from default if user customized) */
+    hotkey?: string;
+}
+
+// ============================================================================
 // Synapse Types (External Plugin Loader)
 // ============================================================================
 
@@ -611,6 +653,52 @@ export interface NotehubApiMap {
      * @returns Array of plugin metadata objects
      */
     'synapse:get-details': () => unknown[];
+
+    // =========================================================================
+    // Command Manager Plugin (nh.system.command-manager)
+    // =========================================================================
+
+    /**
+     * Register a command
+     * @param def - Command definition object
+     */
+    'command:register': (def: CommandDefinition) => void;
+
+    /**
+     * Get all registered commands
+     * @returns Array of all command definitions
+     */
+    'command:get-all': () => CommandDefinition[];
+
+    /**
+     * Execute a command by ID
+     * @param id - Command ID to execute
+     * @returns Promise that resolves when command completes
+     */
+    'command:execute': (id: string) => Promise<void>;
+
+    /**
+     * Set the active command context
+     * @param context - Context identifier (e.g., 'editor', 'explorer', 'global')
+     */
+    'command:set-context': (context: string) => void;
+
+    /**
+     * Get commands visible for the current context
+     * @returns Array of visible commands for the palette
+     */
+    'command:get-visible': () => VisibleCommand[];
+
+    // =========================================================================
+    // Keymap Plugin (nh.system.keymap)
+    // =========================================================================
+
+    /**
+     * Register a keybinding for a command
+     * @param commandId - ID of the command
+     * @param hotkey - Hotkey string (e.g. "Mod+S")
+     */
+    'keymap:register-binding': (commandId: string, hotkey: string) => void;
 }
 
 // ============================================================================

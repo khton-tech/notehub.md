@@ -1,0 +1,10 @@
+{
+    "id": "nh.system.command-manager",
+    "name": "Command Manager",
+    "version": "0.1.5",
+    "type": "system",
+    "description": "Central command system for context-aware user actions",
+    "dependencies": [
+        "nh.system.logger"
+    ]
+}

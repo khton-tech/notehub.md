@@ -1,0 +1,11 @@
+{
+    "id": "nh.system.keymap",
+    "name": "Keymap Manager",
+    "version": "0.1.0",
+    "type": "system",
+    "description": "Handles keyboard shortcuts and input events",
+    "dependencies": [
+        "nh.system.command-manager",
+        "nh.system.logger"
+    ]
+}
