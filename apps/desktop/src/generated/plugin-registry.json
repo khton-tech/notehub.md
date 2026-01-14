@@ -22,20 +22,6 @@
     ]
   },
   {
-    "id": "nh.features.command-palette",
-    "name": "Command Palette",
-    "version": "0.1.5",
-    "type": "features",
-    "description": "Spotlight-style command palette for quick actions",
-    "dependencies": [
-      "nh.system.command-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.ck-standard",
-      "nh.ui.icon-manager"
-    ]
-  },
-  {
     "id": "nh.features.editor",
     "name": "Editor",
     "version": "0.1.5",
@@ -51,6 +37,20 @@
       "nh.ui.dialog-manager",
       "nh.ui.icon-manager",
       "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.features.command-palette",
+    "name": "Command Palette",
+    "version": "0.1.5",
+    "type": "features",
+    "description": "Spotlight-style command palette for quick actions",
+    "dependencies": [
+      "nh.system.command-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.ck-standard",
+      "nh.ui.icon-manager"
     ]
   },
   {
@@ -85,20 +85,6 @@
     ]
   },
   {
-    "id": "nh.features.vault-picker",
-    "name": "VaultPicker",
-    "version": "0.1.5",
-    "type": "feature",
-    "dependencies": [
-      "nh.system.fs-manager",
-      "nh.system.config-manager",
-      "nh.system.state-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.layout-manager"
-    ]
-  },
-  {
     "id": "nh.features.workbench",
     "name": "Workbench",
     "version": "0.1.5",
@@ -110,6 +96,20 @@
       "nh.ui.ck-standard",
       "nh.system.state-manager",
       "nh.features.explorer"
+    ]
+  },
+  {
+    "id": "nh.features.vault-picker",
+    "name": "VaultPicker",
+    "version": "0.1.5",
+    "type": "feature",
+    "dependencies": [
+      "nh.system.fs-manager",
+      "nh.system.config-manager",
+      "nh.system.state-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.layout-manager"
     ]
   },
   {

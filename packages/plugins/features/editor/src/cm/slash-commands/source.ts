@@ -1,4 +1,5 @@
 import { CompletionContext, type CompletionResult, snippet } from "@codemirror/autocomplete";
+import { getSearchCandidates } from "./layoutEngine";
 
 /**
  * Trigger regex: matches a slash at the start of a line or after a space, 
@@ -57,40 +58,47 @@ export function slashCommandSource(context: CompletionContext): CompletionResult
         };
     };
 
-    const result = {
+    // 3. Get the query string (text after the slash)
+    const query = match.text.slice(slashOffset + 1).toLowerCase();
+
+    const options = [
+        // --- Headings ---
+        { label: "Heading 1 Big Header", displayLabel: "Heading 1", type: "H1", apply: cleanSlash("# "), detail: "Big Header" },
+        { label: "Heading 2 Medium Header", displayLabel: "Heading 2", type: "H2", apply: cleanSlash("## "), detail: "Medium Header" },
+        { label: "Heading 3 Small Header", displayLabel: "Heading 3", type: "H3", apply: cleanSlash("### "), detail: "Small Header" },
+
+        // --- Lists ---
+        { label: "Bullet List Unordered List", displayLabel: "Bullet List", type: "text", apply: cleanSlash("- "), detail: "Unordered List" },
+        { label: "Numbered List Ordered List", displayLabel: "Numbered List", type: "text", apply: cleanSlash("1. "), detail: "Ordered List" },
+        { label: "Task List Checkbox", displayLabel: "Task List", type: "text", apply: cleanSlash("- [ ] "), detail: "Checkbox" },
+
+        // --- Complex Blocks ---
+        {
+            label: "Callout Info Block",
+            displayLabel: "Callout",
+            type: "function",
+            apply: cleanSlash(snippet("> [!INFO] ${}\n> ")),
+            detail: "Info Block"
+        },
+        {
+            label: "Code Block Code Snippet",
+            displayLabel: "Code Block",
+            type: "function",
+            apply: cleanSlash(snippet("```${language}\n${}\n```")),
+            detail: "Code Snippet"
+        }
+    ];
+
+    // Filter options based on whether label/detail contains any query variant (cross-layout support)
+    const candidates = getSearchCandidates(query);
+    const filteredOptions = options.filter(opt => {
+        const text = (opt.label + (opt.detail || "")).toLowerCase();
+        return candidates.some(variant => text.includes(variant));
+    });
+
+    return {
         from: slashPos + 1,
-        options: [
-            // --- Headings ---
-            { label: "Heading 1", type: "H1", apply: cleanSlash("# "), detail: "Big Header" },
-            { label: "Heading 2", type: "H2", apply: cleanSlash("## "), detail: "Medium Header" },
-            { label: "Heading 3", type: "H3", apply: cleanSlash("### "), detail: "Small Header" },
-
-            // --- Lists ---
-            { label: "Bullet List", type: "text", apply: cleanSlash("- "), detail: "Unordered List" },
-            { label: "Numbered List", type: "text", apply: cleanSlash("1. "), detail: "Ordered List" },
-            { label: "Task List", type: "text", apply: cleanSlash("- [ ] "), detail: "Checkbox" },
-
-            // --- Complex Blocks ---
-            {
-                label: "Callout",
-                type: "function",
-                apply: cleanSlash(snippet("> [!INFO] ${}\n> ")),
-                detail: "Info Block"
-            },
-            {
-                label: "Code Block",
-                type: "function",
-                apply: cleanSlash(snippet("```${language}\n${}\n```")),
-                detail: "Code Snippet"
-            }
-        ],
-        // Enable filtering so typing "/h" narrows down to Headings
-        filter: true,
-
-        // validFor must match the text AFTER the slash (result.from)
-        // matches any sequence of characters that are not slashes or newlines
-        validFor: /^[^/\n]*$/
+        options: filteredOptions,
+        filter: false
     };
-
-    return result;
 }

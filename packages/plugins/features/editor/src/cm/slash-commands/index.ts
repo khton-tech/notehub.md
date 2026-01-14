@@ -2,6 +2,7 @@ import { autocompletion, startCompletion } from "@codemirror/autocomplete";
 import type { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { slashCommandSource } from "./source";
+import { slashPlaceholder } from "./placeholder";
 
 /**
  * Listener that detects backspace/delete operations.
@@ -45,6 +46,7 @@ const slashCommandUpdater = EditorView.updateListener.of((update) => {
  */
 export function slashMenu(): Extension {
     return [
+        slashPlaceholder(),
         autocompletion({
             override: [slashCommandSource],
             // defaultKeymap is usually included by 'autocompletion()', 

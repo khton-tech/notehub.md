@@ -18,6 +18,7 @@ import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import type { VisibleCommand } from '@notehub/api';
 import { Card, ListItem } from '@notehub/ck-standard';
 import { Icon } from '@notehub/icon-manager';
+import { getSearchCandidates } from './utils/layoutEngine';
 
 // ============================================================================
 // PaletteModal Component
@@ -41,7 +42,7 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose }) =
         setTimeout(() => inputRef.current?.focus(), 50);
     }, []);
 
-    // Filter commands based on query
+    // Filter commands based on query (with cross-layout support)
     useEffect(() => {
         if (!query.trim()) {
             setFilteredCommands(commands);
@@ -49,11 +50,17 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose }) =
             return;
         }
 
-        const lowerQuery = query.toLowerCase();
-        const filtered = commands.filter(cmd =>
-            cmd.name.toLowerCase().includes(lowerQuery) ||
-            cmd.id.toLowerCase().includes(lowerQuery)
-        );
+        // Generate search candidates for all layout interpretations
+        const candidates = getSearchCandidates(query.toLowerCase());
+
+        // Filter commands: match if ANY candidate is a substring of the command name or id
+        const filtered = commands.filter(cmd => {
+            const name = cmd.name.toLowerCase();
+            const id = cmd.id.toLowerCase();
+            return candidates.some(
+                variant => name.includes(variant) || id.includes(variant)
+            );
+        });
         setFilteredCommands(filtered);
         setSelectedIndex(0);
     }, [query, commands]);
