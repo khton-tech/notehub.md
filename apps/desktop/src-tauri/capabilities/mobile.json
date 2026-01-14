@@ -1,0 +1,59 @@
+{
+    "$schema": "../gen/schemas/mobile-schema.json",
+    "identifier": "mobile",
+    "description": "Capability for the mobile app",
+    "platforms": [
+        "android"
+    ],
+    "windows": [
+        "main"
+    ],
+    "permissions": [
+        "core:default",
+        "fs:default",
+        "fs:allow-read",
+        "fs:allow-write",
+        "fs:allow-exists",
+        "fs:allow-mkdir",
+        "fs:allow-read-dir",
+        "fs:allow-read-file",
+        "fs:allow-read-text-file",
+        "fs:allow-write-file",
+        "fs:allow-write-text-file",
+        "fs:allow-remove",
+        "fs:allow-rename",
+        "fs:allow-app-read-recursive",
+        "fs:allow-app-write-recursive",
+        "fs:allow-document-read-recursive",
+        "fs:allow-document-write-recursive",
+        "fs:allow-download-read-recursive",
+        "fs:allow-download-write-recursive",
+        "fs:allow-home-read-recursive",
+        "fs:allow-home-write-recursive",
+        {
+            "identifier": "fs:scope",
+            "allow": [
+                {
+                    "path": "content://**"
+                },
+                {
+                    "path": "$DOCUMENT/**"
+                },
+                {
+                    "path": "$DOWNLOAD/**"
+                },
+                {
+                    "path": "$HOME/**"
+                },
+                {
+                    "path": "$APP/**"
+                }
+            ]
+        },
+        "dialog:default",
+        "dialog:allow-open",
+        "os:default",
+        "opener:default",
+        "android-fs:default"
+    ]
+}

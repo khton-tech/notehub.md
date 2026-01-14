@@ -80,6 +80,78 @@ export class VaultService {
     }
 
     /**
+     * Helper to extract a human-readable name from a path
+     * Handles standard paths and Android SAF paths
+     */
+    private getNameFromPath(path: string): string {
+        // Handle SAF paths
+        if (path.startsWith('/saf-root/')) {
+            try {
+                // Remove prefix
+                const withoutPrefix = path.substring('/saf-root/'.length);
+
+                // The URI part is encoded, so it won't contain literal slashes
+                const firstSlash = withoutPrefix.indexOf('/');
+
+                if (firstSlash !== -1) {
+                    // We have a relative path component (e.g. /saf-root/.../MyVault)
+                    // Use the last part of the relative path
+                    const relative = withoutPrefix.substring(firstSlash + 1);
+                    const parts = relative.split(/[/\\]/);
+                    return parts[parts.length - 1] || 'Unknown';
+                }
+
+                // No relative path, must extract from the JSON URI
+                const decodedJson = decodeURIComponent(withoutPrefix);
+                let uriStr = '';
+
+                try {
+                    const jsonObj = JSON.parse(decodedJson);
+                    if (jsonObj && jsonObj.uri) {
+                        uriStr = jsonObj.uri;
+                    }
+                } catch {
+                    // Maybe it wasn't JSON but just a URI? (Backward compatibility)
+                    uriStr = decodedJson;
+                }
+
+                if (uriStr) {
+                    // Try to extract from content URI
+                    // Examples: 
+                    // content://.../tree/primary%3AVaultName
+                    // content://.../document/primary%3AVaultName
+                    const decodedUri = decodeURIComponent(uriStr);
+
+                    // Remove trailing slashes
+                    const cleanUri = decodedUri.replace(/\/+$/, '');
+
+                    // Split by slash to get the last segment (usually the ID)
+                    const parts = cleanUri.split('/');
+                    const lastPart = parts[parts.length - 1]; // e.g. "primary:VaultName"
+
+                    if (lastPart) {
+                        // If it contains colon (common in Android docs IDs), take the part after colon
+                        if (lastPart.includes(':')) {
+                            const idParts = lastPart.split(':');
+                            return idParts[idParts.length - 1] || lastPart;
+                        }
+                        return lastPart;
+                    }
+
+                    return 'Unknown';
+                }
+            } catch (e) {
+                this.log('warn', `Failed to parse SAF path for name: ${e}`);
+            }
+        }
+
+        // Standard path handling
+        const sep = path.includes('/') ? '/' : '\\';
+        const segments = path.split(sep);
+        return segments[segments.length - 1] || 'Unknown';
+    }
+
+    /**
      * Open an existing vault
      *
      * @param fullPath - Full path to the vault directory
@@ -102,8 +174,7 @@ export class VaultService {
             }
 
             // Extract vault name from path
-            const parts = fullPath.split(/[/\\]/);
-            const name = parts[parts.length - 1] || 'Unknown';
+            const name = this.getNameFromPath(fullPath);
 
             // Update history (deduplicate, unshift to top, limit to 10)
             const currentHistory = await this.getRecentVaults();

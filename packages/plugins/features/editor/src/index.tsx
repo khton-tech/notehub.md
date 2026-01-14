@@ -289,7 +289,11 @@ export class EditorPlugin implements IPlugin {
         this.controller = new EditorController(app);
 
         // Load settings from config-manager
-        await this.controller.loadSettings();
+        try {
+            await this.controller.loadSettings();
+        } catch (error) {
+            this.log('warn', `Failed to load settings (using defaults): ${error}`);
+        }
 
         // Restore last opened file
         // We don't await this to avoid blocking the UI render
