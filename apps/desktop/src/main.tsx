@@ -117,6 +117,8 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/explorer');
         case '@notehub/editor':
             return import('@notehub/editor');
+        case '@notehub/keybindings':
+            return import('@notehub/keybindings');
         case '@notehub/about':
             return import('@notehub/about');
         case '@notehub/backlinks':
@@ -246,6 +248,10 @@ async function initApp(onStatusUpdate: (status: string) => void): Promise<Notehu
             console.log(`[Desktop]   ✓ ${entry.id} imported successfully`);
         } catch (error) {
             console.error(`[Desktop]   ✗ Failed to import ${entry.id}:`, error);
+            if (error instanceof Error) {
+                console.error(`[Desktop]   Details: ${error.message}`);
+                console.error(`[Desktop]   Stack: ${error.stack}`);
+            }
             // Continue with other plugins - one failure shouldn't crash the app
         }
     }

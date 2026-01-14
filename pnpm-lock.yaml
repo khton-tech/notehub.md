@@ -80,6 +80,9 @@ importers:
       '@notehub/icon-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/ui/icon-manager
+      '@notehub/keybindings':
+        specifier: workspace:*
+        version: link:../../packages/plugins/features/keybindings
       '@notehub/keymap':
         specifier: workspace:*
         version: link:../../packages/plugins/system/keymap
@@ -436,6 +439,40 @@ importers:
       react-dnd-html5-backend:
         specifier: ^16.0.1
         version: 16.0.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.2.0
+        version: 18.3.7(@types/react@18.3.27)
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/plugins/features/keybindings:
+    dependencies:
+      '@notehub/ck-standard':
+        specifier: workspace:*
+        version: link:../../ui/ck-standard
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+      '@notehub/settings-manager':
+        specifier: workspace:*
+        version: link:../../ui/settings-manager
+      lucide-react:
+        specifier: ^0.469.0
+        version: 0.469.0(react@18.3.1)
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)

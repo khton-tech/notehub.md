@@ -27,6 +27,7 @@
         "@notehub/fs-driver-tauri": "workspace:*",
         "@notehub/fs-manager": "workspace:*",
         "@notehub/icon-manager": "workspace:*",
+        "@notehub/keybindings": "workspace:*",
         "@notehub/keymap": "workspace:*",
         "@notehub/layout-manager": "workspace:*",
         "@notehub/logger": "workspace:*",

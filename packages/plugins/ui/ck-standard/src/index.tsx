@@ -4,6 +4,8 @@ import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
 import { Button, Label, Card, StatusBar, RibbonButton, EmptySlot, type StatusBarProps, Toggle, Select, Input } from './components';
 
 export * from './components';
+import { HotkeyRecorder } from './components/HotkeyRecorder';
+export { HotkeyRecorder };
 
 /**
  * Status report payload from EventBus
@@ -81,6 +83,7 @@ export class CKStandardPlugin implements IPlugin {
         app.api.invoke('controller:register', 'toggle', Toggle);
         app.api.invoke('controller:register', 'select', Select);
         app.api.invoke('controller:register', 'input', Input);
+        app.api.invoke('controller:register', 'hotkey-recorder', HotkeyRecorder);
 
         this.log('info', 'Loaded successfully');
     }

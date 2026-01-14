@@ -4,6 +4,13 @@ import type { NotehubCore } from '@notehub/core';
 export class KeyListener {
     /** Map of hotkey string -> commandId */
     private hotkeyMap: Map<string, string> = new Map();
+
+    /** Map of commandId -> hotkey strings (User Overrides) */
+    private overrides: Map<string, string[]> = new Map();
+
+    /** Map of commandId -> default hotkey strings (Plugin Defaults) */
+    private defaults: Map<string, string[]> = new Map();
+
     private boundKeydownHandler: ((e: KeyboardEvent) => void) | null = null;
     private app: NotehubCore;
 
@@ -59,8 +66,11 @@ export class KeyListener {
     /**
      * Initialize listeners and load initial keybindings
      */
-    init(): void {
+    async init(): Promise<void> {
         this.log('info', `Initializing KeyListener. Platform: ${navigator.platform}, UserAgent: ${navigator.userAgent}`);
+
+        // Load overrides first
+        await this.loadOverrides();
 
         this.boundKeydownHandler = this.handleKeydown.bind(this);
         // USE CAPTURE PHASE to intercept events before they hit default handlers or other listeners
@@ -84,12 +94,130 @@ export class KeyListener {
     }
 
     /**
-     * Register a new keybinding
+     * Get the current effective bindings for a command
+     */
+    getBindings(commandId: string): string[] {
+        // If overridden, return overrides
+        if (this.overrides.has(commandId)) {
+            return this.overrides.get(commandId) || [];
+        }
+        // Otherwise return defaults
+        return this.defaults.get(commandId) || [];
+    }
+
+    /**
+     * Register a default keybinding from a plugin
      */
     registerBinding(commandId: string, hotkey: string): void {
         const normalized = this.normalizeHotkey(hotkey);
-        this.hotkeyMap.set(normalized, commandId);
-        this.log('info', `Registered binding: ${hotkey} -> ${commandId}`);
+
+        // Store in defaults
+        if (!this.defaults.has(commandId)) {
+            this.defaults.set(commandId, []);
+        }
+        const cmdDefaults = this.defaults.get(commandId)!;
+        if (!cmdDefaults.includes(normalized)) {
+            cmdDefaults.push(normalized);
+        }
+
+        // Apply if not overridden
+        if (!this.overrides.has(commandId)) {
+            this.hotkeyMap.set(normalized, commandId);
+            this.log('info', `Registered binding: ${normalized} -> ${commandId}`);
+        } else {
+            this.log('info', `Registered binding (SHADOWED by override): ${normalized} -> ${commandId}`);
+        }
+    }
+
+    /**
+     * Update the hotkey map to reflect the current effective bindings for a command
+     */
+    private updateHotkeyMapForCommand(commandId: string): void {
+        // Clear old bindings for this command
+        for (const [key, cmd] of this.hotkeyMap.entries()) {
+            if (cmd === commandId) {
+                this.hotkeyMap.delete(key);
+            }
+        }
+
+        // Re-apply effective bindings
+        const effective = this.getBindings(commandId);
+        for (const key of effective) {
+            this.hotkeyMap.set(key, commandId);
+        }
+    }
+
+    /**
+     * Add a keybinding (User Override)
+     */
+    async addBinding(commandId: string, hotkey: string): Promise<void> {
+        const normalized = this.normalizeHotkey(hotkey);
+
+        // Get current effective bindings
+        const current = [...this.getBindings(commandId)];
+
+        if (!current.includes(normalized)) {
+            current.push(normalized);
+            this.overrides.set(commandId, current);
+            this.updateHotkeyMapForCommand(commandId);
+            await this.saveOverrides();
+            this.log('info', `User added binding: ${normalized} -> ${commandId}`);
+        }
+    }
+
+    /**
+     * Remove a keybinding (User Override)
+     */
+    async removeBinding(commandId: string, hotkey: string): Promise<void> {
+        const normalized = this.normalizeHotkey(hotkey);
+
+        // Get current effective bindings
+        const current = [...this.getBindings(commandId)];
+
+        const idx = current.indexOf(normalized);
+        if (idx !== -1) {
+            current.splice(idx, 1);
+            this.overrides.set(commandId, current);
+            this.updateHotkeyMapForCommand(commandId);
+            await this.saveOverrides();
+            this.log('info', `User removed binding: ${normalized} from ${commandId}`);
+        }
+    }
+
+    /**
+     * Reset a command to its default
+     */
+    async reset(commandId: string): Promise<void> {
+        if (!this.overrides.has(commandId)) return;
+
+        this.overrides.delete(commandId);
+        this.updateHotkeyMapForCommand(commandId);
+        await this.saveOverrides();
+        this.log('info', `User reset: ${commandId}`);
+    }
+
+    private async loadOverrides(): Promise<void> {
+        try {
+            const stored = await this.app.api.invoke('config:get', 'keymap.overrides');
+            if (stored && typeof stored === 'object') {
+                for (const [cmdId, value] of Object.entries(stored)) {
+                    // MIGRATION: Handle legacy string overrides
+                    if (typeof value === 'string') {
+                        this.overrides.set(cmdId, [this.normalizeHotkey(value)]);
+                    } else if (Array.isArray(value)) {
+                        this.overrides.set(cmdId, value.map(k => this.normalizeHotkey(k)));
+                    }
+                }
+                this.log('info', `Loaded ${this.overrides.size} overrides`);
+            }
+        } catch (e) {
+            this.log('warn', 'Failed to load overrides');
+        }
+    }
+
+    private async saveOverrides(): Promise<void> {
+        const obj = Object.fromEntries(this.overrides);
+        await this.app.api.invoke('config:set', 'keymap.overrides', obj);
     }
 
     /**
@@ -107,7 +235,7 @@ export class KeyListener {
                         count++;
                     }
                 }
-                this.log('info', `Synced ${count} initial keybindings. Map size: ${this.hotkeyMap.size}`);
+                this.log('info', `Synced ${count} initial keybindings. Default map size: ${this.defaults.size}`);
             }
         } catch (err) {
             this.log('warn', `Failed to sync initial bindings: ${err}`);
