@@ -12,6 +12,7 @@
         "dev:desktop": "pnpm predev && pnpm --filter @notehub/desktop tauri dev",
         "dev:desktop:debug": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri dev",
         "dev:android": "pnpm predev && pnpm --filter @notehub/desktop tauri android dev",
+        "android:release": "tsx scripts/build-android-release.ts",
         "build:desktop": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri build"
     },
     "devDependencies": {
