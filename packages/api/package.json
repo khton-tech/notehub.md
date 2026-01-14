@@ -1,7 +1,16 @@
 {
-    "name": "@notehub/api",
-    "version": "0.1.6",
+    "name": "@notehub.md/api",
+    "version": "0.1.0",
     "description": "Public SDK for Notehub.md plugin development",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/khton-tech/notehub.md.git",
+        "directory": "packages/api"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "license": "AGPL-3.0",
     "type": "module",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",

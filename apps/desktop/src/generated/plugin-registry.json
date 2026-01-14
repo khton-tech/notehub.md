@@ -72,19 +72,6 @@
     ]
   },
   {
-    "id": "nh.features.keybindings",
-    "name": "Keybindings",
-    "version": "1.0.0",
-    "description": "Keybindings Editor for Settings",
-    "type": "feature",
-    "main": "dist/index.js",
-    "dependencies": [
-      "nh.ui.settings-manager",
-      "nh.system.command-manager",
-      "nh.system.keymap"
-    ]
-  },
-  {
     "id": "nh.features.vault-picker",
     "name": "VaultPicker",
     "version": "0.1.5",
@@ -110,6 +97,19 @@
       "nh.ui.ck-standard",
       "nh.system.state-manager",
       "nh.features.explorer"
+    ]
+  },
+  {
+    "id": "nh.features.keybindings",
+    "name": "Keybindings",
+    "version": "1.0.0",
+    "description": "Keybindings Editor for Settings",
+    "type": "feature",
+    "main": "dist/index.js",
+    "dependencies": [
+      "nh.ui.settings-manager",
+      "nh.system.command-manager",
+      "nh.system.keymap"
     ]
   },
   {

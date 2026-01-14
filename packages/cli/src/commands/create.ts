@@ -185,7 +185,7 @@ function generatePackageJson(id: string, name: string): string {
         },
         dependencies: {},
         devDependencies: {
-            '@notehub/api': 'workspace:*',
+            '@notehub.md/api': '^0.1.0',
             '@types/react': '^18.3.0',
             typescript: '^5.6.0',
         },
@@ -231,7 +231,7 @@ function generateEntryPoint(id: string, name: string): string {
  * @module ${id}
  */
 
-import { NotehubPlugin, PluginContext } from '@notehub/api';
+import { NotehubPlugin, PluginContext } from '@notehub.md/api';
 
 class ${toPascalCase(id)}Plugin extends NotehubPlugin {
     async onload(ctx: PluginContext): Promise<void> {

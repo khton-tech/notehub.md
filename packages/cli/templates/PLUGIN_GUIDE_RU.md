@@ -68,7 +68,7 @@ my-plugin/
 Самый быстрый способ создать новый плагин:
 
 ```bash
-npx @notehub/cli create ext.my-plugin --name "My Plugin"
+npx "@notehub.md/cli" create ext.my-plugin --name "My Plugin"
 ```
 
 Это сгенерирует полную структуру плагина со всеми необходимыми файлами.

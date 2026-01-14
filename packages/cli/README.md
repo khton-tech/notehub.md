@@ -2,15 +2,15 @@
   <img src="https://raw.githubusercontent.com/khton-tech/notehub.md/main/logos/plugin-bundle-background.svg" alt="Notehub Plugin" width="128" />
 </p>
 
-<h1 align="center">@notehub/cli</h1>
+<h1 align="center">@notehub.md/cli</h1>
 
 <p align="center">
   <strong>🔧 CLI tool for building Notehub.md plugins</strong>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@notehub/cli">
-    <img src="https://img.shields.io/npm/v/@notehub/cli?style=flat-square&color=blueviolet" alt="npm version" />
+  <a href="https://www.npmjs.com/package/@notehub.md/cli">
+    <img src="https://img.shields.io/npm/v/@notehub.md/cli?style=flat-square&color=blueviolet" alt="npm version" />
   </a>
   <a href="https://github.com/khton-tech/notehub.md/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square" alt="License" />
@@ -19,12 +19,32 @@
 
 ---
 
-## 🚀 Quick Start
+## 📦 Installation
+
+To use `nhp` command globally (recommended for frequent use):
+
+```bash
+# Windows (PowerShell)
+npm install -g "@notehub.md/cli"
+
+# macOS / Linux
+npm install -g @notehub.md/cli
+```
+
+Then you can simply run:
+
+```bash
+nhp create my-plugin
+```
+
+---
+
+## 🚀 Quick Start (via npx)
 
 ### Create a new plugin
 
 ```bash
-npx @notehub/cli create ext.my-plugin
+npx "@notehub.md/cli" create ext.my-plugin
 ```
 
 This will scaffold a complete plugin project with:
@@ -40,7 +60,7 @@ This will scaffold a complete plugin project with:
 ```bash
 cd ext.my-plugin
 npm install
-npx @notehub/cli build
+npx "@notehub.md/cli" build
 ```
 
 This creates `ext.my-plugin.nhp` — a ready-to-install plugin archive.

@@ -68,7 +68,7 @@ The manifest describes your plugin to Notehub:
 The fastest way to create a new plugin:
 
 ```bash
-npx @notehub/cli create ext.my-plugin --name "My Plugin"
+npx "@notehub.md/cli" create ext.my-plugin --name "My Plugin"
 ```
 
 This generates the complete plugin structure with all necessary files.
