@@ -20,7 +20,7 @@
     },
     "dependencies": {
         "@notehub/core": "workspace:*",
-        "@notehub/api": "workspace:*",
+        "@notehub.md/api": "workspace:*",
         "@notehub/ck-standard": "workspace:*",
         "@notehub/icon-manager": "workspace:*",
         "react": "^19.0.0",

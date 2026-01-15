@@ -1,4 +1,4 @@
-import type { CommandDefinition, VisibleCommand } from '@notehub/api';
+import type { CommandDefinition, VisibleCommand } from '@notehub.md/api';
 import type { NotehubCore } from '@notehub/core';
 
 /**

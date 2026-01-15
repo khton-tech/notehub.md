@@ -276,19 +276,18 @@ const theme = await ctx.invokeApi<string>('theme:get-current');
 const themes = await ctx.invokeApi<string[]>('theme:list');
 ```
 
-## Editor Widget API
+## Editor Portal API
 
 ```typescript
-// Регистрация виджета
-await ctx.invokeApi(
-    'editor:register-widget',
-    'my-plugin:progress-bar',
-    /\[progress:(\d+)\]/g,
-    ProgressBarComponent
-);
+// Регистрация портала (инлайн-виджета)
+await ctx.invokeApi('editor:register-portal', {
+    id: 'my-plugin:progress-bar',
+    regex: /\[progress:(\d+)\]/g,
+    component: ProgressBarComponent
+});
 
 // Отмена регистрации (опционально - очищается автоматически)
-await ctx.invokeApi('editor:unregister-widget', 'my-plugin:progress-bar');
+await ctx.invokeApi('editor:unregister-portal', 'my-plugin:progress-bar');
 ```
 
 ## Settings API
@@ -407,14 +406,17 @@ const ProgressBar: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
     );
 };
 
+// Плагин
 export default class ProgressBarPlugin extends NotehubPlugin {
     async onload(ctx: PluginContext): Promise<void> {
-        await ctx.invokeApi(
-            'editor:register-widget',
-            'progress-bar',
-            /\[progress:(\d+)\]/g,
-            ProgressBar
-        );
+        // Совпадение: [progress:XX] где XX — число
+        await ctx.invokeApi('editor:register-portal', {
+            id: 'progress-bar',
+            regex: /\[progress:(\d+)\]/g,
+            component: ProgressBar
+        });
+        
+        await ctx.invokeApi('logger:info', 'ProgressBar', 'Портал зарегистрирован');
     }
     
     async onunload(): Promise<void> {}
@@ -523,12 +525,11 @@ const WordCounter: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
 };
 
 // Регистрация с паттерном: {{count: ваш текст здесь}}
-await ctx.invokeApi(
-    'editor:register-widget',
-    'word-counter',
-    /\{\{count:\s*(.+?)\}\}/g,
-    WordCounter
-);
+await ctx.invokeApi('editor:register-portal', {
+    id: 'word-counter',
+    regex: /\{\{count:\s*(.+?)\}\}/g,
+    component: WordCounter
+});
 ```
 
 ## Полноценный плагин

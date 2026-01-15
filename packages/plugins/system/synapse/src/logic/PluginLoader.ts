@@ -9,7 +9,7 @@
  * for automatic cleanup when the plugin is unloaded.
  */
 
-import type { NotehubPlugin } from '@notehub/api';
+import type { NotehubPlugin } from '@notehub.md/api';
 import type { IPlugin, NotehubCore } from '@notehub/core';
 import type { ExternalPluginManifest, LoadedPluginRecord, PluginLoadResult, DiscoveredPluginRecord } from '../types.js';
 import { PluginContextImpl } from './PluginContextImpl.js';

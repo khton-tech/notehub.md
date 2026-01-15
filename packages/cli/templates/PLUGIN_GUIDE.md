@@ -276,19 +276,18 @@ const theme = await ctx.invokeApi<string>('theme:get-current');
 const themes = await ctx.invokeApi<string[]>('theme:list');
 ```
 
-## Editor Widget API
+## Editor Portal API
 
 ```typescript
-// Register widget
-await ctx.invokeApi(
-    'editor:register-widget',
-    'my-plugin:progress-bar',
-    /\[progress:(\d+)\]/g,
-    ProgressBarComponent
-);
+// Register portal (inline widget)
+await ctx.invokeApi('editor:register-portal', {
+    id: 'my-plugin:progress-bar',
+    regex: /\[progress:(\d+)\]/g,
+    component: ProgressBarComponent
+});
 
-// Unregister (optional - auto-cleaned)
-await ctx.invokeApi('editor:unregister-widget', 'my-plugin:progress-bar');
+// Unregister (optional - auto-cleaned on plugin unload)
+await ctx.invokeApi('editor:unregister-portal', 'my-plugin:progress-bar');
 ```
 
 ## Settings API
@@ -407,14 +406,15 @@ const ProgressBar: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
     );
 };
 
+// Plugin
 export default class ProgressBarPlugin extends NotehubPlugin {
     async onload(ctx: PluginContext): Promise<void> {
-        await ctx.invokeApi(
-            'editor:register-widget',
-            'progress-bar',
-            /\[progress:(\d+)\]/g,
-            ProgressBar
-        );
+        // Match: [progress:XX] where XX is a number
+        await ctx.invokeApi('editor:register-portal', {
+            id: 'progress-bar',
+            regex: /\[progress:(\d+)\]/g,
+            component: ProgressBar
+        });
     }
     
     async onunload(): Promise<void> {}
@@ -523,12 +523,11 @@ const WordCounter: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
 };
 
 // Register with pattern: {{count: your text here}}
-await ctx.invokeApi(
-    'editor:register-widget',
-    'word-counter',
-    /\{\{count:\s*(.+?)\}\}/g,
-    WordCounter
-);
+await ctx.invokeApi('editor:register-portal', {
+    id: 'word-counter',
+    regex: /\{\{count:\s*(.+?)\}\}/g,
+    component: WordCounter
+});
 ```
 
 ## Full-Featured Plugin

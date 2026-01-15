@@ -212,7 +212,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@notehub/api':
+      '@notehub.md/api':
         specifier: workspace:*
         version: link:../api
       react:
@@ -299,7 +299,7 @@ importers:
 
   packages/plugins/features/command-palette:
     dependencies:
-      '@notehub/api':
+      '@notehub.md/api':
         specifier: workspace:*
         version: link:../../../api
       '@notehub/ck-standard':
@@ -567,7 +567,7 @@ importers:
 
   packages/plugins/system/command-manager:
     dependencies:
-      '@notehub/api':
+      '@notehub.md/api':
         specifier: workspace:*
         version: link:../../../api
       '@notehub/core':
@@ -599,7 +599,7 @@ importers:
 
   packages/plugins/system/drag-drop:
     dependencies:
-      '@notehub/api':
+      '@notehub.md/api':
         specifier: workspace:*
         version: link:../../../api
       '@notehub/core':
@@ -674,7 +674,7 @@ importers:
 
   packages/plugins/system/keymap:
     dependencies:
-      '@notehub/api':
+      '@notehub.md/api':
         specifier: workspace:*
         version: link:../../../api
       '@notehub/core':
@@ -716,7 +716,7 @@ importers:
 
   packages/plugins/system/synapse:
     dependencies:
-      '@notehub/api':
+      '@notehub.md/api':
         specifier: workspace:*
         version: link:../../../api
       '@notehub/ck-standard':
@@ -762,6 +762,9 @@ importers:
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.27)
 
   packages/plugins/system/titlebar:
     dependencies:

@@ -14,17 +14,16 @@
 Режим редактирования: [progress:80]   ← Исходный текст виден когда курсор внутри
 ```
 
-## Регистрация виджета
+## Регистрация портала
 
-Используйте API `editor:register-widget`:
+Используйте API `editor:register-portal`:
 
 ```typescript
-await ctx.invokeApi(
-    'editor:register-widget',
-    'unique-id',           // Уникальный идентификатор
-    /regex-pattern/g,      // Паттерн для поиска (ДОЛЖЕН иметь флаг 'g')
-    ReactComponent         // Компонент для рендеринга
-);
+await ctx.invokeApi('editor:register-portal', {
+    id: 'unique-id',           // Уникальный идентификатор
+    regex: /regex-pattern/g,   // Паттерн для поиска (ДОЛЖЕН иметь флаг 'g')
+    component: ReactComponent  // Компонент для рендеринга
+});
 ```
 
 ## Пропсы компонента
@@ -87,18 +86,17 @@ const ProgressBar: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
 export default class ProgressBarPlugin extends NotehubPlugin {
     async onload(ctx: PluginContext): Promise<void> {
         // Совпадение: [progress:XX] где XX — число
-        await ctx.invokeApi(
-            'editor:register-widget',
-            'progress-bar',
-            /\[progress:(\d+)\]/g,
-            ProgressBar
-        );
+        await ctx.invokeApi('editor:register-portal', {
+            id: 'progress-bar',
+            regex: /\[progress:(\d+)\]/g,
+            component: ProgressBar
+        });
         
-        await ctx.invokeApi('logger:info', 'ProgressBar', 'Виджет зарегистрирован');
+        await ctx.invokeApi('logger:info', 'ProgressBar', 'Портал зарегистрирован');
     }
     
     async onunload(): Promise<void> {
-        // Виджет автоматически отменяет регистрацию!
+        // Портал автоматически отменяет регистрацию!
     }
 }
 ```
@@ -140,12 +138,11 @@ const ButtonWidget: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
 };
 
 // Регистрация
-await ctx.invokeApi(
-    'editor:register-widget',
-    'btn-widget',
-    /\[btn:([^\]:]+):([^\]]+)\]/g,
-    ButtonWidget
-);
+await ctx.invokeApi('editor:register-portal', {
+    id: 'btn-widget',
+    regex: /\[btn:([^\]:]+):([^\]]+)\]/g,
+    component: ButtonWidget
+});
 ```
 
 **Использование:**
@@ -183,12 +180,11 @@ const StatusBadge: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
     );
 };
 
-await ctx.invokeApi(
-    'editor:register-widget',
-    'status-badge',
-    /\[status:([^\]]+)\]/g,
-    StatusBadge
-);
+await ctx.invokeApi('editor:register-portal', {
+    id: 'status-badge',
+    regex: /\[status:([^\]]+)\]/g,
+    component: StatusBadge
+});
 ```
 
 **Использование:**
@@ -276,12 +272,12 @@ style={{
 
 ## Отмена регистрации виджетов
 
-Виджеты **автоматически отменяют регистрацию** при выгрузке вашего плагина.
+Порталы **автоматически отменяют регистрацию** при выгрузке вашего плагина.
 
 Для ручной отмены:
 
 ```typescript
-await ctx.invokeApi('editor:unregister-widget', 'my-widget-id');
+await ctx.invokeApi('editor:unregister-portal', 'my-portal-id');
 ```
 
 ---

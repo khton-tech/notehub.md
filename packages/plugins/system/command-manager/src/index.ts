@@ -21,7 +21,7 @@
  */
 
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
-import type { CommandDefinition } from '@notehub/api';
+import type { CommandDefinition } from '@notehub.md/api';
 import { CommandRegistry } from './logic/CommandRegistry';
 
 /**
