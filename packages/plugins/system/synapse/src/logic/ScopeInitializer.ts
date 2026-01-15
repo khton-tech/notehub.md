@@ -20,6 +20,8 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import * as ReactDOMClient from 'react-dom/client';
+// RFC-010 Wave 1: Import JSX Runtime for React 18+ automatic JSX transform
+import * as JsxRuntime from 'react/jsx-runtime';
 import * as NotehubCore from '@notehub/core';
 import * as NotehubApi from '@notehub.md/api';
 import * as NotehubUI from '@notehub/ck-standard';
@@ -77,6 +79,8 @@ export function initSharedScope(): void {
         'react': `${SHARED_SCOPE_PREFIX}react`,
         'react-dom': `${SHARED_SCOPE_PREFIX}react-dom`,
         'react-dom/client': `${SHARED_SCOPE_PREFIX}react-dom-client`,
+        // RFC-010 Wave 1: Add JSX Runtime for React 18+ automatic transform
+        'react/jsx-runtime': `${SHARED_SCOPE_PREFIX}jsx-runtime`,
         '@notehub/core': `${SHARED_SCOPE_PREFIX}notehub-core`,
         '@notehub/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
         '@notehub.md/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
@@ -126,6 +130,16 @@ export function initSharedScope(): void {
         default: ReactDOMClient,
         __esModule: true,
     });
+
+    // RFC-010 Wave 1: Register JSX Runtime for React 18+ automatic transform
+    // This is CRITICAL - without it, plugins using { jsx: 'automatic' } will fail
+    // with 'Unable to resolve bare specifier react/jsx-runtime'
+    System.set(moduleUrls['react/jsx-runtime'], {
+        ...JsxRuntime,
+        default: JsxRuntime,
+        __esModule: true,
+    });
+    console.log('✔ Registered synthetic module: react/jsx-runtime');
 
     // Register @notehub/core
     System.set(moduleUrls['@notehub/core'], {
