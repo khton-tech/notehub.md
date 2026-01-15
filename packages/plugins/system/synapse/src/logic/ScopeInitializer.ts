@@ -79,6 +79,7 @@ export function initSharedScope(): void {
         'react-dom/client': `${SHARED_SCOPE_PREFIX}react-dom-client`,
         '@notehub/core': `${SHARED_SCOPE_PREFIX}notehub-core`,
         '@notehub/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
+        '@notehub.md/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
         '@notehub/ui': `${SHARED_SCOPE_PREFIX}notehub-ui`,
     };
 

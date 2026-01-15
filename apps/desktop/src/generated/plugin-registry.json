@@ -22,6 +22,20 @@
     ]
   },
   {
+    "id": "nh.features.command-palette",
+    "name": "Command Palette",
+    "version": "0.1.5",
+    "type": "features",
+    "description": "Spotlight-style command palette for quick actions",
+    "dependencies": [
+      "nh.system.command-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.ck-standard",
+      "nh.ui.icon-manager"
+    ]
+  },
+  {
     "id": "nh.features.editor",
     "name": "Editor",
     "version": "0.1.5",
@@ -40,20 +54,6 @@
     ]
   },
   {
-    "id": "nh.features.command-palette",
-    "name": "Command Palette",
-    "version": "0.1.5",
-    "type": "features",
-    "description": "Spotlight-style command palette for quick actions",
-    "dependencies": [
-      "nh.system.command-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.ck-standard",
-      "nh.ui.icon-manager"
-    ]
-  },
-  {
     "id": "nh.features.explorer",
     "name": "Explorer",
     "version": "0.1.5",
@@ -69,6 +69,19 @@
       "nh.ui.theme-manager",
       "nh.ui.context-menu",
       "nh.ui.dialog-manager"
+    ]
+  },
+  {
+    "id": "nh.features.keybindings",
+    "name": "Keybindings",
+    "version": "1.0.0",
+    "description": "Keybindings Editor for Settings",
+    "type": "feature",
+    "main": "dist/index.js",
+    "dependencies": [
+      "nh.ui.settings-manager",
+      "nh.system.command-manager",
+      "nh.system.keymap"
     ]
   },
   {
@@ -97,104 +110,6 @@
       "nh.ui.ck-standard",
       "nh.system.state-manager",
       "nh.features.explorer"
-    ]
-  },
-  {
-    "id": "nh.features.keybindings",
-    "name": "Keybindings",
-    "version": "1.0.0",
-    "description": "Keybindings Editor for Settings",
-    "type": "feature",
-    "main": "dist/index.js",
-    "dependencies": [
-      "nh.ui.settings-manager",
-      "nh.system.command-manager",
-      "nh.system.keymap"
-    ]
-  },
-  {
-    "id": "nh.ui.ck-standard",
-    "name": "CKStandard",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.icon-manager",
-      "nh.ui.theme-manager"
-    ]
-  },
-  {
-    "id": "nh.ui.context-menu",
-    "name": "ContextMenu",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.ui.icon-manager",
-      "nh.ui.ck-standard"
-    ]
-  },
-  {
-    "id": "nh.ui.controllers-manager",
-    "name": "ControllersManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
-    "id": "nh.ui.dialog-manager",
-    "name": "DialogManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.ui.ck-standard"
-    ]
-  },
-  {
-    "id": "nh.ui.icon-manager",
-    "name": "IconManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
-    "id": "nh.ui.layout-manager",
-    "name": "LayoutManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.ui.theme-manager",
-      "nh.ui.icon-manager",
-      "nh.ui.controllers-manager",
-      "nh.ui.ck-standard"
-    ]
-  },
-  {
-    "id": "nh.ui.settings-manager",
-    "name": "SettingsManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.config-manager",
-      "nh.ui.ck-standard",
-      "nh.ui.icon-manager",
-      "nh.ui.dialog-manager"
-    ]
-  },
-  {
-    "id": "nh.ui.theme-manager",
-    "name": "ThemeManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.system.config-manager"
     ]
   },
   {
@@ -307,6 +222,91 @@
     "dependencies": [
       "nh.ui.icon-manager",
       "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.ck-standard",
+    "name": "CKStandard",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.context-menu",
+    "name": "ContextMenu",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.ui.icon-manager",
+      "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.controllers-manager",
+    "name": "ControllersManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.ui.dialog-manager",
+    "name": "DialogManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.icon-manager",
+    "name": "IconManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.ui.layout-manager",
+    "name": "LayoutManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.theme-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.controllers-manager",
+      "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.settings-manager",
+    "name": "SettingsManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.config-manager",
+      "nh.ui.ck-standard",
+      "nh.ui.icon-manager",
+      "nh.ui.dialog-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.theme-manager",
+    "name": "ThemeManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.system.config-manager"
     ]
   }
 ]

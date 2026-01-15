@@ -17,7 +17,7 @@
  */
 
 import chalk from 'chalk';
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, cpSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -118,6 +118,18 @@ export async function createCommand(options: CreateOptions): Promise<void> {
         console.log(chalk.green('  ✓ docs/index.html'));
     } catch {
         console.log(chalk.yellow('  ⚠ docs/index.html (template not found)'));
+    }
+
+    // Copy full documentation from templates/docs
+    try {
+        const docsSrc = join(TEMPLATES_DIR, 'docs');
+        const docsDest = join(targetDir, 'docs');
+        if (existsSync(docsSrc)) {
+            cpSync(docsSrc, docsDest, { recursive: true });
+            console.log(chalk.green('  ✓ docs/ (bundled documentation)'));
+        }
+    } catch (e) {
+        console.log(chalk.yellow('  ⚠ Failed to copy bundled docs'));
     }
 
     // Print next steps

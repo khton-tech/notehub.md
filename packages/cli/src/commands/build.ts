@@ -133,9 +133,7 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
                     'react-dom',
                     'react-dom/client',
                     'react/jsx-runtime',
-                    '@notehub/api',
-                    '@notehub/core',
-                    '@notehub/ui',
+                    '@notehub.md/api',
                     'lucide-react',
                 ],
                 output: {
