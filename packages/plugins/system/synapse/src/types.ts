@@ -1,4 +1,4 @@
-import type { NotehubPlugin } from '@notehub/api';
+import type { NotehubPlugin } from '@notehub.md/api';
 import type { IPlugin, NotehubCore } from '@notehub/core';
 import type { PluginContextImpl } from './logic/PluginContextImpl.js';
 

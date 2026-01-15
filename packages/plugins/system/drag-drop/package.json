@@ -19,7 +19,7 @@
         "clean": "rimraf dist"
     },
     "dependencies": {
-        "@notehub/api": "workspace:*",
+        "@notehub.md/api": "workspace:*",
         "@notehub/core": "workspace:*",
         "@tauri-apps/api": "^2.0.0",
         "jszip": "^3.10.1"

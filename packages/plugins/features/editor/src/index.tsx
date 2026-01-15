@@ -347,6 +347,12 @@ export class EditorPlugin implements IPlugin {
             this.log('info', `Registered portal: ${spec.id}`);
         });
 
+        // Register API for unregistering portals
+        (app.api.register as any)('editor:unregister-portal', (id: string) => {
+            PortalRegistry.getInstance().unregister(id);
+            this.log('info', `Unregistered portal: ${id}`);
+        });
+
         // ⚡ FIX E2: Register API for checking dirty state (used by titlebar on close)
         (app.api.register as any)('editor:is-dirty', () => {
             return this.controller?.getIsDirty() ?? false;
@@ -411,8 +417,8 @@ export class EditorPlugin implements IPlugin {
         app.api.invoke('controller:unregister', 'editor-portal-renderer');
 
         // Unregister API
-        app.api.unregister('editor:register-widget');
-        app.api.unregister('editor:unregister-widget');
+        app.api.unregister('editor:register-portal');
+        app.api.unregister('editor:unregister-portal');
         app.api.unregister('editor:is-dirty');
         app.api.unregister('editor:open');
         app.api.unregister('editor:get-active-path');

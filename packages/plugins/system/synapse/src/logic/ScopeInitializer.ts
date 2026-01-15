@@ -11,7 +11,7 @@
  * ```ts
  * import React from 'react';
  * import { NotehubCore } from '@notehub/core';
- * import { NotehubPlugin, PluginContext } from '@notehub/api';
+ * import { NotehubPlugin, PluginContext } from '@notehub.md/api';
  * import { Button, Card, Input } from '@notehub/ui';
  * ```
  * And receive the host's instances instead of bundling their own.
@@ -21,7 +21,7 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import * as ReactDOMClient from 'react-dom/client';
 import * as NotehubCore from '@notehub/core';
-import * as NotehubApi from '@notehub/api';
+import * as NotehubApi from '@notehub.md/api';
 import * as NotehubUI from '@notehub/ck-standard';
 
 // SystemJS global type declaration (SystemJS 6.x)

@@ -14,17 +14,16 @@ View Mode:     [████████░░] 80%     ← Your rendered compon
 Edit Mode:     [progress:80]        ← Source text visible when cursor inside
 ```
 
-## Registering a Widget
+## Registering a Portal
 
-Use the `editor:register-widget` API:
+Use the `editor:register-portal` API:
 
 ```typescript
-await ctx.invokeApi(
-    'editor:register-widget',
-    'unique-id',           // Unique identifier
-    /regex-pattern/g,      // Pattern to match (MUST have global flag 'g')
-    ReactComponent         // Component to render
-);
+await ctx.invokeApi('editor:register-portal', {
+    id: 'unique-id',           // Unique identifier
+    regex: /regex-pattern/g,   // Pattern to match (MUST have global flag 'g')
+    component: ReactComponent  // Component to render
+});
 ```
 
 ## Component Props
@@ -87,18 +86,17 @@ const ProgressBar: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
 export default class ProgressBarPlugin extends NotehubPlugin {
     async onload(ctx: PluginContext): Promise<void> {
         // Match: [progress:XX] where XX is a number
-        await ctx.invokeApi(
-            'editor:register-widget',
-            'progress-bar',
-            /\[progress:(\d+)\]/g,
-            ProgressBar
-        );
+        await ctx.invokeApi('editor:register-portal', {
+            id: 'progress-bar',
+            regex: /\[progress:(\d+)\]/g,
+            component: ProgressBar
+        });
         
-        await ctx.invokeApi('logger:info', 'ProgressBar', 'Widget registered');
+        await ctx.invokeApi('logger:info', 'ProgressBar', 'Portal registered');
     }
     
     async onunload(): Promise<void> {
-        // Widget is automatically unregistered!
+        // Portal is automatically unregistered!
     }
 }
 ```
@@ -142,12 +140,11 @@ const ButtonWidget: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
 };
 
 // Register
-await ctx.invokeApi(
-    'editor:register-widget',
-    'btn-widget',
-    /\[btn:([^\]:]+):([^\]]+)\]/g,
-    ButtonWidget
-);
+await ctx.invokeApi('editor:register-portal', {
+    id: 'btn-widget',
+    regex: /\[btn:([^\]:]+):([^\]]+)\]/g,
+    component: ButtonWidget
+});
 ```
 
 **Usage:**
@@ -185,12 +182,11 @@ const StatusBadge: React.FC<{ match: RegExpExecArray }> = ({ match }) => {
     );
 };
 
-await ctx.invokeApi(
-    'editor:register-widget',
-    'status-badge',
-    /\[status:([^\]]+)\]/g,
-    StatusBadge
-);
+await ctx.invokeApi('editor:register-portal', {
+    id: 'status-badge',
+    regex: /\[status:([^\]]+)\]/g,
+    component: StatusBadge
+});
 ```
 
 **Usage:**
@@ -305,12 +301,12 @@ onClick={(e) => {
 
 ## Unregistering Widgets
 
-Widgets are **automatically unregistered** when your plugin unloads.
+Portals are **automatically unregistered** when your plugin unloads.
 
 For manual unregistration:
 
 ```typescript
-await ctx.invokeApi('editor:unregister-widget', 'my-widget-id');
+await ctx.invokeApi('editor:unregister-portal', 'my-portal-id');
 ```
 
 ---

@@ -1,6 +1,6 @@
 {
     "name": "@notehub.md/cli",
-    "version": "0.1.10",
+    "version": "0.1.11",
     "description": "CLI tool for building Notehub plugins",
     "type": "module",
     "repository": {

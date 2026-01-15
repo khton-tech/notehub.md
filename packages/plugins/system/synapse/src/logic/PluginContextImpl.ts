@@ -11,7 +11,7 @@
  * automatically cleaned up, preventing "Zombie Methods".
  */
 
-import type { PluginContext } from '@notehub/api';
+import type { PluginContext } from '@notehub.md/api';
 import type { NotehubCore } from '@notehub/core';
 
 /**
@@ -90,11 +90,11 @@ export class PluginContextImpl implements PluginContext {
     async invokeApi<T = unknown>(name: string, ...args: unknown[]): Promise<T> {
         this.ensureNotDisposed('invokeApi');
 
-        // Intercept widget registration for auto-cleanup
-        if (name === 'editor:register-widget' && typeof args[0] === 'string') {
-            const widgetId = args[0];
+        // Intercept portal registration for auto-cleanup
+        if (name === 'editor:register-portal' && args[0] && typeof (args[0] as any).id === 'string') {
+            const widgetId = (args[0] as any).id;
             this.registeredWidgets.push(widgetId);
-            this.log('info', `Tracked widget for cleanup: ${widgetId}`);
+            this.log('info', `Tracked portal for cleanup: ${widgetId}`);
         }
 
         // Intercept settings registration
@@ -190,15 +190,14 @@ export class PluginContextImpl implements PluginContext {
         }
         this.eventUnsubscribers = [];
 
-        // Unregister tracked widgets
         for (const widgetId of this.registeredWidgets) {
             try {
-                this.app.api.invoke('editor:unregister-widget', widgetId).catch(err => {
-                    this.log('warn', `Failed to unregister widget "${widgetId}" during cleanup: ${err}`);
+                this.app.api.invoke('editor:unregister-portal', widgetId).catch(err => {
+                    this.log('warn', `Failed to unregister portal "${widgetId}" during cleanup: ${err}`);
                 });
-                this.log('info', `Unregistered widget: ${widgetId}`);
+                this.log('info', `Unregistered portal: ${widgetId}`);
             } catch (error) {
-                this.log('error', `Failed to unregister widget "${widgetId}": ${error}`);
+                this.log('error', `Failed to unregister portal "${widgetId}": ${error}`);
             }
         }
         this.registeredWidgets = [];

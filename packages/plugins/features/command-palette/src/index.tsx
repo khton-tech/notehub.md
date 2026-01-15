@@ -15,7 +15,7 @@
 import { useState, useEffect, useRef, useCallback, type FC, type KeyboardEvent } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
-import type { VisibleCommand } from '@notehub/api';
+import type { VisibleCommand } from '@notehub.md/api';
 import { Card, ListItem } from '@notehub/ck-standard';
 import { Icon } from '@notehub/icon-manager';
 import { getSearchCandidates } from './utils/layoutEngine';

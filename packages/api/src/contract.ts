@@ -296,6 +296,20 @@ export interface SynapseLoadResult {
     error?: string;
 }
 
+/**
+ * Portal (inline widget) specification for editor registration
+ */
+export interface PortalSpec {
+    /** Unique identifier for the portal */
+    id: string;
+    /** Regex pattern to match (must have global flag 'g') */
+    regex: RegExp | string;
+    /** React component to render for each match */
+    component: FC<{ match: RegExpExecArray }>;
+    /** Optional display name for debugging */
+    name?: string;
+}
+
 // ============================================================================
 // NotehubApiMap - The Central API Registry
 // ============================================================================
@@ -614,11 +628,11 @@ export interface NotehubApiMap {
     // Editor Plugin (nh.features.editor)
     // =========================================================================
 
-    /** Register a dynamic widget */
-    'editor:register-widget': (id: string, regex: RegExp | string, component: FC<{ match: RegExpMatchArray }>) => void;
+    /** Register a portal (inline widget) */
+    'editor:register-portal': (spec: PortalSpec) => void;
 
-    /** Unregister a dynamic widget */
-    'editor:unregister-widget': (id: string) => void;
+    /** Unregister a portal by ID */
+    'editor:unregister-portal': (id: string) => void;
 
     // =========================================================================
     // Synapse Plugin (nh.system.synapse) - External Plugin Loader
