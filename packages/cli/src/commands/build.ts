@@ -135,6 +135,9 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
                     'react/jsx-runtime',
                     '@notehub.md/api',
                     'lucide-react',
+                    // Wave 1: Shared Runtime - CodeMirror must be external
+                    // to prevent Dual Package Hazard (instanceof checks failing)
+                    /^@codemirror\/.*/,
                 ],
                 output: {
                     format: 'system' as const,

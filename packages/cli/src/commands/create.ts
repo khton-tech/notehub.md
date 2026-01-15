@@ -90,10 +90,16 @@ export async function createCommand(options: CreateOptions): Promise<void> {
     console.log(chalk.green('  ✓ tsconfig.json'));
 
     writeFileSync(
-        join(targetDir, 'src', 'index.ts'),
+        join(targetDir, 'vite.config.ts'),
+        generateViteConfig()
+    );
+    console.log(chalk.green('  ✓ vite.config.ts'));
+
+    writeFileSync(
+        join(targetDir, 'src', 'main.tsx'),
         generateEntryPoint(id, name)
     );
-    console.log(chalk.green('  ✓ src/index.ts'));
+    console.log(chalk.green('  ✓ src/main.tsx'));
 
     if (withStyles) {
         writeFileSync(
@@ -193,16 +199,20 @@ function generatePackageJson(id: string, name: string): string {
         main: './dist/main.js',
         scripts: {
             build: 'nhp build',
-            dev: 'tsc --watch',
+            dev: 'vite build --watch',
         },
         dependencies: {},
         devDependencies: {
             '@notehub.md/api': '^0.1.0',
             '@types/react': '^18.3.0',
-            typescript: '^5.6.0',
+            'vite': '^5.4.0',
+            'typescript': '^5.6.0',
         },
         peerDependencies: {
-            react: '^18.3.0',
+            'react': '^18.3.0',
+            'react-dom': '^18.3.0',
+            '@codemirror/state': '*',
+            '@codemirror/view': '*',
         },
     };
     return JSON.stringify(pkg, null, 4) + '\n';
@@ -234,32 +244,132 @@ function generateTsConfig(): string {
 }
 
 /**
- * Generate src/index.ts entry point
+ * Generate vite.config.ts for plugin builds
+ */
+function generateViteConfig(): string {
+    return `/**
+ * Vite Configuration for Notehub Plugin
+ * 
+ * Wave 1: SystemJS Shared Runtime
+ * - Outputs SystemJS module format
+ * - Marks React, CodeMirror, and API as external (provided by host)
+ */
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+    build: {
+        lib: {
+            entry: 'src/main.tsx',
+            formats: ['system'],
+            fileName: () => 'main.js',
+        },
+        outDir: 'dist',
+        emptyOutDir: true,
+        minify: false,
+        rollupOptions: {
+            external: [
+                // React Runtime (provided by Notehub)
+                'react',
+                'react-dom',
+                'react-dom/client',
+                'react/jsx-runtime',
+                // Notehub API
+                '@notehub.md/api',
+                // UI Components
+                'lucide-react',
+                // Wave 1: CodeMirror Shared Runtime
+                // CRITICAL: Must be external to prevent Dual Package Hazard
+                /^@codemirror\\/.*/,
+            ],
+            output: {
+                format: 'system',
+                entryFileNames: 'main.js',
+                exports: 'auto',
+            },
+        },
+    },
+});
+`;
+}
+
+/**
+ * Generate src/main.tsx entry point with Wave 2/3 examples
  */
 function generateEntryPoint(id: string, name: string): string {
     return `/**
  * ${name} Plugin
  * 
  * @module ${id}
+ * 
+ * Template demonstrating:
+ * - Basic API registration and invocation
+ * - Wave 2: Middleware Engine (hooks.before/after)
+ * - Wave 3: Unsafe Context (God Mode) - COMMENTED BY DEFAULT
  */
 
 import { NotehubPlugin, PluginContext } from '@notehub.md/api';
+// Uncomment for Wave 3: Unsafe Context usage
+// import type { EditorView } from '@codemirror/view';
 
 class ${toPascalCase(id)}Plugin extends NotehubPlugin {
     async onload(ctx: PluginContext): Promise<void> {
-        console.log('${name} plugin loaded!');
+        console.log('[${name}] Plugin loaded!');
         
-        // Register an API endpoint
-        // ctx.registerApi('${id}:hello', (name: string) => \`Hello, \${name}!\`);
+        // ═══════════════════════════════════════════════════════════
+        // BASIC USAGE: Register API endpoint
+        // ═══════════════════════════════════════════════════════════
+        ctx.registerApi('${id}:greet', (name: string) => {
+            return \`Hello, \${name}! Greetings from ${name} plugin.\`;
+        });
         
-        // Subscribe to events
-        // ctx.subscribe('note:saved', (payload) => {
-        //     console.log('Note saved:', payload);
+        // Subscribe to application events
+        ctx.subscribe<{ path: string }>('note:opened', (payload) => {
+            console.log('[${name}] Note opened:', payload.path);
+        });
+        
+        // ═══════════════════════════════════════════════════════════
+        // WAVE 2: Middleware Engine (Interceptors)
+        // Uncomment to intercept and modify API calls
+        // ═══════════════════════════════════════════════════════════
+        
+        // Example: Log all file writes
+        // ctx.subscribe('middleware:register', () => {
+        //     // Register a "before" hook on fs:write-text-file
+        //     // This runs BEFORE the actual write happens
+        //     ctx.invokeApi('hooks:before', 'fs:write-text-file', (callCtx: any) => {
+        //         const [path, content] = callCtx.args;
+        //         console.log(\`[${name}] Intercepted write to: \${path}\`);
+        //         console.log(\`[${name}] Content length: \${content?.length || 0} chars\`);
+        //     });
         // });
+        
+        // ═══════════════════════════════════════════════════════════
+        // WAVE 3: Unsafe Context (God Mode)
+        // ⚠️ WARNING: These APIs may change without notice!
+        // Use only when Safe API doesn't provide required functionality
+        // ═══════════════════════════════════════════════════════════
+        
+        // Example: Direct EditorView access for CodeMirror 6 manipulation
+        // const view = ctx.unsafe.getActiveEditorView() as EditorView | null;
+        // if (view) {
+        //     // Insert text at cursor position
+        //     const pos = view.state.selection.main.head;
+        //     view.dispatch({
+        //         changes: { from: pos, insert: 'Hello from ${name}!' }
+        //     });
+        // }
+        
+        // Example: Access global window object
+        // const win = ctx.unsafe.window;
+        // console.log('User agent:', win.navigator.userAgent);
+        
+        // Example: Access root app instance (internal APIs)
+        // const app = ctx.unsafe.app;
+        // console.log('App instance:', app);
     }
 
     async onunload(): Promise<void> {
-        console.log('${name} plugin unloaded!');
+        console.log('[${name}] Plugin unloaded!');
         // Cleanup is automatic for APIs and subscriptions
     }
 }
