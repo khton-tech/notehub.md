@@ -13,6 +13,8 @@
 
 import type { PluginContext } from '@notehub.md/api';
 import type { NotehubCore } from '@notehub/core';
+import type { UnsafeContext } from './UnsafeContext.js';
+import { UnsafeContextImpl } from './UnsafeContext.js';
 
 /**
  * Implementation of PluginContext that wraps Core APIs and 
@@ -44,6 +46,9 @@ export class PluginContextImpl implements PluginContext {
     /** Whether the context has been cleaned up */
     private disposed = false;
 
+    /** Wave 3: Unsafe Context for God Mode access */
+    public readonly unsafe: UnsafeContext;
+
     /**
      * Create a new PluginContextImpl
      * 
@@ -53,6 +58,8 @@ export class PluginContextImpl implements PluginContext {
     constructor(app: NotehubCore, pluginId: string) {
         this.app = app;
         this.pluginId = pluginId;
+        // Wave 3: Initialize Unsafe Context with app reference
+        this.unsafe = new UnsafeContextImpl(app);
     }
 
     /**

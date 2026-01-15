@@ -7,6 +7,25 @@
  */
 
 /**
+ * Unsafe Context interface - "God Mode" API for plugins.
+ * 
+ * WARNING: APIs exposed through UnsafeContext may change without notice.
+ * Plugins using this API should be prepared for breakage on core updates.
+ * 
+ * @remarks
+ * The `app` property type is `unknown` to avoid coupling the API package
+ * to internal core types. Cast to your expected type as needed.
+ */
+export interface UnsafeContext {
+    /** Direct access to the global Window object */
+    readonly window: Window;
+    /** Reference to the root application controller */
+    readonly app: unknown;
+    /** Get the currently active CodeMirror EditorView instance */
+    getActiveEditorView(): unknown;
+}
+
+/**
  * Context object provided to plugins during lifecycle.
  * 
  * Enables plugins to:
@@ -28,6 +47,9 @@
  *         
  *         // Subscribe to events
  *         ctx.subscribe('note:saved', (payload) => console.log(payload));
+ *         
+ *         // Wave 3: Access editor directly
+ *         const view = ctx.unsafe.getActiveEditorView();
  *     }
  * }
  * ```
@@ -83,4 +105,13 @@ export interface PluginContext {
      * ```
      */
     subscribe<T = unknown>(event: string, handler: (payload: T) => void): void;
+
+    /**
+     * Wave 3: Direct access to platform internals.
+     * 
+     * WARNING: APIs exposed through `unsafe` may change without notice.
+     * Use only when the Safe API doesn't provide required functionality.
+     */
+    readonly unsafe: UnsafeContext;
 }
+

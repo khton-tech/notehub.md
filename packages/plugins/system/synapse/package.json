@@ -20,6 +20,10 @@
         "test": "vitest run"
     },
     "dependencies": {
+        "@codemirror/commands": "^6.10.1",
+        "@codemirror/language": "^6.12.1",
+        "@codemirror/state": "^6.5.3",
+        "@codemirror/view": "^6.39.7",
         "@notehub.md/api": "workspace:*",
         "@notehub/ck-standard": "workspace:*",
         "@notehub/core": "workspace:*",

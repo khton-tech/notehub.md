@@ -370,6 +370,12 @@ export class EditorPlugin implements IPlugin {
             return this.controller?.getCurrentPath() ?? null;
         });
 
+        // Wave 3: Register API for Unsafe Context to access EditorView
+        // This is the primary way for external plugins to get the EditorView
+        app.api.register('editor:get-view', () => {
+            return this.controller?.getEditorView() ?? null;
+        });
+
         // === Command Registration (context-aware) ===
         // Register save command only active when editor is focused
         app.api.invoke('command:register', {
@@ -422,6 +428,7 @@ export class EditorPlugin implements IPlugin {
         app.api.unregister('editor:is-dirty');
         app.api.unregister('editor:open');
         app.api.unregister('editor:get-active-path');
+        app.api.unregister('editor:get-view');
 
         // 3. Dispose controller (clears debounce timers, internal state)
         if (this.controller) {

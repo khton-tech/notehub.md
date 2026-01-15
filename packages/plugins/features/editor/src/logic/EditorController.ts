@@ -112,7 +112,8 @@ export class EditorController {
 
     // ========== CodeMirror Integration ==========
 
-    // EditorView reference removed as we rely on React state flow
+    /** Wave 3: EditorView reference for Unsafe Context access */
+    private editorView: EditorView | null = null;
 
     // ========== Debounce Configuration ==========
 
@@ -305,9 +306,18 @@ export class EditorController {
      * Called by the UI component when the editor mounts/unmounts.
      * @param view - The EditorView instance, or null on unmount
      */
-    setEditorView(_view: EditorView | null): void {
-        // We don't need to store the view reference anymore
-        // keeping method for API compatibility
+    setEditorView(view: EditorView | null): void {
+        // Wave 3: Store reference for Unsafe Context access
+        this.editorView = view;
+    }
+
+    /**
+     * Wave 3: Get the EditorView reference.
+     * Used by UnsafeContext to provide God Mode access to plugins.
+     * @returns The EditorView instance or null if not mounted
+     */
+    getEditorView(): EditorView | null {
+        return this.editorView;
     }
 
     /**

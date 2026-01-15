@@ -26,6 +26,14 @@ import * as NotehubCore from '@notehub/core';
 import * as NotehubApi from '@notehub.md/api';
 import * as NotehubUI from '@notehub/ck-standard';
 
+// RFC-010 Wave 3: Import CodeMirror dependencies for Shared Runtime
+// CRITICAL: These imports resolve to the same instances used by @notehub/editor,
+// ensuring plugins pass `instanceof` checks and can dispatch transactions.
+import * as CMView from '@codemirror/view';
+import * as CMState from '@codemirror/state';
+import * as CMLanguage from '@codemirror/language';
+import * as CMCommands from '@codemirror/commands';
+
 // SystemJS global type declaration (SystemJS 6.x)
 // Includes addImportMap for programmatic import map registration
 declare const System: {
@@ -85,6 +93,11 @@ export function initSharedScope(): void {
         '@notehub/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
         '@notehub.md/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
         '@notehub/ui': `${SHARED_SCOPE_PREFIX}notehub-ui`,
+        // RFC-010 Wave 3: CodeMirror Shared Runtime
+        '@codemirror/view': `${SHARED_SCOPE_PREFIX}codemirror-view`,
+        '@codemirror/state': `${SHARED_SCOPE_PREFIX}codemirror-state`,
+        '@codemirror/language': `${SHARED_SCOPE_PREFIX}codemirror-language`,
+        '@codemirror/commands': `${SHARED_SCOPE_PREFIX}codemirror-commands`,
     };
 
     // Step 1: Add import map to map bare specifiers to our synthetic URLs
@@ -162,8 +175,45 @@ export function initSharedScope(): void {
         __esModule: true,
     });
 
+    // RFC-010 Wave 3: Register CodeMirror packages for Shared Runtime
+    // This prevents "Dual Package Hazard" where plugins would get different
+    // class instances, causing `instanceof EditorView` checks to fail.
+    // The __useDefault flag ensures proper ESM/CJS interop.
+
+    System.set(moduleUrls['@codemirror/view'], {
+        ...CMView,
+        default: CMView,
+        __useDefault: true, // Critical: See RFC-010 Section 2.3
+        __esModule: true,
+    });
+    console.log('📦 Registered synthetic module: @codemirror/view');
+
+    System.set(moduleUrls['@codemirror/state'], {
+        ...CMState,
+        default: CMState,
+        __useDefault: true,
+        __esModule: true,
+    });
+    console.log('📦 Registered synthetic module: @codemirror/state');
+
+    System.set(moduleUrls['@codemirror/language'], {
+        ...CMLanguage,
+        default: CMLanguage,
+        __useDefault: true,
+        __esModule: true,
+    });
+    console.log('📦 Registered synthetic module: @codemirror/language');
+
+    System.set(moduleUrls['@codemirror/commands'], {
+        ...CMCommands,
+        default: CMCommands,
+        __useDefault: true,
+        __esModule: true,
+    });
+    console.log('📦 Registered synthetic module: @codemirror/commands');
+
     scopeInitialized = true;
-    console.log('[ScopeInitializer] Shared scope initialized with React, ReactDOM, @notehub/core, @notehub/api, and @notehub/ui');
+    console.log('[ScopeInitializer] Shared scope initialized with React, ReactDOM, @notehub/core, @notehub/api, @notehub/ui, and @codemirror/*');
 }
 
 /**

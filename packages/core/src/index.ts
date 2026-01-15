@@ -12,6 +12,10 @@ export * from './api/contract.js';
 // Re-export React context and hooks
 export * from './react/NotehubContext.js';
 
+// Re-export Middleware system (Wave 2)
+export * from './middleware/index.js';
+
+
 
 /**
  * Core application class for Notehub.md
