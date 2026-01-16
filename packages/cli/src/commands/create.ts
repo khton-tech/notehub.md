@@ -366,6 +366,19 @@ class ${toPascalCase(id)}Plugin extends NotehubPlugin {
         // Example: Access root app instance (internal APIs)
         // const app = ctx.unsafe.app;
         // console.log('App instance:', app);
+        
+        // ═══════════════════════════════════════════════════════════
+        // WAVE 4: Portal API (Dynamic UI Injection)
+        // Inject UI anywhere without modifying core layouts
+        // ═══════════════════════════════════════════════════════════
+        
+        // Example: Add a toolbar above the editor
+        // setTimeout(() => {
+        //     const container = ctx.unsafe.createPortal('[data-nh-portal="editor"]', 'prepend');
+        //     if (container) {
+        //         container.innerHTML = '<div style="padding:8px;background:#333;">My Toolbar</div>';
+        //     }
+        // }, 100);
     }
 
     async onunload(): Promise<void> {

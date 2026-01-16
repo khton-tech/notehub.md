@@ -63,6 +63,16 @@ export interface UnsafeContext {
      * reliably present in non-minified builds.
      */
     getActiveEditorView(): EditorView | null;
+
+    /**
+     * Create a container element for React portal injection.
+     * Allows plugins to inject UI anywhere in the application.
+     * 
+     * @param selector - CSS selector for target container
+     * @param position - 'prepend' or 'append' (default: 'prepend')
+     * @returns Created container element, or null if target not found
+     */
+    createPortal(selector: string, position?: 'prepend' | 'append'): HTMLElement | null;
 }
 
 /**
@@ -133,6 +143,42 @@ export class UnsafeContextImpl implements UnsafeContext {
             return null;
         } catch (e) {
             console.warn('[UnsafeContext] Error getting EditorView:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Create a container element for React portal injection.
+     * 
+     * This allows external plugins to inject UI anywhere in the application
+     * by creating a container element inside the specified target.
+     * 
+     * @param selector - CSS selector for target container
+     * @param position - 'prepend' (before first child) or 'append' (after last child)
+     * @returns Created container element, or null if target not found
+     */
+    createPortal(selector: string, position: 'prepend' | 'append' = 'prepend'): HTMLElement | null {
+        try {
+            const target = document.querySelector(selector);
+            if (!target) {
+                console.warn(`[UnsafeContext] Portal target not found: ${selector}`);
+                return null;
+            }
+
+            // Create container element for the portal
+            const container = document.createElement('div');
+            container.dataset.nhPortal = 'true';
+            // Note: Do not set display:contents as it prevents the container from being visible
+
+            if (position === 'prepend') {
+                target.insertBefore(container, target.firstChild);
+            } else {
+                target.appendChild(container);
+            }
+
+            return container;
+        } catch (e) {
+            console.warn('[UnsafeContext] Error creating portal:', e);
             return null;
         }
     }

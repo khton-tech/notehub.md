@@ -153,14 +153,25 @@ function createEditorSlotComponent(controller: EditorController, app: NotehubCor
         }
 
         // Render the CodeMirror editor with current file content
+        // Wrap with portal-enabled container for plugin injection
         return (
-            <NotehubEditor
-                app={app}
-                controller={controller}
-                content={content}
-                filePath={filePath}
-                settings={settings}
-            />
+            <div
+                data-nh-portal="editor"
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    width: '100%'
+                }}
+            >
+                <NotehubEditor
+                    app={app}
+                    controller={controller}
+                    content={content}
+                    filePath={filePath}
+                    settings={settings}
+                />
+            </div>
         );
     };
 }

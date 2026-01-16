@@ -23,6 +23,23 @@ export interface UnsafeContext {
     readonly app: unknown;
     /** Get the currently active CodeMirror EditorView instance */
     getActiveEditorView(): unknown;
+
+    /**
+     * Create a container element for React portal injection.
+     * 
+     * @param selector - CSS selector for target container (e.g., '[data-nh-portal="editor"]')
+     * @param position - Where to insert: 'prepend' (before first child) or 'append' (after last child)
+     * @returns The created container element, or null if target not found
+     * 
+     * @example
+     * ```ts
+     * const container = ctx.unsafe.createPortal('[data-nh-portal="editor"]', 'prepend');
+     * if (container) {
+     *     ReactDOM.createRoot(container).render(<MyToolbar />);
+     * }
+     * ```
+     */
+    createPortal(selector: string, position?: 'prepend' | 'append'): HTMLElement | null;
 }
 
 /**
