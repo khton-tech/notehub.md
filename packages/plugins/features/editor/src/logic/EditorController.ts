@@ -351,6 +351,48 @@ export class EditorController {
     }
 
     /**
+     * Insert content into the editor.
+     * Handles transaction and forcing visual update so external plugins don't have to.
+     */
+    insertContent(text: string, options: {
+        from?: number;
+        to?: number;
+        anchor?: number; // New selection anchor (cursor pos)
+        head?: number;   // New selection head
+    } = {}): void {
+        if (!this.editorView) {
+            this.log('warn', 'insertContent: No editorView available');
+            return;
+        }
+
+        const { from, to, anchor, head } = options;
+
+        // Default to replacing current selection if from/to not provided
+        const range = this.editorView.state.selection.main;
+        const insertFrom = from ?? range.from;
+        // If 'to' is not provided: 
+        // - if 'from' WAS provided, assume insertion at point (to = from)
+        // - if 'from' was NOT provided, assume replacing selection (to = range.to)
+        const insertTo = to ?? (from !== undefined ? insertFrom : range.to);
+
+        const docLength = this.editorView.state.doc.length;
+        if (insertFrom > docLength || insertTo > docLength) {
+            this.log('error', `insertContent: Range [${insertFrom}-${insertTo}] exceeds doc length ${docLength}`);
+            return;
+        }
+
+        this.log('info', `insertContent: text="${text}", from=${from}, to=${to}, range=[${range.from}-${range.to}], calculated=[${insertFrom}-${insertTo}], docLen=${docLength}`);
+
+        this.editorView.dispatch({
+            changes: { from: insertFrom, to: insertTo, insert: text },
+            selection: (anchor !== undefined) ? { anchor, head: head ?? anchor } : undefined,
+            scrollIntoView: true
+        });
+
+        this.editorView.focus();
+    }
+
+    /**
      * Get the currently open file path
      * @returns The absolute path to the open file, or null
      */

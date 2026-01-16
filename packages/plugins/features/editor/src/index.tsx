@@ -393,6 +393,13 @@ export class EditorPlugin implements IPlugin {
             return this.controller?.getSelection() ?? { from: 0, to: 0 };
         });
 
+        // Register API for external plugins to insert content reliably
+        // Ensures transaction is handled internally with proper visual update
+        app.api.register('editor:insert-content', (...args: unknown[]) => {
+            const [text, options] = args as [string, any];
+            this.controller?.insertContent(text, options);
+        });
+
         // === Command Registration (context-aware) ===
         // Register save command only active when editor is focused
         app.api.invoke('command:register', {
@@ -405,11 +412,13 @@ export class EditorPlugin implements IPlugin {
             },
             areas: ['palette', 'global'],
             context: 'editor',
-            defaultHotkey: 'Mod+S',
+            hotkeys: ['Mod+S']
         });
 
         this.log('info', 'Loaded successfully');
     }
+
+
 
     /**
      * Cleanup the plugin.
@@ -447,6 +456,10 @@ export class EditorPlugin implements IPlugin {
         app.api.unregister('editor:get-active-path');
         app.api.unregister('editor:get-view');
         app.api.unregister('editor:get-selection');
+        app.api.unregister('editor:insert-content');
+
+        // Unregister commands
+        app.api.invoke('command:unregister', 'editor:save');
 
         // 3. Dispose controller (clears debounce timers, internal state)
         if (this.controller) {

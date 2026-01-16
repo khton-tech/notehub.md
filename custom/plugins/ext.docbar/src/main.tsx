@@ -55,25 +55,20 @@ function DocbarToolbar({
             if (from === to) {
                 // No selection: insert **|**
                 log('No selection, inserting ****');
-                view.dispatch({
-                    changes: { from, insert: '****' },
-                    selection: { anchor: from + 2 },
-                    scrollIntoView: true,
+                await ctx.invokeApi('editor:insert-content', '****', {
+                    from,
+                    anchor: from + 2
                 });
             } else {
                 // Has selection: wrap with **text**
                 const text = view.state.sliceDoc(from, to);
                 log(`Wrapping "${text}" with **`);
-                view.dispatch({
-                    changes: { from, to, insert: `**${text}**` },
-                    selection: { anchor: from + text.length + 4 },
-                    scrollIntoView: true,
+                await ctx.invokeApi('editor:insert-content', `**${text}**`, {
+                    from,
+                    to,
+                    anchor: from + text.length + 4
                 });
             }
-
-            // Force visual update
-            view.focus();
-            view.requestMeasure();
         } catch (error) {
             log(`Error: ${error}`);
         }
