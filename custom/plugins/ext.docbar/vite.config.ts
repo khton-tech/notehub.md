@@ -1,16 +1,20 @@
-/**
- * Vite Configuration for Notehub Plugin
- * 
- * Wave 1: SystemJS Shared Runtime
- * - Outputs SystemJS module format
- * - Marks React, CodeMirror, and API as external (provided by host)
- */
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
+/**
+ * Vite configuration for ext.docbar plugin.
+ * 
+ * Key requirements:
+ * 1. Output format: SystemJS (for dynamic loading via Synapse)
+ * 2. External: React, CodeMirror (use shared runtime from core)
+ */
 export default defineConfig({
+    plugins: [react()],
     build: {
+        target: 'es2020',
         lib: {
-            entry: 'src/main.tsx',
+            entry: resolve(__dirname, 'src/main.tsx'),
             formats: ['system'],
             fileName: () => 'main.js',
         },
@@ -18,18 +22,14 @@ export default defineConfig({
         emptyOutDir: true,
         minify: false,
         rollupOptions: {
+            // CRITICAL: These must be external to avoid Dual Package Hazard
             external: [
-                // React Runtime (provided by Notehub)
                 'react',
                 'react-dom',
                 'react-dom/client',
                 'react/jsx-runtime',
-                // Notehub API
                 '@notehub.md/api',
-                // UI Components
-                'lucide-react',
-                // Wave 1: CodeMirror Shared Runtime
-                // CRITICAL: Must be external to prevent Dual Package Hazard
+                // CodeMirror packages - use regex to catch all
                 /^@codemirror\/.*/,
             ],
             output: {

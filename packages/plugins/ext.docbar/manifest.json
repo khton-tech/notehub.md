@@ -1,8 +1,0 @@
-{
-    "id": "ext.docbar",
-    "name": "Docbar",
-    "version": "0.1.0",
-    "description": "Docbar plugin for Notehub.md",
-    "author": "",
-    "main": "main.js"
-}

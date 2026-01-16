@@ -1,0 +1,49 @@
+/**
+ * Docbar Plugin Styles
+ * 
+ * Minimal styling for the toolbar - uses CSS variables from theme-manager
+ */
+
+.docbar-portal {
+    /* Container styling */
+    width: 100%;
+    flex-shrink: 0;
+}
+
+.docbar-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--nh-bg-surface, #252525);
+    border-top: 1px solid var(--nh-border-subtle, #333);
+}
+
+.docbar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--nh-text-secondary, #999);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.docbar-button:hover {
+    background: var(--nh-bg-hover, #333);
+    color: var(--nh-text-primary, #fff);
+}
+
+.docbar-button:active {
+    background: var(--nh-bg-active, #444);
+}
+
+.docbar-button strong {
+    font-weight: 700;
+}

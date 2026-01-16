@@ -387,6 +387,12 @@ export class EditorPlugin implements IPlugin {
             return this.controller?.getEditorView() ?? null;
         });
 
+        // Register API for external plugins to get last known selection
+        // Solves timing issues when editor loses focus before button click
+        app.api.register('editor:get-selection', () => {
+            return this.controller?.getSelection() ?? { from: 0, to: 0 };
+        });
+
         // === Command Registration (context-aware) ===
         // Register save command only active when editor is focused
         app.api.invoke('command:register', {
@@ -440,6 +446,7 @@ export class EditorPlugin implements IPlugin {
         app.api.unregister('editor:open');
         app.api.unregister('editor:get-active-path');
         app.api.unregister('editor:get-view');
+        app.api.unregister('editor:get-selection');
 
         // 3. Dispose controller (clears debounce timers, internal state)
         if (this.controller) {

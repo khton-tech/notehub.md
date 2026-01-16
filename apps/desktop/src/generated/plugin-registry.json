@@ -1,13 +1,5 @@
 [
   {
-    "id": "ext.docbar",
-    "name": "Docbar",
-    "version": "0.1.0",
-    "description": "Docbar plugin for Notehub.md",
-    "author": "",
-    "main": "main.js"
-  },
-  {
     "id": "nh.features.about",
     "name": "About",
     "version": "0.1.5",
@@ -15,20 +7,6 @@
     "description": "Displays application information and credits",
     "dependencies": [
       "nh.ui.settings-manager",
-      "nh.ui.icon-manager"
-    ]
-  },
-  {
-    "id": "nh.features.command-palette",
-    "name": "Command Palette",
-    "version": "0.1.5",
-    "type": "features",
-    "description": "Spotlight-style command palette for quick actions",
-    "dependencies": [
-      "nh.system.command-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.ck-standard",
       "nh.ui.icon-manager"
     ]
   },
@@ -41,24 +19,6 @@
     "dependencies": [
       "nh.features.editor",
       "nh.system.fs-manager"
-    ]
-  },
-  {
-    "id": "nh.features.explorer",
-    "name": "Explorer",
-    "version": "0.1.5",
-    "type": "features",
-    "description": "File Explorer for Notehub",
-    "dependencies": [
-      "nh.system.config-manager",
-      "nh.ui.settings-manager",
-      "nh.system.fs-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.icon-manager",
-      "nh.ui.theme-manager",
-      "nh.ui.context-menu",
-      "nh.ui.dialog-manager"
     ]
   },
   {
@@ -77,6 +37,38 @@
       "nh.ui.dialog-manager",
       "nh.ui.icon-manager",
       "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.features.command-palette",
+    "name": "Command Palette",
+    "version": "0.1.5",
+    "type": "features",
+    "description": "Spotlight-style command palette for quick actions",
+    "dependencies": [
+      "nh.system.command-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.ck-standard",
+      "nh.ui.icon-manager"
+    ]
+  },
+  {
+    "id": "nh.features.explorer",
+    "name": "Explorer",
+    "version": "0.1.5",
+    "type": "features",
+    "description": "File Explorer for Notehub",
+    "dependencies": [
+      "nh.system.config-manager",
+      "nh.ui.settings-manager",
+      "nh.system.fs-manager",
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager",
+      "nh.ui.context-menu",
+      "nh.ui.dialog-manager"
     ]
   },
   {

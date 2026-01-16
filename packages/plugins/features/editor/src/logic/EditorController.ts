@@ -115,6 +115,9 @@ export class EditorController {
     /** Wave 3: EditorView reference for Unsafe Context access */
     private editorView: EditorView | null = null;
 
+    /** Last known selection range (persists when editor loses focus) */
+    private lastSelection: { from: number; to: number } = { from: 0, to: 0 };
+
     // ========== Debounce Configuration ==========
 
     /** Timer ID for debounced save */
@@ -309,6 +312,24 @@ export class EditorController {
     setEditorView(view: EditorView | null): void {
         // Wave 3: Store reference for Unsafe Context access
         this.editorView = view;
+
+        // Track selection changes to persist cursor position
+        // when external plugins need it (e.g., docbar bold button)
+        if (view) {
+            // Update selection on any state change
+            const updateSelection = () => {
+                if (view.hasFocus) {
+                    const sel = view.state.selection.main;
+                    this.lastSelection = { from: sel.from, to: sel.to };
+                }
+            };
+            // Initial sync
+            updateSelection();
+            // Listen to DOM focus/selection events
+            view.dom.addEventListener('focus', updateSelection);
+            view.dom.addEventListener('keyup', updateSelection);
+            view.dom.addEventListener('mouseup', updateSelection);
+        }
     }
 
     /**
@@ -318,6 +339,15 @@ export class EditorController {
      */
     getEditorView(): EditorView | null {
         return this.editorView;
+    }
+
+    /**
+     * Get the last known selection range.
+     * Persists when editor loses focus, solving timing issues with external plugins.
+     * @returns Selection range {from, to}. If from === to, it's just cursor position.
+     */
+    getSelection(): { from: number; to: number } {
+        return { ...this.lastSelection };
     }
 
     /**
