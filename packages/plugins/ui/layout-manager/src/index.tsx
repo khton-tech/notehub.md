@@ -387,14 +387,18 @@ export class LayoutManagerPlugin implements IPlugin {
 
         this.handleRegisterComponent('editor', EditorLayout);
 
-        // Initialize Window Controller (restore state)
-        this.windowController = new WindowController(app);
-        // We don't await this to avoid blocking startup, or we should?
-        // User didn't specify, but restore typically should happen fast.
-        // However, init() involves async config:get.
-        // Let's await it to ensure window jumps to correct position before valid UI is fully interactive if possible,
-        // but `load` is async so it's fine.
-        await this.windowController.init();
+        // Initialize Window Controller (restore state) - ONLY on Tauri Desktop
+        // @ts-ignore
+        if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+            try {
+                this.windowController = new WindowController(app);
+                await this.windowController.init();
+            } catch (error) {
+                this.log('warn', `Failed to initialize WindowController: ${error}`);
+            }
+        } else {
+            this.log('info', 'Not in Tauri environment, skipping WindowController');
+        }
 
         this.log('info', 'Loaded successfully');
     }

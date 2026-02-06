@@ -50,7 +50,19 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
             setData([...treeData]);
 
             const tree = controller.getTree();
-            setRootName(tree?.name || '');
+            if (tree?.name) {
+                try {
+                    // Try to decode URI if it looks like one
+                    const decoded = decodeURIComponent(tree.name);
+                    // Get last segment, handling potential trailing slashes
+                    const name = decoded.split('/').filter(Boolean).pop() || decoded;
+                    setRootName(name);
+                } catch {
+                    setRootName(tree?.name || '');
+                }
+            } else {
+                setRootName('');
+            }
 
             // Sync renaming state only
             if (controller.renamingPath !== renamingId) {
@@ -66,9 +78,12 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     // Sync renaming state to Arborist
     useEffect(() => {
         if (renamingId && treeRef.current) {
+            console.log('[Explorer] Triggering edit for:', renamingId);
             treeRef.current.edit(renamingId);
         }
     }, [renamingId]);
+
+    // ... (existing code)
 
     // Measure container height for virtualization
     useEffect(() => {
@@ -387,7 +402,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                             onToggle={(id) => handleToggle(id)}
                             disableDrag={false}
                             disableDrop={false}
-                            disableEdit={true}
+                            disableEdit={false}
                             className="outline-none"
                         >
                             {NodeRow}

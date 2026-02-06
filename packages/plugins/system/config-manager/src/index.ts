@@ -1,5 +1,4 @@
 import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
-import { appDataDir, join } from '@tauri-apps/api/path';
 
 /**
  * ConfigManagerPlugin - Centralized configuration management
@@ -65,15 +64,39 @@ export class ConfigManagerPlugin implements IPlugin {
         if (this.globalConfigPath) return this.globalConfigPath;
 
         try {
-            // Use standard AppData location
-            const appData = await appDataDir();
-            // Store in %APPDATA%/Notehub/config.json (simplest)
-            // OR keep consistent structure
-            this.globalConfigPath = await join(appData, this.GLOBAL_CONFIG_FILE);
+            // Check for Capacitor first
+            // @ts-ignore
+            const isCapacitor = typeof window !== 'undefined' && !!window.Capacitor;
+
+            if (isCapacitor) {
+                // In Capacitor, use a relative path which the FS driver will map to the default directory
+                this.globalConfigPath = `.notehub/${this.GLOBAL_CONFIG_FILE}`;
+            } else {
+                // Check if we are in Tauri
+                // @ts-ignore
+                const isTauri = typeof window !== 'undefined' && !!window.__TAURI__;
+
+                if (isTauri) {
+                    try {
+                        const { appDataDir, join } = await import('@tauri-apps/api/path');
+                        const appData = await appDataDir();
+                        this.globalConfigPath = await join(appData, this.GLOBAL_CONFIG_FILE);
+                    } catch (e) {
+                        this.log('warn', `Tauri path resolution failed: ${e}. Using fallback.`);
+                        this.globalConfigPath = `.notehub/${this.GLOBAL_CONFIG_FILE}`;
+                    }
+                } else {
+                    // Web fallback
+                    this.globalConfigPath = `.notehub/${this.GLOBAL_CONFIG_FILE}`;
+                }
+            }
+
             return this.globalConfigPath;
         } catch (e) {
             this.log('error', `Failed to resolve global config path: ${e}`);
-            return null;
+            // Fallback for safety
+            this.globalConfigPath = `.notehub/${this.GLOBAL_CONFIG_FILE}`;
+            return this.globalConfigPath;
         }
     }
 

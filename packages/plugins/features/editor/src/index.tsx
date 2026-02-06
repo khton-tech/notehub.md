@@ -314,7 +314,7 @@ export class EditorPlugin implements IPlugin {
         this.eventCleanups.push(() => app.events.off('explorer:file-selected', this.handleFileSelected));
 
         // Register API for Portals (replacing dynamic widgets)
-        (app.api.register as any)('editor:register-portal', (spec: PortalSpec) => {
+        app.api.register('editor:register-portal', (spec: PortalSpec) => {
             // Validate incoming spec
             if (!spec || !spec.id || !spec.component) {
                 this.log('warn', 'Invalid portal spec registered');
@@ -348,13 +348,13 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Register API for unregistering portals
-        (app.api.register as any)('editor:unregister-portal', (id: string) => {
+        app.api.register('editor:unregister-portal', (id: string) => {
             PortalRegistry.getInstance().unregister(id);
             this.log('info', `Unregistered portal: ${id}`);
         });
 
         // ⚡ FIX E2: Register API for checking dirty state (used by titlebar on close)
-        (app.api.register as any)('editor:is-dirty', () => {
+        app.api.register('editor:is-dirty', () => {
             return this.controller?.getIsDirty() ?? false;
         });
 

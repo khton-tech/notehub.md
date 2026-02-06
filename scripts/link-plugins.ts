@@ -9,11 +9,14 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 
 // Directory paths
 const PLUGINS_DIR = path.join(ROOT_DIR, 'packages', 'plugins');
-const GENERATED_DIR = path.join(ROOT_DIR, 'apps', 'desktop', 'src', 'generated');
+// Output directories
+const GENERATED_DIRS = [
+    path.join(ROOT_DIR, 'apps', 'desktop', 'src', 'generated'),
+    path.join(ROOT_DIR, 'apps', 'capacitor', 'src', 'generated')
+];
 const ARTIFACTS_DIR = path.join(ROOT_DIR, 'artifacts');
 
 // Output files
-const REGISTRY_FILE = path.join(GENERATED_DIR, 'plugin-registry.json');
 const GRAPH_MMD_FILE = path.join(ARTIFACTS_DIR, 'graph.mmd');
 const GRAPH_HTML_FILE = path.join(ARTIFACTS_DIR, 'graph.html');
 
@@ -76,11 +79,15 @@ async function scanManifests(): Promise<PluginManifest[]> {
  * Generate plugin registry JSON
  */
 function generateRegistry(manifests: PluginManifest[]): void {
-    // Ensure directory exists
-    fs.mkdirSync(GENERATED_DIR, { recursive: true });
+    for (const dir of GENERATED_DIRS) {
+        // Ensure directory exists
+        fs.mkdirSync(dir, { recursive: true });
 
-    // Write registry file
-    fs.writeFileSync(REGISTRY_FILE, JSON.stringify(manifests, null, 2), 'utf-8');
+        // Write registry file
+        const registryFile = path.join(dir, 'plugin-registry.json');
+        fs.writeFileSync(registryFile, JSON.stringify(manifests, null, 2), 'utf-8');
+        console.log(`   ✅ ${path.relative(ROOT_DIR, registryFile)}`);
+    }
 }
 
 /**
@@ -283,7 +290,7 @@ async function main(): Promise<void> {
     // Step 2: Generate registry
     console.log('\n📋 Generating plugin registry...');
     generateRegistry(manifests);
-    console.log(`   ✅ ${path.relative(ROOT_DIR, REGISTRY_FILE)}`);
+    generateRegistry(manifests);
 
     // Step 3: Generate Mermaid graph
     console.log('\n🎨 Generating dependency graph...');

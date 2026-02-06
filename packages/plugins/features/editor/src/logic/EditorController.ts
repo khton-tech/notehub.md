@@ -501,8 +501,9 @@ export class EditorController {
                 // Show error dialog to user
                 try {
                     await this.app.api.invoke('dialog:alert', 'Error Opening File', errorMessage);
-                } catch {
+                } catch (dialogError) {
                     // Dialog manager might not be available
+                    this.log('warn', `Failed to show dialog: ${dialogError}`);
                 }
 
                 throw error;
@@ -650,8 +651,9 @@ export class EditorController {
             // Show error dialog to user
             try {
                 await this.app.api.invoke('dialog:alert', 'Error Saving File', errorMessage);
-            } catch {
+            } catch (dialogError) {
                 // Dialog manager might not be available
+                this.log('warn', `Failed to show dialog: ${dialogError}`);
             }
         }
     }

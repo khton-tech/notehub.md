@@ -57,6 +57,9 @@ export interface IFileSystem {
     exists(path: string): Promise<boolean>;
     pickDirectory(): Promise<string | null>;
     watch(path: string, onChange: (event: FsEvent) => void): Promise<() => void>;
+    removeFile(path: string): Promise<void>;
+    removeDir(path: string, options?: { recursive?: boolean }): Promise<void>;
+    rename(oldPath: string, newPath: string): Promise<void>;
 }
 
 // ============================================================================
@@ -634,6 +637,9 @@ export interface NotehubApiMap {
     /** Unregister a portal by ID */
     'editor:unregister-portal': (id: string) => void;
 
+    /** Check if editor has unsaved changes */
+    'editor:is-dirty': () => boolean;
+
     // =========================================================================
     // Synapse Plugin (nh.system.synapse) - External Plugin Loader
     // =========================================================================
@@ -703,16 +709,66 @@ export interface NotehubApiMap {
      */
     'command:get-visible': () => VisibleCommand[];
 
-    // =========================================================================
-    // Keymap Plugin (nh.system.keymap)
-    // =========================================================================
-
     /**
      * Register a keybinding for a command
      * @param commandId - ID of the command
      * @param hotkey - Hotkey string (e.g. "Mod+S")
      */
     'keymap:register-binding': (commandId: string, hotkey: string) => void;
+
+    /**
+     * Bind a hotkey to a command (overwrites existing bindings)
+     * @param commandId - ID of the command
+     * @param hotkey - Hotkey string
+     */
+    'keymap:bind': (commandId: string, hotkey: string) => Promise<void>;
+
+    /**
+     * Add an additional binding for a command
+     * @param commandId - ID of the command
+     * @param hotkey - Hotkey string to add
+     */
+    'keymap:add-binding': (commandId: string, hotkey: string) => Promise<void>;
+
+    /**
+     * Remove a specific binding from a command
+     * @param commandId - ID of the command
+     * @param hotkey - Hotkey string to remove
+     */
+    'keymap:remove-binding': (commandId: string, hotkey: string) => Promise<void>;
+
+    /**
+     * Reset a command's bindings to defaults
+     * @param commandId - ID of the command
+     */
+    'keymap:reset': (commandId: string) => Promise<void>;
+
+    /**
+     * Get the primary binding for a command
+     * @param commandId - ID of the command
+     * @returns First hotkey or undefined
+     */
+    'keymap:get-binding': (commandId: string) => string | undefined;
+
+    /**
+     * Get all bindings for a command
+     * @param commandId - ID of the command
+     * @returns Array of hotkey strings
+     */
+    'keymap:get-bindings': (commandId: string) => string[];
+
+    // =========================================================================
+    // TitleBar Plugin (nh.system.titlebar)
+    // =========================================================================
+
+    /** Set the title bar title */
+    'titlebar:set-title': (title: string) => void;
+
+    /** Set the title bar icon (Lucide icon name or null to clear) */
+    'titlebar:set-icon': (icon: string | null) => void;
+
+    /** Get the current title bar title */
+    'titlebar:get-title': () => string;
 }
 
 // ============================================================================

@@ -1,0 +1,10 @@
+{
+    "id": "nh.system.fs-driver-capacitor",
+    "name": "FsDriverCapacitor",
+    "version": "0.1.0",
+    "type": "system",
+    "dependencies": [
+        "nh.system.logger",
+        "nh.system.fs-manager"
+    ]
+}

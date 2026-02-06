@@ -57,7 +57,7 @@ export class FsManagerPlugin implements IPlugin {
         this.log('info', 'Loading...');
 
         // Register driver registration API
-        (app.api.register as any)('fs:register-driver', this.registerDriver.bind(this));
+        app.api.register('fs:register-driver', this.registerDriver.bind(this));
 
         // Register proxy methods
         app.api.register('fs:read-file', this.readFile.bind(this));
@@ -69,9 +69,9 @@ export class FsManagerPlugin implements IPlugin {
         app.api.register('fs:exists', this.exists.bind(this));
         app.api.register('fs:pick-directory', this.pickDirectory.bind(this));
         app.api.register('fs:watch', this.watch.bind(this));
-        (app.api.register as any)('fs:remove-file', this.removeFile.bind(this));
-        (app.api.register as any)('fs:remove-dir', this.removeDir.bind(this));
-        (app.api.register as any)('fs:rename', this.rename.bind(this));
+        app.api.register('fs:remove-file', this.removeFile.bind(this));
+        app.api.register('fs:remove-dir', this.removeDir.bind(this));
+        app.api.register('fs:rename', this.rename.bind(this));
 
         this.log('info', 'Loaded - awaiting driver registration');
     }
@@ -141,26 +141,52 @@ export class FsManagerPlugin implements IPlugin {
         return this.ensureDriver().readTextFile(path);
     }
 
+    /**
+     * Write binary data to file with atomic lock to prevent race conditions.
+     * Uses chain-based locking: new writes wait for previous writes to complete.
+     */
     private async writeFile(path: string, data: Uint8Array): Promise<void> {
-        // Wait for any pending write to the same path
-        while (this.writeLocks.has(path)) {
-            await this.writeLocks.get(path);
-        }
+        const existingLock = this.writeLocks.get(path);
 
-        const writePromise = this.ensureDriver().writeFile(path, data);
-        this.writeLocks.set(path, writePromise.finally(() => this.writeLocks.delete(path)));
-        return writePromise;
+        const newLock = (async () => {
+            if (existingLock) await existingLock.catch(() => { }); // Ignore errors from previous writes
+            await this.ensureDriver().writeFile(path, data);
+        })();
+
+        this.writeLocks.set(path, newLock);
+
+        try {
+            await newLock;
+        } finally {
+            // Only delete if this is still the current lock
+            if (this.writeLocks.get(path) === newLock) {
+                this.writeLocks.delete(path);
+            }
+        }
     }
 
+    /**
+     * Write text to file with atomic lock to prevent race conditions.
+     * Uses chain-based locking: new writes wait for previous writes to complete.
+     */
     private async writeTextFile(path: string, content: string): Promise<void> {
-        // Wait for any pending write to the same path
-        while (this.writeLocks.has(path)) {
-            await this.writeLocks.get(path);
-        }
+        const existingLock = this.writeLocks.get(path);
 
-        const writePromise = this.ensureDriver().writeTextFile(path, content);
-        this.writeLocks.set(path, writePromise.finally(() => this.writeLocks.delete(path)));
-        return writePromise;
+        const newLock = (async () => {
+            if (existingLock) await existingLock.catch(() => { }); // Ignore errors from previous writes
+            await this.ensureDriver().writeTextFile(path, content);
+        })();
+
+        this.writeLocks.set(path, newLock);
+
+        try {
+            await newLock;
+        } finally {
+            // Only delete if this is still the current lock
+            if (this.writeLocks.get(path) === newLock) {
+                this.writeLocks.delete(path);
+            }
+        }
     }
 
     private async createDir(path: string, options?: CreateDirOptions): Promise<void> {
