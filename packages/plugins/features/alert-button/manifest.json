@@ -1,0 +1,8 @@
+{
+    "id": "features.alert-button",
+    "name": "Alert Button",
+    "version": "0.1.0",
+    "description": "Alert Button plugin for Notehub.md",
+    "author": "",
+    "main": "main.js"
+}
