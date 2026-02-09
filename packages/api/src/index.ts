@@ -37,8 +37,12 @@
 // Export plugin base class
 export { NotehubPlugin } from './plugin.js';
 
-// Export context interface
-export type { PluginContext } from './context.js';
+// Export context interface and unsafe types
+// Note: HookPosition, BeforeHook, AfterHook, AroundHook are exported via @notehub/core
+export type {
+    PluginContext,
+    UnsafeContext
+} from './context.js';
 
 // Export API contract types
 export * from './contract.js';

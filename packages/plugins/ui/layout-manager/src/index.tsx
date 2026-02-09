@@ -189,7 +189,7 @@ export const ZoneRenderer: FC<ZoneRendererProps> = ({ name, className, style }) 
     if (!Controller) {
         // Fallback: render items directly by invoking controller:get for each
         return (
-            <div className={className} style={style}>
+            <div className={className} style={style} data-nh-zone={name}>
                 {sortedItems.map((item, index) => {
                     const Component = appInstance?.api.invoke('controller:get', item.component) as FC | undefined;
                     if (!Component) {
@@ -203,7 +203,7 @@ export const ZoneRenderer: FC<ZoneRendererProps> = ({ name, className, style }) 
     }
 
     return (
-        <div className={className} style={style}>
+        <div className={className} style={style} data-nh-zone={name}>
             {sortedItems.map((item, index) => (
                 <Controller key={`${item.component}-${index}`} type={item.component} />
             ))}
@@ -360,6 +360,67 @@ export class LayoutManagerPlugin implements IPlugin {
         }
     };
 
+    // =============== DOM Utility API Method Handlers ===============
+
+    /**
+     * Wait for a zone element to appear in the DOM
+     * @param zoneId - Zone ID to wait for (matches data-nh-zone attribute)
+     * @param timeout - Optional timeout in milliseconds (default: 5000)
+     * @returns The HTMLElement when found, or null on timeout
+     */
+    private handleWaitForZone = (zoneId: string, timeout: number = 5000): Promise<HTMLElement | null> => {
+        return new Promise((resolve) => {
+            // Check if element already exists
+            const existing = document.querySelector(`[data-nh-zone="${zoneId}"]`) as HTMLElement | null;
+            if (existing) {
+                this.log('info', `Zone "${zoneId}" already exists in DOM`);
+                resolve(existing);
+                return;
+            }
+
+            // Set up timeout
+            const timeoutId = setTimeout(() => {
+                observer.disconnect();
+                this.log('warn', `Timeout waiting for zone "${zoneId}"`);
+                resolve(null);
+            }, timeout);
+
+            // Use MutationObserver to wait for element
+            const observer = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.type === 'childList') {
+                        for (const node of mutation.addedNodes) {
+                            if (node instanceof HTMLElement) {
+                                // Check the node itself
+                                if (node.getAttribute('data-nh-zone') === zoneId) {
+                                    clearTimeout(timeoutId);
+                                    observer.disconnect();
+                                    this.log('info', `Zone "${zoneId}" found in DOM`);
+                                    resolve(node);
+                                    return;
+                                }
+                                // Check children of the added node
+                                const child = node.querySelector(`[data-nh-zone="${zoneId}"]`) as HTMLElement | null;
+                                if (child) {
+                                    clearTimeout(timeoutId);
+                                    observer.disconnect();
+                                    this.log('info', `Zone "${zoneId}" found in DOM`);
+                                    resolve(child);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        });
+    };
+
     // =============== Plugin Lifecycle ===============
 
     /**
@@ -380,6 +441,9 @@ export class LayoutManagerPlugin implements IPlugin {
         app.api.register('zone:register', this.handleZoneRegister);
         app.api.register('zone:get', this.handleZoneGet);
         app.api.register('zone:clear', this.handleZoneClear);
+
+        // Register DOM utility API methods
+        app.api.register('dom:wait-for-zone', this.handleWaitForZone);
 
         // Register built-in layouts
         this.handleRegisterComponent('welcome', WelcomeLayout);
@@ -424,6 +488,9 @@ export class LayoutManagerPlugin implements IPlugin {
         app.api.unregister('zone:register');
         app.api.unregister('zone:get');
         app.api.unregister('zone:clear');
+
+        // Unregister DOM utility API methods
+        app.api.unregister('dom:wait-for-zone');
 
         // ========== BULLETPROOF STATE CLEANUP ==========
         // Clear all module-level state to prevent zombie listeners on HMR

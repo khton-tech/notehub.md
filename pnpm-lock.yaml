@@ -65,6 +65,9 @@ importers:
       '@notehub/config-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/system/config-manager
+      '@notehub/context-manager':
+        specifier: workspace:*
+        version: link:../../packages/plugins/system/context-manager
       '@notehub/context-menu':
         specifier: workspace:*
         version: link:../../packages/plugins/ui/context-menu
@@ -189,6 +192,9 @@ importers:
       '@notehub/config-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/system/config-manager
+      '@notehub/context-manager':
+        specifier: workspace:*
+        version: link:../../packages/plugins/system/context-manager
       '@notehub/context-menu':
         specifier: workspace:*
         version: link:../../packages/plugins/ui/context-menu
@@ -736,6 +742,19 @@ importers:
         specifier: ^5.3.0
         version: 5.9.3
 
+  packages/plugins/system/context-manager:
+    dependencies:
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+    devDependencies:
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
   packages/plugins/system/drag-drop:
     dependencies:
       '@notehub.md/api':
@@ -1068,6 +1087,34 @@ importers:
         version: 18.3.27
       '@types/react-dom':
         specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.27)
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/plugins/ui/floating-toolbar:
+    dependencies:
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+      lucide-react:
+        specifier: ^0.469.0
+        version: 0.469.0(react@18.3.1)
+      react:
+        specifier: ^18.0.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.0.0
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.2.0
         version: 18.3.7(@types/react@18.3.27)
       rimraf:
         specifier: ^5.0.0

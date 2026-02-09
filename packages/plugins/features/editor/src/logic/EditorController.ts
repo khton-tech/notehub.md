@@ -112,7 +112,8 @@ export class EditorController {
 
     // ========== CodeMirror Integration ==========
 
-    // EditorView reference removed as we rely on React state flow
+    /** EditorView reference for programmatic access */
+    private editorView: EditorView | null = null;
 
     // ========== Debounce Configuration ==========
 
@@ -305,9 +306,16 @@ export class EditorController {
      * Called by the UI component when the editor mounts/unmounts.
      * @param view - The EditorView instance, or null on unmount
      */
-    setEditorView(_view: EditorView | null): void {
-        // We don't need to store the view reference anymore
-        // keeping method for API compatibility
+    setEditorView(view: EditorView | null): void {
+        this.editorView = view;
+    }
+
+    /**
+     * Get the current CodeMirror EditorView reference.
+     * @returns The EditorView instance or null if not mounted
+     */
+    getEditorView(): EditorView | null {
+        return this.editorView;
     }
 
     /**

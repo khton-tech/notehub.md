@@ -72,6 +72,8 @@ async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/fs-manager');
         case '@notehub/state-manager':
             return import('@notehub/state-manager');
+        case '@notehub/context-manager':
+            return import('@notehub/context-manager');
         case '@notehub/fs-driver-capacitor':
             // Using Capacitor driver instead of Tauri
             return import('@notehub/fs-driver-capacitor');

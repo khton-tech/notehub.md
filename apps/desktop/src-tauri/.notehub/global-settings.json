@@ -1,15 +1,15 @@
 {
   "window.bounds": {
-    "x": 302,
-    "y": 82,
-    "width": 660,
+    "x": 318,
+    "y": 91,
+    "width": 866,
     "height": 800
   },
   "vault.history": [
     {
       "path": "C:\\Users\\khton\\Documents\\Vault",
       "name": "Vault",
-      "lastOpened": 1770391342300
+      "lastOpened": 1770629586424
     }
   ],
   "vault.last-opened": "C:\\Users\\khton\\Documents\\Vault"

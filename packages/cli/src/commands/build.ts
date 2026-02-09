@@ -134,7 +134,7 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
                     'react-dom/client',
                     'react/jsx-runtime',
                     '@notehub.md/api',
-                    'lucide-react',
+                    // 'lucide-react',
                 ],
                 output: {
                     format: 'system' as const,

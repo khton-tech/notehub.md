@@ -84,6 +84,55 @@ export interface ZoneItem {
     priority: number;
 }
 
+/**
+ * Available zone identifiers in the application layout.
+ * Use these constants when registering components to zones.
+ */
+export enum ZoneId {
+    /** Ribbon on the left side */
+    RIBBON = 'ribbon',
+    /** Left sidebar */
+    SIDEBAR_LEFT = 'sidebar-left',
+    /** Right panel */
+    PANEL_RIGHT = 'panel-right',
+    /** Tab bar in editor area */
+    TABBAR = 'tabbar',
+    /** Editor header area */
+    EDITOR_HEADER = 'editor-header',
+    /** Editor footer/status area */
+    EDITOR_FOOTER = 'editor-footer',
+    /** Status bar at the bottom */
+    STATUS_BAR = 'status-bar',
+    /** Title bar */
+    TITLEBAR = 'titlebar',
+}
+
+// ============================================================================
+// Editor Types
+// ============================================================================
+
+/**
+ * Cursor position in the editor.
+ * Uses 0-indexed line and column numbers.
+ */
+export interface EditorCursor {
+    /** Line number (0-indexed) */
+    line: number;
+    /** Column/character offset within the line (0-indexed) */
+    ch: number;
+}
+
+/**
+ * Selection range in the editor.
+ * Defines start and end positions of a text selection.
+ */
+export interface EditorSelectionRange {
+    /** Selection start position */
+    from: EditorCursor;
+    /** Selection end position (exclusive) */
+    to: EditorCursor;
+}
+
 // ============================================================================
 // Theme Types
 // ============================================================================
@@ -337,6 +386,28 @@ export interface PortalSpec {
  */
 export interface NotehubApiMap {
     // =========================================================================
+    // Core API Discovery (built-in)
+    // =========================================================================
+
+    /** Get list of all registered API method names */
+    'api:list': () => string[];
+
+    /** Check if an API method is registered */
+    'api:has': (name: string) => boolean;
+
+    /** Get detailed info about a registered API method */
+    'api:info': (name: string) => {
+        exists: boolean;
+        hookCount: { before: number; after: number; around: number };
+    };
+
+    /** Get all registered methods with metadata */
+    'api:list-with-metadata': () => Array<{
+        name: string;
+        hookCount: { before: number; after: number; around: number };
+    }>;
+
+    // =========================================================================
     // Logger Plugin (nh.system.logger)
     // =========================================================================
 
@@ -395,6 +466,31 @@ export interface NotehubApiMap {
 
     /** Restore state from a dump object */
     'state:restore': (dump: Record<string, unknown>) => void;
+
+    // =========================================================================
+    // Context Manager Plugin (nh.system.context-manager)
+    // =========================================================================
+
+    /** Set a context value (for when clauses) */
+    'context:set': (key: string, value: unknown) => void;
+
+    /** Get a context value */
+    'context:get': <T = unknown>(key: string) => T | undefined;
+
+    /** Delete a context value */
+    'context:delete': (key: string) => boolean;
+
+    /** Evaluate a when clause expression (supports &&, ||, ==, !=, !) */
+    'context:evaluate': (expression: string) => boolean;
+
+    /** Get all context keys */
+    'context:keys': () => string[];
+
+    /** Subscribe to context changes for a key */
+    'context:subscribe': (key: string, callback: (value: unknown) => void) => (() => void);
+
+    /** Dump all context values */
+    'context:dump': () => Record<string, unknown>;
 
     // =========================================================================
     // FS Manager Plugin (nh.system.fs-manager)
@@ -467,6 +563,16 @@ export interface NotehubApiMap {
 
     /** Clear all items in a zone */
     'zone:clear': (zoneId: string) => void;
+
+    /**
+     * Wait for a zone element to appear in the DOM.
+     * Uses MutationObserver to efficiently wait for the element.
+     * 
+     * @param zoneId - Zone ID to wait for (matches data-nh-zone attribute)
+     * @param timeout - Optional timeout in milliseconds (default: 5000)
+     * @returns The HTMLElement when found, or null on timeout
+     */
+    'dom:wait-for-zone': (zoneId: string, timeout?: number) => Promise<HTMLElement | null>;
 
     // =========================================================================
     // Dialog Manager Plugin (nh.ui.dialog-manager)
@@ -639,6 +745,64 @@ export interface NotehubApiMap {
 
     /** Check if editor has unsaved changes */
     'editor:is-dirty': () => boolean;
+
+    /** Open a file in the editor */
+    'editor:open': (path: string) => Promise<void>;
+
+    /** Get the path of the currently open file */
+    'editor:get-active-path': () => string | null;
+
+    // -------------------------------------------------------------------------
+    // Text Manipulation API
+    // -------------------------------------------------------------------------
+
+    /** Get the full document content */
+    'editor:get-content': () => string;
+
+    /** Replace the entire document content */
+    'editor:set-content': (content: string) => void;
+
+    /** Get the current text selection (empty string if no selection) */
+    'editor:get-selection': () => string;
+
+    /** Replace the current selection with new text */
+    'editor:replace-selection': (text: string) => void;
+
+    /** Insert text at the current cursor position */
+    'editor:insert-text': (text: string) => void;
+
+    /** Get content of a specific line (0-indexed) */
+    'editor:get-line': (lineNumber: number) => string;
+
+    /** Get the total number of lines in the document */
+    'editor:get-line-count': () => number;
+
+    // -------------------------------------------------------------------------
+    // Cursor API
+    // -------------------------------------------------------------------------
+
+    /** Get the current cursor position */
+    'editor:get-cursor': () => EditorCursor;
+
+    /** Set the cursor position */
+    'editor:set-cursor': (pos: EditorCursor) => void;
+
+    /** Get the current selection range */
+    'editor:get-selection-range': () => EditorSelectionRange;
+
+    /** Set the selection range */
+    'editor:set-selection-range': (range: EditorSelectionRange) => void;
+
+    // -------------------------------------------------------------------------
+    // Unsafe / Advanced API
+    // -------------------------------------------------------------------------
+
+    /**
+     * UNSAFE: Get direct access to CodeMirror EditorView.
+     * @warning This API may break in future versions. Use at your own risk.
+     * @returns The EditorView instance or null if no editor is mounted
+     */
+    'editor:unsafe_get-view': () => unknown | null;
 
     // =========================================================================
     // Synapse Plugin (nh.system.synapse) - External Plugin Loader
