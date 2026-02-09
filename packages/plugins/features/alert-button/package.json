@@ -1,0 +1,21 @@
+{
+    "name": "@notehub/alert-button",
+    "version": "0.1.0",
+    "description": "Alert Button Plugin with API Inspector",
+    "main": "dist/main.js",
+    "scripts": {
+        "build": "nhp build"
+    },
+    "peerDependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
+    },
+    "devDependencies": {
+        "@notehub.md/api": "workspace:*",
+        "@notehub.md/cli": "workspace:*",
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "lucide-react": "^0.344.0",
+        "typescript": "^5.0.0"
+    }
+}

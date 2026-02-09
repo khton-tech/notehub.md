@@ -1,0 +1,16 @@
+{
+    "id": "features.alert-button",
+    "name": "Alert Button",
+    "version": "0.1.0",
+    "description": "Adds a button to the editor that triggers an alert notification",
+    "main": "dist/main.js",
+    "author": "Notehub",
+    "license": "MIT",
+    "dependencies": [],
+    "permissions": [
+        "editor:register-portal",
+        "command:register",
+        "settings:register-tab",
+        "settings:register-custom-view"
+    ]
+}
