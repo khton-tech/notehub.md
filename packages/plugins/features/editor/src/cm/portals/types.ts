@@ -13,9 +13,10 @@ export interface PortalSpec {
     /**
      * The regex pattern to match in the document text.
      * Matches will be replaced/decorated with the component.
+     * Can be a RegExp object or a string (will be converted to RegExp).
      * Example: /\[([*|]+)\]/g
      */
-    regex: RegExp;
+    regex: RegExp | string;
 
     /**
      * The React component to render for the match.

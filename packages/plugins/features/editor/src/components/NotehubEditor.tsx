@@ -267,10 +267,25 @@ const inlineStylesTheme = EditorView.baseTheme({
         textDecoration: 'none',
         cursor: 'pointer',
         borderBottom: '1px solid transparent',
-        transition: 'border-color 0.2s ease',
+        transition: 'all 0.2s ease',
     },
     '.cm-md-link:hover': {
         borderBottomColor: 'var(--nh-accent-primary, #4a90e2)',
+    },
+    // Specific styling for WikiLinks (internal navigation)
+    '.cm-wiki-link': {
+        borderBottom: '1px solid var(--nh-accent-primary)', // Always visible underline
+        backgroundColor: 'rgba(74, 144, 226, 0.1)', // Subtle background
+        padding: '0 2px',
+        borderRadius: '3px',
+    },
+    '.cm-wiki-link:hover': {
+        backgroundColor: 'rgba(74, 144, 226, 0.2)',
+    },
+    '.cm-wiki-link:active': {
+        backgroundColor: 'var(--nh-accent-primary, #4a90e2)',
+        color: 'var(--nh-bg-main, #1a1a1a)',
+        borderBottomColor: 'transparent',
     },
     '.cm-md-link-source': {
         color: 'var(--nh-text-muted, #666)',
@@ -509,17 +524,56 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
             }
         };
 
+        // Listen for internal wiki link events
+        const handleWikiLink = async (e: Event) => {
+            const customEvent = e as CustomEvent<{ target: string }>;
+            if (customEvent.detail && customEvent.detail.target) {
+                let target = customEvent.detail.target;
+                console.log(`WikiLink Clicked: ${target}`);
+
+                // Basic extension handling
+                if (!target.toLowerCase().endsWith('.md')) {
+                    target += '.md';
+                }
+
+                // Resolve path relative to current file
+                let resolvedPath = target;
+                if (filePath) {
+                    // Handle both / and \ separators, and URL encoded content URIs
+                    const separator = filePath.includes('\\') ? '\\' : '/';
+                    const lastSepIndex = filePath.lastIndexOf(separator);
+
+                    if (lastSepIndex !== -1) {
+                        const parentDir = filePath.substring(0, lastSepIndex);
+                        resolvedPath = `${parentDir}${separator}${target}`;
+                    }
+                }
+
+                console.log(`Resolved WikiLink path: ${resolvedPath}`);
+
+                try {
+                    await controller.openFile(resolvedPath);
+                } catch (err) {
+                    console.error('Failed to open wiki link:', err);
+                    // Optional: Ask to create file if not exists?
+                    // For now, controller shows error dialog which is fine.
+                }
+            }
+        };
+
         const currentContainer = containerRef.current; // Using containerRef.current as equivalent to editorContainer.current
         if (currentContainer) {
             currentContainer.addEventListener('notehub:external-link', handleExternalLink);
+            currentContainer.addEventListener('notehub:wiki-link', handleWikiLink);
         }
 
         return () => {
             if (currentContainer) {
                 currentContainer.removeEventListener('notehub:external-link', handleExternalLink);
+                currentContainer.removeEventListener('notehub:wiki-link', handleWikiLink);
             }
         };
-    }, [app]); // Only run on mount/unmount
+    }, [app, controller, filePath]); // Added filePath and controller to deps
 
     /**
      * Sync content when file changes.

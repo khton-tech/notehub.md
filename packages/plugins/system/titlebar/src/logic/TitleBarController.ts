@@ -90,7 +90,17 @@ export class TitleBarController {
      * Check if running in Tauri environment
      */
     isTauri(): boolean {
-        return '__TAURI_INTERNALS__' in window;
+        // Check for various Tauri indicators
+        // @ts-ignore
+        return !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
+    }
+
+    /**
+     * Check if running on mobile
+     */
+    isMobile(): boolean {
+        const ua = navigator.userAgent.toLowerCase();
+        return ua.includes('android') || ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod');
     }
 
     /**

@@ -1,0 +1,8 @@
+{
+    "id": "nh.ui.floating-toolbar",
+    "name": "FloatingToolbar",
+    "version": "0.0.1",
+    "type": "ui",
+    "description": "Floating formatting toolbar that appears on text selection",
+    "dependencies": []
+}

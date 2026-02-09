@@ -14,6 +14,7 @@
     "id": "features.alert-button",
     "name": "Alert Button",
     "version": "0.1.0",
+<<<<<<< HEAD
     "description": "Adds a button to the editor that triggers an alert notification",
     "main": "dist/main.js",
     "author": "Notehub",
@@ -25,6 +26,11 @@
       "settings:register-tab",
       "settings:register-custom-view"
     ]
+=======
+    "description": "Alert Button plugin for Notehub.md",
+    "author": "",
+    "main": "main.js"
+>>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
   },
   {
     "id": "nh.features.backlinks",
@@ -170,6 +176,14 @@
     ]
   },
   {
+    "id": "nh.ui.floating-toolbar",
+    "name": "FloatingToolbar",
+    "version": "0.0.1",
+    "type": "ui",
+    "description": "Floating formatting toolbar that appears on text selection",
+    "dependencies": []
+  },
+  {
     "id": "nh.ui.icon-manager",
     "name": "IconManager",
     "version": "0.1.5",
@@ -253,6 +267,16 @@
       "nh.ui.dialog-manager",
       "nh.system.fs-manager",
       "nh.system.synapse"
+    ]
+  },
+  {
+    "id": "nh.system.fs-driver-capacitor",
+    "name": "FsDriverCapacitor",
+    "version": "0.1.0",
+    "type": "system",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.system.fs-manager"
     ]
   },
   {

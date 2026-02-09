@@ -1,6 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
+<<<<<<< HEAD
 import type { PluginContext } from '@notehub.md/api';
+=======
+import { PluginContext } from '@notehub/api';
+>>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
 
 interface ApiInspectorViewProps {
     ctx: PluginContext;
@@ -14,14 +18,28 @@ const ApiInspectorView: React.FC<ApiInspectorViewProps> = ({ ctx }) => {
     useEffect(() => {
         const fetchMethods = () => {
             try {
+<<<<<<< HEAD
                 // Access internal API bus via unsafe/internal property
                 const api = (ctx as any).app?.api;
 
+=======
+                // Attempt to access internal API bus to get registered methods
+                // This is a hack for debugging/inspection as it's not part of the public API contract
+                // We assume ctx has access to app or api bus in some way, or we use a known global if available.
+                // Based on standard Notehub architecture, we might find it on ctx.app.api
+
+                const api = (ctx as any).app?.api;
+>>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
                 if (api && typeof api.getRegisteredMethods === 'function') {
                     const registered = api.getRegisteredMethods() as string[];
                     setMethods(registered.sort());
                 } else {
                     console.warn('ApiInspector: Could not access getRegisteredMethods via ctx.app.api');
+<<<<<<< HEAD
+=======
+                    // Fallback or error state?
+                    // Maybe try to list keys if we can access the map directly (highly unlikely)
+>>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
                 }
             } catch (e) {
                 console.error('ApiInspector: Error fetching methods', e);
@@ -31,7 +49,12 @@ const ApiInspectorView: React.FC<ApiInspectorViewProps> = ({ ctx }) => {
         };
 
         fetchMethods();
+<<<<<<< HEAD
         // Poll for changes
+=======
+
+        // Optional: poll for changes?
+>>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
         const interval = setInterval(fetchMethods, 2000);
         return () => clearInterval(interval);
     }, [ctx]);
@@ -77,8 +100,12 @@ const ApiInspectorView: React.FC<ApiInspectorViewProps> = ({ ctx }) => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+<<<<<<< HEAD
         cursor: 'pointer',
         userSelect: 'none'
+=======
+        cursor: 'pointer' // Could make them clickable to copy?
+>>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
     };
 
     return (
@@ -113,7 +140,11 @@ const ApiInspectorView: React.FC<ApiInspectorViewProps> = ({ ctx }) => {
                                 title="Click to copy"
                                 onClick={() => {
                                     navigator.clipboard.writeText(method);
+<<<<<<< HEAD
                                     // Optional toast could go here
+=======
+                                    // Could show toast here if available via ctx
+>>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
                                 }}
                             >
                                 <span style={{ fontFamily: 'monospace' }}>{method}</span>

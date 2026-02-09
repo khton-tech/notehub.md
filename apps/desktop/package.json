@@ -17,6 +17,7 @@
         "@notehub/command-manager": "workspace:*",
         "@notehub/command-palette": "workspace:*",
         "@notehub/config-manager": "workspace:*",
+        "@notehub/context-manager": "workspace:*",
         "@notehub/context-menu": "workspace:*",
         "@notehub/controllers-manager": "workspace:*",
         "@notehub/core": "workspace:*",

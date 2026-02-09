@@ -93,8 +93,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({ controller, app }) => {
         }
     }, [controller]);
 
-    // Don't render on non-Tauri platforms
-    if (!controller.isTauri()) {
+    // Don't render on non-Tauri platforms or on Mobile
+    if (!controller.isTauri() || controller.isMobile()) {
         return null;
     }
 
