@@ -47,6 +47,21 @@ export class NotehubCore<TEvents extends EventMap = EventMap> {
     constructor() {
         this.events = new EventBus<TEvents>();
         this.api = new ApiBus();
+
+        // Register built-in API Discovery methods
+        this.registerApiDiscoveryMethods();
+    }
+
+    /**
+     * Register built-in API discovery methods
+     * @internal
+     */
+    private registerApiDiscoveryMethods(): void {
+        // Use untyped overload for dynamic registration
+        this.api.register('api:list', () => this.api.getRegisteredMethods());
+        this.api.register('api:has', (...args: unknown[]) => this.api.has(args[0] as string));
+        this.api.register('api:info', (...args: unknown[]) => this.api.getMethodInfo(args[0] as string));
+        this.api.register('api:list-with-metadata', () => this.api.getMethodsWithMetadata());
     }
 
     /**

@@ -15,8 +15,12 @@ import { PortalWidget } from './PortalWidget';
 
 /**
  * Ensures a regex has the global flag for iteration.
+ * Converts string to RegExp if needed.
  */
-function ensureGlobal(regex: RegExp): RegExp {
+function ensureGlobal(regex: RegExp | string): RegExp {
+    if (typeof regex === 'string') {
+        return new RegExp(regex, 'g');
+    }
     if (regex.flags.includes('g')) return regex;
     return new RegExp(regex.source, regex.flags + 'g');
 }

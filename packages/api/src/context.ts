@@ -7,12 +7,45 @@
  */
 
 /**
+ * Hook position for API interception.
+ */
+export type HookPosition = 'before' | 'after' | 'around';
+
+/**
+ * Hook handler types for API interception.
+ */
+export type BeforeHook = (args: unknown[]) => unknown[] | void;
+export type AfterHook = (result: unknown, args: unknown[]) => unknown;
+export type AroundHook = (args: unknown[], next: (...args: unknown[]) => Promise<unknown>) => Promise<unknown>;
+
+/**
+ * Unsafe context providing direct access to internal APIs.
+ * 
+ * @warning These APIs may change or break in future versions.
+ * Use at your own risk for advanced functionality.
+ */
+export interface UnsafeContext {
+    /**
+     * Register a hook for an API method.
+     * 
+     * @param method - API method name to intercept
+     * @param position - Hook position ('before', 'after', 'around')
+     * @param handler - Hook handler function
+     * @returns Unsubscribe function to remove the hook
+     */
+    hook(method: string, position: 'before', handler: BeforeHook): () => void;
+    hook(method: string, position: 'after', handler: AfterHook): () => void;
+    hook(method: string, position: 'around', handler: AroundHook): () => void;
+}
+
+/**
  * Context object provided to plugins during lifecycle.
  * 
  * Enables plugins to:
  * - Register their own APIs for other plugins to consume
  * - Invoke APIs provided by Core or other plugins
  * - Subscribe to application events
+ * - Emit events to other plugins
  * 
  * All registrations are automatically cleaned up when the plugin is unloaded.
  * 
@@ -28,6 +61,15 @@
  *         
  *         // Subscribe to events
  *         ctx.subscribe('note:saved', (payload) => console.log(payload));
+ *         
+ *         // Emit events
+ *         ctx.emit('my-plugin:ready', { version: '1.0.0' });
+ *         
+ *         // Use unsafe API for advanced interception
+ *         ctx.unsafe.hook('fs:write-text-file', 'before', (args) => {
+ *             console.log('Writing to:', args[0]);
+ *             return args;
+ *         });
  *     }
  * }
  * ```
@@ -83,4 +125,36 @@ export interface PluginContext {
      * ```
      */
     subscribe<T = unknown>(event: string, handler: (payload: T) => void): void;
+
+    /**
+     * Emit an event to all subscribers.
+     * 
+     * @typeParam T - Type of the event payload
+     * @param event - Event name to emit
+     * @param payload - Optional payload to send with the event
+     * 
+     * @example
+     * ```ts
+     * ctx.emit('my-plugin:initialized', { version: '1.0.0' });
+     * ```
+     */
+    emit<T = unknown>(event: string, payload?: T): Promise<void>;
+
+    /**
+     * Access to unsafe/internal APIs.
+     * 
+     * @warning Using these APIs may break compatibility in future versions.
+     * They are provided for advanced use cases where standard APIs are insufficient.
+     */
+    readonly unsafe: UnsafeContext;
+
+    /**
+     * Plugin manifest information.
+     */
+    readonly manifest: {
+        id: string;
+        name: string;
+        version: string;
+    };
 }
+

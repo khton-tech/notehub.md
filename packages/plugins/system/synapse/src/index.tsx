@@ -89,10 +89,10 @@ export class SynapsePlugin implements IPlugin {
             this.loader = new PluginLoader(app);
 
             // Register API methods for programmatic plugin loading
-            (app.api.register as any)('synapse:load-plugin', this.loadExternalPlugin.bind(this));
-            (app.api.register as any)('synapse:unload-plugin', this.unloadExternalPlugin.bind(this));
-            (app.api.register as any)('synapse:list-plugins', this.listLoadedPlugins.bind(this));
-            (app.api.register as any)('synapse:get-details', this.getPluginsDetails.bind(this));
+            app.api.register('synapse:load-plugin', this.loadExternalPlugin.bind(this));
+            app.api.register('synapse:unload-plugin', this.unloadExternalPlugin.bind(this));
+            app.api.register('synapse:list-plugins', this.listLoadedPlugins.bind(this));
+            app.api.register('synapse:get-details', this.getPluginsDetails.bind(this));
 
             // Subscribe to vault-opened event to scan for external plugins
             app.events.on('app:vault-opened', this.handleVaultOpened);

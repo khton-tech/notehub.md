@@ -84,71 +84,68 @@ export class VaultService {
      * Handles standard paths and Android SAF paths
      */
     private getNameFromPath(path: string): string {
-        // Handle SAF paths
-        if (path.startsWith('/saf-root/')) {
-            try {
-                // Remove prefix
-                const withoutPrefix = path.substring('/saf-root/'.length);
+        try {
+            // 1. Handle standard file paths (Windows/Linux/macOS)
+            if (!path.includes('content://') && !path.startsWith('/saf-root/')) {
+                const sep = path.includes('/') ? '/' : '\\';
+                const segments = path.split(sep).filter(Boolean); // Filter empty strings
+                return segments[segments.length - 1] || 'Unknown';
+            }
 
-                // The URI part is encoded, so it won't contain literal slashes
-                const firstSlash = withoutPrefix.indexOf('/');
+            // 2. Handle Android Content URIs (including wrapped ones)
+            let uriToParse = path;
 
-                if (firstSlash !== -1) {
-                    // We have a relative path component (e.g. /saf-root/.../MyVault)
-                    // Use the last part of the relative path
-                    const relative = withoutPrefix.substring(firstSlash + 1);
-                    const parts = relative.split(/[/\\]/);
-                    return parts[parts.length - 1] || 'Unknown';
-                }
+            // Remove /saf-root/ prefix if present
+            if (uriToParse.startsWith('/saf-root/')) {
+                uriToParse = uriToParse.substring('/saf-root/'.length);
+            }
 
-                // No relative path, must extract from the JSON URI
-                const decodedJson = decodeURIComponent(withoutPrefix);
-                let uriStr = '';
-
+            // Attempt to decode if it looks like a JSON string (legacy wrapper)
+            if (uriToParse.startsWith('{') && uriToParse.includes('"uri"')) {
                 try {
-                    const jsonObj = JSON.parse(decodedJson);
-                    if (jsonObj && jsonObj.uri) {
-                        uriStr = jsonObj.uri;
+                    const parsed = JSON.parse(decodeURIComponent(uriToParse));
+                    if (parsed && parsed.uri) {
+                        uriToParse = parsed.uri;
                     }
                 } catch {
-                    // Maybe it wasn't JSON but just a URI? (Backward compatibility)
-                    uriStr = decodedJson;
+                    // Ignore JSON parse error, treat as raw string
                 }
-
-                if (uriStr) {
-                    // Try to extract from content URI
-                    // Examples: 
-                    // content://.../tree/primary%3AVaultName
-                    // content://.../document/primary%3AVaultName
-                    const decodedUri = decodeURIComponent(uriStr);
-
-                    // Remove trailing slashes
-                    const cleanUri = decodedUri.replace(/\/+$/, '');
-
-                    // Split by slash to get the last segment (usually the ID)
-                    const parts = cleanUri.split('/');
-                    const lastPart = parts[parts.length - 1]; // e.g. "primary:VaultName"
-
-                    if (lastPart) {
-                        // If it contains colon (common in Android docs IDs), take the part after colon
-                        if (lastPart.includes(':')) {
-                            const idParts = lastPart.split(':');
-                            return idParts[idParts.length - 1] || lastPart;
-                        }
-                        return lastPart;
-                    }
-
-                    return 'Unknown';
-                }
-            } catch (e) {
-                this.log('warn', `Failed to parse SAF path for name: ${e}`);
             }
-        }
 
-        // Standard path handling
-        const sep = path.includes('/') ? '/' : '\\';
-        const segments = path.split(sep);
-        return segments[segments.length - 1] || 'Unknown';
+            // Decode the URI (it might be double encoded or just encoded)
+            // e.g. content://.../tree/primary%3ADownload%2FHui
+            const decoded = decodeURIComponent(uriToParse);
+
+            // Clean trailing slashes
+            const cleanPath = decoded.replace(/\/+$/, '');
+
+            // Split by '/' to get the last segment of the URI
+            const parts = cleanPath.split('/');
+            const lastSegment = parts[parts.length - 1];
+
+            if (!lastSegment) return 'Unknown';
+
+            // Android Document IDs often look like "primary:Download/Hui" or "primary:Hui"
+            // We want the part after the last slash or colon
+
+            // Check if it's a "primary:..." or "raw:..." style ID
+            if (lastSegment.includes(':')) {
+                const idParts = lastSegment.split(':');
+                // If the last part has slashes (e.g. "primary:Download/Hui"), split that too
+                const potentialPath = idParts[idParts.length - 1];
+                if (potentialPath) {
+                    const pathParts = potentialPath.split(/[/\\]/);
+                    return pathParts[pathParts.length - 1] || potentialPath;
+                }
+                return lastSegment;
+            }
+
+            return lastSegment;
+
+        } catch (e) {
+            this.log('warn', `Failed to parse path for name: ${e}`);
+            return 'Unknown';
+        }
     }
 
     /**

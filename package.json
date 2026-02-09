@@ -12,7 +12,9 @@
         "dev:desktop": "pnpm predev && pnpm --filter @notehub/desktop tauri dev",
         "dev:desktop:debug": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri dev",
         "dev:android": "pnpm predev && pnpm --filter @notehub/desktop tauri android dev",
+        "dev:android:debug": "pnpm build && pnpm predev && pnpm --filter @notehub/capacitor exec cap sync && pnpm --filter @notehub/capacitor exec cap run android",
         "android:release": "tsx scripts/build-android-release.ts",
+        "cap:release": "tsx scripts/build-capacitor-release.ts",
         "build:desktop": "pnpm build && pnpm predev && pnpm --filter @notehub/desktop tauri build"
     },
     "devDependencies": {

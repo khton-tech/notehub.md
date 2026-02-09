@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugin Documentation | Notehub.md</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --bg-card-hover: rgba(255, 255, 255, 0.06);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --accent: #8b5cf6;
+            --accent-secondary: #a78bfa;
+            --border: rgba(255, 255, 255, 0.1);
+            --border-accent: rgba(139, 92, 246, 0.3);
+            --gradient-start: #8b5cf6;
+            --gradient-end: #06b6d4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.08) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 4rem 0 3rem;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1.5rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        /* Language switcher */
+        .lang-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 2rem 0;
+        }
+
+        .lang-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .lang-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-accent);
+        }
+
+        .lang-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card h2 .icon {
+            font-size: 1.5rem;
+        }
+
+        .card p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* Code blocks */
+        pre {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            margin: 1rem 0;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-secondary);
+        }
+
+        /* Links */
+        .doc-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .doc-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .doc-link:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .doc-link .flag {
+            font-size: 1.5rem;
+        }
+
+        .doc-link-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .doc-link-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .doc-link-desc {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* File structure */
+        .file-tree {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .file-tree .folder {
+            color: var(--accent);
+        }
+
+        .file-tree .file {
+            color: var(--text-primary);
+        }
+
+        .file-tree .comment {
+            color: var(--text-muted);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            color: var(--text-muted);
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Language content */
+        [data-lang] {
+            display: none;
+        }
+
+        [data-lang].active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <svg class="logo" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="512" height="512" rx="36" fill="black" />
+                <path d="M390.564 178.309V333.69L256 411.381L121.436 333.69V178.309L256 100.618L390.564 178.309Z"
+                    stroke="white" stroke-width="8" />
+                <path d="M231.692 401.846C255.751 349.437 302.645 310.884 359.692 297.145" stroke="white"
+                    stroke-width="4" />
+                <path
+                    d="M373.755 294.3C380.541 293.183 387.45 292.411 394.461 292M394.461 292C394.508 291.997 393.846 291.975 394.461 292Z"
+                    stroke="white" stroke-width="4" />
+                <path
+                    d="M171.077 145.231C177.911 155.145 180.923 165.509 180.923 178.462C180.923 212.448 153.371 240 119.385 240"
+                    stroke="white" stroke-width="4" />
+                <path d="M117.846 196.615C162.859 198.376 205.148 209.076 243.056 227.036" stroke="white"
+                    stroke-width="4" />
+                <path d="M323.777 281.693C343.757 300.509 361.225 321.956 375.692 345.538" stroke="white"
+                    stroke-width="4" />
+                <path d="M240.923 314.462C227.534 324.09 212.879 331.819 196.923 337.538" stroke="white"
+                    stroke-width="4" />
+                <path
+                    d="M308.615 208C310.377 198.153 311.077 188.336 311.077 177.846C311.077 158.72 310.819 143.66 305 126.5"
+                    stroke="white" stroke-width="4" />
+                <path d="M175.385 344C164.998 346.478 154.609 347.952 143.692 348.615" stroke="white"
+                    stroke-width="4" />
+                <path
+                    d="M242.769 264.923C241.312 260.486 240.585 256.62 240.585 251.692C240.585 226.882 260.574 206.769 285.231 206.769C309.888 206.769 329.877 226.882 329.877 251.692C329.877 271.941 317.377 288.543 299.077 294.154"
+                    stroke="white" stroke-width="3" />
+                <path
+                    d="M238.596 268.923C236.471 263.368 235.692 258.001 235.692 251.692C235.692 224.163 257.872 201.846 285.231 201.846C312.59 201.846 334.769 224.163 334.769 251.692C334.769 275.044 319.388 294.281 297.846 299.692"
+                    stroke="white" stroke-width="3" />
+                <circle cx="185.231" cy="339.077" r="11.6923" stroke="white" stroke-width="3" />
+                <circle cx="3.07692" cy="3.07692" r="3.07692" transform="matrix(-1 0 0 1 208 341.538)" fill="white" />
+                <circle cx="8" cy="8" r="8" transform="matrix(-1 0 0 1 374.769 287.385)" stroke="white"
+                    stroke-width="3" />
+                <circle cx="6.15385" cy="6.15385" r="6.15385" transform="matrix(-1 0 0 1 290.462 180.308)"
+                    stroke="white" stroke-width="4" />
+                <circle cx="264.923" cy="290.769" r="34.7692" stroke="white" stroke-width="4" />
+            </svg>
+            <h1 data-lang="en" class="active">Plugin Documentation</h1>
+            <h1 data-lang="ru">Документация плагина</h1>
+            <p class="subtitle" data-lang="en" class="active">Build powerful extensions for Notehub.md</p>
+            <p class="subtitle" data-lang="ru">Создавайте мощные расширения для Notehub.md</p>
+        </header>
+
+        <div class="lang-switcher">
+            <button class="lang-btn active" onclick="setLang('en')">🇬🇧 English</button>
+            <button class="lang-btn" onclick="setLang('ru')">🇷🇺 Русский</button>
+        </div>
+
+        <!-- ENGLISH CONTENT -->
+        <div data-lang="en" class="active">
+            <div class="card">
+                <h2><span class="icon">🚀</span> Quick Start</h2>
+                <p>Build your plugin in three simple steps:</p>
+                <pre><code># 1. Install dependencies
+npm install
+
+# 2. Build your plugin
+npm run build
+
+# 3. Package for distribution
+npx "@notehub.md/cli" build</code></pre>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">📁</span> Plugin Structure</h2>
+                <div class="file-tree">
+                    <p><span class="folder">your-plugin/</span></p>
+                    <p>├── <span class="file">manifest.json</span> <span class="comment"># Plugin metadata</span></p>
+                    <p>├── <span class="file">package.json</span> <span class="comment"># NPM config</span></p>
+                    <p>├── <span class="file">tsconfig.json</span> <span class="comment"># TypeScript config</span></p>
+                    <p>├── <span class="folder">src/</span></p>
+                    <p>│ └── <span class="file">index.ts</span> <span class="comment"># Entry point</span></p>
+                    <p>└── <span class="folder">docs/</span></p>
+                    <p> ├── <span class="folder">en/</span> <span class="comment"># English Docs</span></p>
+                    <p> ├── <span class="folder">ru/</span> <span class="comment"># Russian Docs</span></p>
+                    <p> └── <span class="file">index.html</span> <span class="comment"># This file</span></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">💡</span> API Example</h2>
+                <pre><code>import { NotehubPlugin, PluginContext } from '@notehub/api';
+
+class MyPlugin extends NotehubPlugin {
+    async onload(ctx: PluginContext) {
+        // Register a custom API
+        ctx.registerApi('my-plugin:greet', (name: string) => {
+            return `Hello, ${name}!`;
+        });
+
+        // Subscribe to events
+        ctx.subscribe('explorer:file-selected', (payload) => {
+            console.log('Selected:', payload.path);
+        });
+    }
+}
+
+export default new MyPlugin();</code></pre>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">📚</span> Full Documentation</h2>
+                <p>Explore the complete plugin developer guide:</p>
+                <div class="doc-links">
+                    <a href="./en/README.md" class="doc-link" target="_blank">
+                        <span class="flag">🇬🇧</span>
+                        <div class="doc-link-text">
+                            <span class="doc-link-title">English Documentation</span>
+                            <span class="doc-link-desc">Complete API reference & examples</span>
+                        </div>
+                    </a>
+                    <a href="https://github.com/khton-tech/notehub.md/tree/main/docs/forPluginMakers/ru"
+                        class="doc-link" target="_blank">
+                        <span class="flag">🇷🇺</span>
+                        <div class="doc-link-text">
+                            <span class="doc-link-title">Документация на русском</span>
+                            <span class="doc-link-desc">Полное руководство и примеры</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- RUSSIAN CONTENT -->
+        <div data-lang="ru">
+            <div class="card">
+                <h2><span class="icon">🚀</span> Быстрый старт</h2>
+                <p>Соберите свой плагин в три простых шага:</p>
+                <pre><code># 1. Установите зависимости
+npm install
+
+# 2. Соберите плагин
+npm run build
+
+# 3. Упакуйте для распространения
+npx "@notehub.md/cli" build</code></pre>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">📁</span> Структура плагина</h2>
+                <div class="file-tree">
+                    <p><span class="folder">your-plugin/</span></p>
+                    <p>├── <span class="file">manifest.json</span> <span class="comment"># Метаданные плагина</span></p>
+                    <p>├── <span class="file">package.json</span> <span class="comment"># Конфиг NPM</span></p>
+                    <p>├── <span class="file">tsconfig.json</span> <span class="comment"># Конфиг TypeScript</span></p>
+                    <p>├── <span class="folder">src/</span></p>
+                    <p>│ └── <span class="file">index.ts</span> <span class="comment"># Точка входа</span></p>
+                    <p>└── <span class="folder">docs/</span></p>
+                    <p> ├── <span class="folder">en/</span> <span class="comment"># English Docs</span></p>
+                    <p> ├── <span class="folder">ru/</span> <span class="comment"># Russian Docs</span></p>
+                    <p> └── <span class="file">index.html</span> <span class="comment"># Этот файл</span></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">💡</span> Пример API</h2>
+                <pre><code>import { NotehubPlugin, PluginContext } from '@notehub/api';
+
+class MyPlugin extends NotehubPlugin {
+    async onload(ctx: PluginContext) {
+        // Регистрация своего API
+        ctx.registerApi('my-plugin:greet', (name: string) => {
+            return `Привет, ${name}!`;
+        });
+
+        // Подписка на события
+        ctx.subscribe('explorer:file-selected', (payload) => {
+            console.log('Выбрано:', payload.path);
+        });
+    }
+}
+
+export default new MyPlugin();</code></pre>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">📚</span> Полная документация</h2>
+                <p>Изучите полное руководство разработчика плагинов:</p>
+                <div class="doc-links">
+                    <a href="./ru/README.md" class="doc-link" target="_blank">
+                        <span class="flag">🇷🇺</span>
+                        <div class="doc-link-text">
+                            <span class="doc-link-title">Документация на русском</span>
+                            <span class="doc-link-desc">Полное руководство и примеры</span>
+                        </div>
+                    </a>
+                    <a href="https://github.com/khton-tech/notehub.md/tree/main/docs/forPluginMakers/en"
+                        class="doc-link" target="_blank">
+                        <span class="flag">🇬🇧</span>
+                        <div class="doc-link-text">
+                            <span class="doc-link-title">English Documentation</span>
+                            <span class="doc-link-desc">Complete API reference & examples</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Made with ❤️ by <a href="https://github.com/khton-tech" target="_blank">khton-tech</a></p>
+            <p style="margin-top: 0.5rem;"><a href="https://github.com/khton-tech/notehub.md" target="_blank">Notehub.md
+                    on GitHub</a></p>
+        </footer>
+    </div>
+
+    <script>
+        function setLang(lang) {
+            // Update buttons
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(lang === 'en' ? 'English' : 'Русский')) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Update content
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                el.classList.remove('active');
+                if (el.dataset.lang === lang) {
+                    el.classList.add('active');
+                }
+            });
+
+            // Save preference
+            localStorage.setItem('notehub-docs-lang', lang);
+        }
+
+        // Load saved language
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedLang = localStorage.getItem('notehub-docs-lang');
+            if (savedLang) {
+                setLang(savedLang);
+            }
+        });
+    </script>
+</body>
+
+</html>

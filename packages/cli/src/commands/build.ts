@@ -128,14 +128,21 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
             minify: options.minify ? 'esbuild' as const : false as const,
             sourcemap: options.sourcemap ? 'inline' as const : false as const,
             rollupOptions: {
-                external: [
-                    'react',
-                    'react-dom',
-                    'react-dom/client',
-                    'react/jsx-runtime',
-                    '@notehub.md/api',
-                    'lucide-react',
-                ],
+                external: (id: string) => {
+                    // Explicitly externalize React and Notehub API
+                    const externals = [
+                        'react',
+                        'react-dom',
+                        'react-dom/client',
+                        'react/jsx-runtime',
+                        '@notehub.md/api'
+                    ];
+                    if (externals.includes(id)) return true;
+                    if (id.startsWith('react/') || id.startsWith('react-dom/')) return true;
+
+                    // Do NOT externalize lucide-react (or anything else)
+                    return false;
+                },
                 output: {
                     format: 'system' as const,
                     entryFileNames: 'main.js',

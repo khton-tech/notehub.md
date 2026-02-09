@@ -73,10 +73,13 @@ export function initSharedScope(): void {
     }
 
     // Define synthetic URLs for our shared modules
-    const moduleUrls = {
+    const moduleUrls: Record<string, string> = {
         'react': `${SHARED_SCOPE_PREFIX}react`,
         'react-dom': `${SHARED_SCOPE_PREFIX}react-dom`,
         'react-dom/client': `${SHARED_SCOPE_PREFIX}react-dom-client`,
+        // JSX Runtime for modern JSX transform (jsx: 'react-jsx' in tsconfig)
+        'react/jsx-runtime': `${SHARED_SCOPE_PREFIX}react-jsx-runtime`,
+        'react/jsx-dev-runtime': `${SHARED_SCOPE_PREFIX}react-jsx-dev-runtime`,
         '@notehub/core': `${SHARED_SCOPE_PREFIX}notehub-core`,
         '@notehub/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
         '@notehub.md/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
@@ -107,49 +110,131 @@ export function initSharedScope(): void {
     // Then find our pre-registered module
 
     // Register React with both default and named exports
-    System.set(moduleUrls['react'], {
+    System.set(moduleUrls['react']!, {
         ...React,
         default: React,
         __esModule: true,
     });
 
     // Register ReactDOM
-    System.set(moduleUrls['react-dom'], {
+    System.set(moduleUrls['react-dom']!, {
         ...ReactDOM,
         default: ReactDOM,
         __esModule: true,
     });
 
     // Register ReactDOM/client for React 18+ createRoot API
-    System.set(moduleUrls['react-dom/client'], {
+    System.set(moduleUrls['react-dom/client']!, {
         ...ReactDOMClient,
         default: ReactDOMClient,
         __esModule: true,
     });
 
+    // Register JSX Runtime for modern JSX transform (jsx: 'react-jsx' in tsconfig)
+    // This enables external plugins to use modern JSX without manually importing React
+    const jsxRuntimeModule = {
+        jsx: React.createElement,
+        jsxs: React.createElement,
+        Fragment: React.Fragment,
+        __esModule: true,
+    };
+    System.set(moduleUrls['react/jsx-runtime']!, jsxRuntimeModule);
+
+    // Register JSX Dev Runtime (used in development mode)
+    const jsxDevRuntimeModule = {
+        jsxDEV: React.createElement,
+        Fragment: React.Fragment,
+        __esModule: true,
+    };
+    System.set(moduleUrls['react/jsx-dev-runtime']!, jsxDevRuntimeModule);
+
     // Register @notehub/core
-    System.set(moduleUrls['@notehub/core'], {
+    System.set(moduleUrls['@notehub/core']!, {
         ...NotehubCore,
         default: NotehubCore,
         __esModule: true,
     });
 
     // Register @notehub/api - Public SDK for plugin development
-    System.set(moduleUrls['@notehub/api'], {
+    System.set(moduleUrls['@notehub/api']!, {
         ...NotehubApi,
         default: NotehubApi,
         __esModule: true,
     });
 
     // Register @notehub/ui - UI Component Kit (ck-standard)
-    System.set(moduleUrls['@notehub/ui'], {
+    System.set(moduleUrls['@notehub/ui']!, {
         ...NotehubUI,
         default: NotehubUI,
         __esModule: true,
     });
 
     scopeInitialized = true;
-    console.log('[ScopeInitializer] Shared scope initialized with React, ReactDOM, @notehub/core, @notehub/api, and @notehub/ui');
+    console.log('[ScopeInitializer] Shared scope initialized with React, ReactDOM, JSX Runtime, @notehub/core, @notehub/api, and @notehub/ui');
+
+    // Step 3: ALSO register modules at bare specifier names directly
+    // This is needed for plugins loaded from Blob URLs, where import map doesn't work
+    // SystemJS resolves bare specifiers differently for Blob URL contexts
+    // 
+    // Note: SystemJS will log W3 warnings about bare specifiers not being valid URLs.
+    // This is expected behavior - the registrations still work correctly.
+    // We wrap in try-catch to suppress console errors while still registering.
+
+    const safeSet = (name: string, module: object) => {
+        try {
+            System.set(name, module);
+        } catch {
+            // SystemJS W3 warning - expected for bare specifiers, registration still works
+        }
+    };
+
+    safeSet('react', {
+        ...React,
+        default: React,
+        __esModule: true,
+    });
+
+    safeSet('react-dom', {
+        ...ReactDOM,
+        default: ReactDOM,
+        __esModule: true,
+    });
+
+    safeSet('react-dom/client', {
+        ...ReactDOMClient,
+        default: ReactDOMClient,
+        __esModule: true,
+    });
+
+    // JSX Runtime bare specifier registration for Blob URL support
+    safeSet('react/jsx-runtime', jsxRuntimeModule);
+    safeSet('react/jsx-dev-runtime', jsxDevRuntimeModule);
+
+    safeSet('@notehub/core', {
+        ...NotehubCore,
+        default: NotehubCore,
+        __esModule: true,
+    });
+
+    safeSet('@notehub.md/api', {
+        ...NotehubApi,
+        default: NotehubApi,
+        __esModule: true,
+    });
+
+    safeSet('@notehub/api', {
+        ...NotehubApi,
+        default: NotehubApi,
+        __esModule: true,
+    });
+
+    safeSet('@notehub/ui', {
+        ...NotehubUI,
+        default: NotehubUI,
+        __esModule: true,
+    });
+
+    console.log('[ScopeInitializer] Direct bare specifier registrations added for Blob URL support (including JSX runtime)');
 }
 
 /**

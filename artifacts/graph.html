@@ -94,6 +94,7 @@
                 <pre class="mermaid">
 flowchart LR
     nh_features_about["About"]
+    features_alert-button["Alert Button"]
     nh_features_backlinks["Backlinks"]
     nh_features_command-palette["Command Palette"]
     nh_features_editor["Editor"]
@@ -105,6 +106,7 @@ flowchart LR
     nh_ui_context-menu["ContextMenu"]
     nh_ui_controllers-manager["ControllersManager"]
     nh_ui_dialog-manager["DialogManager"]
+    nh_ui_floating-toolbar["FloatingToolbar"]
     nh_ui_icon-manager["IconManager"]
     nh_ui_layout-manager["LayoutManager"]
     nh_ui_settings-manager["SettingsManager"]
@@ -113,6 +115,7 @@ flowchart LR
     nh_system_command-manager["Command Manager"]
     nh_system_config-manager["ConfigManager"]
     nh_system_drag-drop["DragDropInstaller"]
+    nh_system_fs-driver-capacitor["FsDriverCapacitor"]
     nh_system_fs-driver-tauri["FsDriverTauri"]
     nh_system_fs-manager["FsManager"]
     nh_system_keymap["Keymap Manager"]
@@ -191,6 +194,8 @@ flowchart LR
     nh_system_drag-drop --> nh_ui_dialog-manager
     nh_system_drag-drop --> nh_system_fs-manager
     nh_system_drag-drop --> nh_system_synapse
+    nh_system_fs-driver-capacitor --> nh_system_logger
+    nh_system_fs-driver-capacitor --> nh_system_fs-manager
     nh_system_fs-driver-tauri --> nh_system_logger
     nh_system_fs-driver-tauri --> nh_system_fs-manager
     nh_system_fs-manager --> nh_system_logger
@@ -206,10 +211,10 @@ flowchart LR
     classDef system fill:#ff6b6b,stroke:#c92a2a,color:#fff
     classDef ui fill:#4dabf7,stroke:#1971c2,color:#fff
     classDef feature fill:#51cf66,stroke:#2f9e44,color:#fff
-    class nh_features_about,nh_features_backlinks,nh_features_keybindings,nh_features_vault-picker feature
+    class nh_features_about,features_alert-button,nh_features_backlinks,nh_features_keybindings,nh_features_vault-picker feature
     class nh_features_command-palette,nh_features_editor,nh_features_explorer,nh_features_workbench feature
-    class nh_ui_ck-standard,nh_ui_context-menu,nh_ui_controllers-manager,nh_ui_dialog-manager,nh_ui_icon-manager,nh_ui_layout-manager,nh_ui_settings-manager,nh_ui_theme-manager ui
-    class nh_system_bootloader,nh_system_command-manager,nh_system_config-manager,nh_system_drag-drop,nh_system_fs-driver-tauri,nh_system_fs-manager,nh_system_keymap,nh_system_logger,nh_system_state-manager,nh_system_synapse,nh_system_titlebar system
+    class nh_ui_ck-standard,nh_ui_context-menu,nh_ui_controllers-manager,nh_ui_dialog-manager,nh_ui_floating-toolbar,nh_ui_icon-manager,nh_ui_layout-manager,nh_ui_settings-manager,nh_ui_theme-manager ui
+    class nh_system_bootloader,nh_system_command-manager,nh_system_config-manager,nh_system_drag-drop,nh_system_fs-driver-capacitor,nh_system_fs-driver-tauri,nh_system_fs-manager,nh_system_keymap,nh_system_logger,nh_system_state-manager,nh_system_synapse,nh_system_titlebar system
                 </pre>
             </div>
         </div>

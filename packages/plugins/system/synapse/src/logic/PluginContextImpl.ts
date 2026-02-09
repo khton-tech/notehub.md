@@ -14,6 +14,21 @@
 import type { PluginContext } from '@notehub.md/api';
 import type { NotehubCore } from '@notehub/core';
 
+// ============================================================================
+// Local Type Definitions (mirror of @notehub.md/api/context.ts)
+// Defined locally to avoid build dependency on dist files
+// ============================================================================
+
+type BeforeHook = (args: unknown[]) => unknown[] | void;
+type AfterHook = (result: unknown, args: unknown[]) => unknown;
+type AroundHook = (args: unknown[], next: (...args: unknown[]) => Promise<unknown>) => Promise<unknown>;
+
+interface UnsafeContextInternal {
+    hook(method: string, position: 'before', handler: BeforeHook): () => void;
+    hook(method: string, position: 'after', handler: AfterHook): () => void;
+    hook(method: string, position: 'around', handler: AroundHook): () => void;
+}
+
 /**
  * Implementation of PluginContext that wraps Core APIs and 
  * tracks registrations for automatic cleanup.
@@ -41,18 +56,41 @@ export class PluginContextImpl implements PluginContext {
     private registeredSettingsGroups: string[] = [];
     private registeredSettingsItems: string[] = [];
 
+    /** List of hook unsubscriber functions (for cleanup) */
+    private hookUnsubscribers: (() => void)[] = [];
+
     /** Whether the context has been cleaned up */
     private disposed = false;
+
+    /** Plugin manifest information */
+    public readonly manifest: {
+        id: string;
+        name: string;
+        version: string;
+    };
+
+    /** Lazy-initialized unsafe context */
+    private _unsafe: UnsafeContextInternal | null = null;
 
     /**
      * Create a new PluginContextImpl
      * 
      * @param app - Core application instance
      * @param pluginId - ID of the plugin this context belongs to
+     * @param manifestInfo - Plugin manifest information
      */
-    constructor(app: NotehubCore, pluginId: string) {
+    constructor(
+        app: NotehubCore,
+        pluginId: string,
+        manifestInfo?: { name?: string; version?: string }
+    ) {
         this.app = app;
         this.pluginId = pluginId;
+        this.manifest = {
+            id: pluginId,
+            name: manifestInfo?.name ?? pluginId,
+            version: manifestInfo?.version ?? '0.0.0',
+        };
     }
 
     /**
@@ -152,6 +190,54 @@ export class PluginContextImpl implements PluginContext {
     }
 
     /**
+     * Emit an event to all subscribers.
+     * 
+     * @param event - Event name to emit
+     * @param payload - Optional payload to send with the event
+     */
+    async emit<T = unknown>(event: string, payload?: T): Promise<void> {
+        this.ensureNotDisposed('emit');
+
+        await this.app.events.emit(event, payload);
+        this.log('info', `Emitted event: ${event}`);
+    }
+
+    /**
+     * Access to unsafe/internal APIs.
+     * Provides hook registration for API interception.
+     */
+    get unsafe(): UnsafeContextInternal {
+        if (this._unsafe) {
+            return this._unsafe;
+        }
+
+        // Lazily create the unsafe context
+        const self = this;
+        this._unsafe = {
+            hook(
+                method: string,
+                position: 'before' | 'after' | 'around',
+                handler: BeforeHook | AfterHook | AroundHook
+            ): () => void {
+                self.ensureNotDisposed('unsafe.hook');
+
+                // Delegate to Core ApiBus hook
+                // Cast position and handler to specific types to satisfy overload
+                const unsubscribe = (self.app.api.hook as Function)(method, position, handler);
+
+                // Track for cleanup
+                self.hookUnsubscribers.push(unsubscribe);
+
+                self.log('info', `Registered ${position} hook for: ${method}`);
+
+                return unsubscribe;
+            }
+        };
+
+        return this._unsafe;
+    }
+
+    /**
      * Clean up all registrations and subscriptions.
      * Called by PluginLoader when a plugin is unloaded.
      * 
@@ -189,6 +275,19 @@ export class PluginContextImpl implements PluginContext {
             }
         }
         this.eventUnsubscribers = [];
+
+        // Call all hook unsubscribers
+        for (const unsubscribe of this.hookUnsubscribers) {
+            try {
+                unsubscribe();
+            } catch (error) {
+                this.log('error', `Failed to remove hook: ${error}`);
+            }
+        }
+        this.hookUnsubscribers = [];
+
+        // Clear unsafe context reference
+        this._unsafe = null;
 
         for (const widgetId of this.registeredWidgets) {
             try {

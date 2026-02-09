@@ -314,7 +314,7 @@ export class EditorPlugin implements IPlugin {
         this.eventCleanups.push(() => app.events.off('explorer:file-selected', this.handleFileSelected));
 
         // Register API for Portals (replacing dynamic widgets)
-        (app.api.register as any)('editor:register-portal', (spec: PortalSpec) => {
+        app.api.register('editor:register-portal', (spec: PortalSpec) => {
             // Validate incoming spec
             if (!spec || !spec.id || !spec.component) {
                 this.log('warn', 'Invalid portal spec registered');
@@ -348,13 +348,13 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Register API for unregistering portals
-        (app.api.register as any)('editor:unregister-portal', (id: string) => {
+        app.api.register('editor:unregister-portal', (id: string) => {
             PortalRegistry.getInstance().unregister(id);
             this.log('info', `Unregistered portal: ${id}`);
         });
 
         // ⚡ FIX E2: Register API for checking dirty state (used by titlebar on close)
-        (app.api.register as any)('editor:is-dirty', () => {
+        app.api.register('editor:is-dirty', () => {
             return this.controller?.getIsDirty() ?? false;
         });
 
@@ -369,6 +369,136 @@ export class EditorPlugin implements IPlugin {
         app.api.register('editor:get-active-path', () => {
             return this.controller?.getCurrentPath() ?? null;
         });
+
+        // =====================================================================
+        // NEW Editor API: Text Manipulation
+        // =====================================================================
+
+        // Get full document content
+        app.api.register('editor:get-content', () => {
+            return this.controller?.getCurrentContent() ?? '';
+        });
+
+        // Set full document content
+        app.api.register('editor:set-content', (content: unknown) => {
+            const view = this.controller?.getEditorView();
+            if (view && typeof content === 'string') {
+                view.dispatch({
+                    changes: { from: 0, to: view.state.doc.length, insert: content }
+                });
+            }
+        });
+
+        // Get current selection text
+        app.api.register('editor:get-selection', () => {
+            const view = this.controller?.getEditorView();
+            if (!view) return '';
+            const { from, to } = view.state.selection.main;
+            return view.state.sliceDoc(from, to);
+        });
+
+        // Replace current selection with text
+        app.api.register('editor:replace-selection', (text: unknown) => {
+            const view = this.controller?.getEditorView();
+            if (view && typeof text === 'string') {
+                view.dispatch(view.state.replaceSelection(text));
+            }
+        });
+
+        // Insert text at cursor
+        app.api.register('editor:insert-text', (text: unknown) => {
+            const view = this.controller?.getEditorView();
+            if (view && typeof text === 'string') {
+                const pos = view.state.selection.main.head;
+                view.dispatch({
+                    changes: { from: pos, insert: text },
+                    selection: { anchor: pos + text.length }
+                });
+            }
+        });
+
+        // Get specific line content (0-indexed)
+        app.api.register('editor:get-line', (lineNumber: unknown) => {
+            const view = this.controller?.getEditorView();
+            if (!view || typeof lineNumber !== 'number') return '';
+            const doc = view.state.doc;
+            if (lineNumber < 0 || lineNumber >= doc.lines) return '';
+            return doc.line(lineNumber + 1).text; // CodeMirror uses 1-indexed lines
+        });
+
+        // Get total line count
+        app.api.register('editor:get-line-count', () => {
+            const view = this.controller?.getEditorView();
+            return view?.state.doc.lines ?? 0;
+        });
+
+        // =====================================================================
+        // NEW Editor API: Cursor Control
+        // =====================================================================
+
+        // Get cursor position
+        app.api.register('editor:get-cursor', () => {
+            const view = this.controller?.getEditorView();
+            if (!view) return { line: 0, ch: 0 };
+            const pos = view.state.selection.main.head;
+            const line = view.state.doc.lineAt(pos);
+            return { line: line.number - 1, ch: pos - line.from }; // Convert to 0-indexed
+        });
+
+        // Set cursor position
+        app.api.register('editor:set-cursor', (pos: unknown) => {
+            const view = this.controller?.getEditorView();
+            if (!view || !pos || typeof pos !== 'object') return;
+            const { line, ch } = pos as { line?: number; ch?: number };
+            if (typeof line !== 'number' || typeof ch !== 'number') return;
+            const doc = view.state.doc;
+            const lineNum = Math.max(1, Math.min(doc.lines, line + 1)); // Clamp and convert to 1-indexed
+            const lineObj = doc.line(lineNum);
+            const offset = Math.max(0, Math.min(lineObj.length, ch));
+            const absPos = lineObj.from + offset;
+            view.dispatch({ selection: { anchor: absPos } });
+        });
+
+        // Get selection range
+        app.api.register('editor:get-selection-range', () => {
+            const view = this.controller?.getEditorView();
+            if (!view) return { from: { line: 0, ch: 0 }, to: { line: 0, ch: 0 } };
+            const { from, to } = view.state.selection.main;
+            const fromLine = view.state.doc.lineAt(from);
+            const toLine = view.state.doc.lineAt(to);
+            return {
+                from: { line: fromLine.number - 1, ch: from - fromLine.from },
+                to: { line: toLine.number - 1, ch: to - toLine.from }
+            };
+        });
+
+        // Set selection range
+        app.api.register('editor:set-selection-range', (range: unknown) => {
+            const view = this.controller?.getEditorView();
+            if (!view || !range || typeof range !== 'object') return;
+            const { from, to } = range as { from?: { line?: number; ch?: number }; to?: { line?: number; ch?: number } };
+            if (!from || !to) return;
+            const doc = view.state.doc;
+
+            const getAbsPos = (pos: { line?: number; ch?: number }) => {
+                if (typeof pos.line !== 'number' || typeof pos.ch !== 'number') return 0;
+                const lineNum = Math.max(1, Math.min(doc.lines, pos.line + 1));
+                const lineObj = doc.line(lineNum);
+                return lineObj.from + Math.max(0, Math.min(lineObj.length, pos.ch));
+            };
+
+            view.dispatch({ selection: { anchor: getAbsPos(from), head: getAbsPos(to) } });
+        });
+
+        // =====================================================================
+        // NEW Editor API: Unsafe / Advanced
+        // =====================================================================
+
+        // Get direct CodeMirror EditorView access
+        app.api.register('editor:unsafe_get-view', () => {
+            return this.controller?.getEditorView() ?? null;
+        });
+
 
         // === Command Registration (context-aware) ===
         // Register save command only active when editor is focused
@@ -422,6 +552,21 @@ export class EditorPlugin implements IPlugin {
         app.api.unregister('editor:is-dirty');
         app.api.unregister('editor:open');
         app.api.unregister('editor:get-active-path');
+        // Text manipulation API
+        app.api.unregister('editor:get-content');
+        app.api.unregister('editor:set-content');
+        app.api.unregister('editor:get-selection');
+        app.api.unregister('editor:replace-selection');
+        app.api.unregister('editor:insert-text');
+        app.api.unregister('editor:get-line');
+        app.api.unregister('editor:get-line-count');
+        // Cursor API
+        app.api.unregister('editor:get-cursor');
+        app.api.unregister('editor:set-cursor');
+        app.api.unregister('editor:get-selection-range');
+        app.api.unregister('editor:set-selection-range');
+        // Unsafe API
+        app.api.unregister('editor:unsafe_get-view');
 
         // 3. Dispose controller (clears debounce timers, internal state)
         if (this.controller) {

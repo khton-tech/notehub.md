@@ -66,15 +66,15 @@ export class TitleBarPlugin implements IPlugin {
         // Register API Methods
         // ====================================================================
 
-        (app.api.register as any)('titlebar:set-title', (title: string) => {
+        app.api.register('titlebar:set-title', (title: string) => {
             this.controller?.setTitle(title);
         });
 
-        (app.api.register as any)('titlebar:set-icon', (icon: string | null) => {
+        app.api.register('titlebar:set-icon', (icon: string | null) => {
             this.controller?.setIcon(icon);
         });
 
-        (app.api.register as any)('titlebar:get-title', (): string => {
+        app.api.register('titlebar:get-title', (): string => {
             return this.controller?.getTitle() || 'Notehub';
         });
 
