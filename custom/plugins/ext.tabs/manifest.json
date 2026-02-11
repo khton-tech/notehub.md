@@ -1,0 +1,16 @@
+{
+    "id": "ext.tabs",
+    "name": "Editor Tabs",
+    "version": "0.1.0",
+    "description": "Adds a tab bar to manage open files",
+    "main": "dist/main.js",
+    "author": "Notehub",
+    "license": "MIT",
+    "dependencies": [],
+    "permissions": [
+        "zone:register",
+        "editor:open",
+        "editor:file-opened",
+        "editor:file-closed"
+    ]
+}

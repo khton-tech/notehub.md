@@ -317,6 +317,34 @@ importers:
         specifier: ^5.0.0
         version: 5.4.21(@types/node@20.19.27)
 
+  custom/plugins/ext.tabs:
+    dependencies:
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.0
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@notehub.md/api':
+        specifier: workspace:*
+        version: link:../../../packages/api
+      '@notehub.md/cli':
+        specifier: workspace:*
+        version: link:../../../packages/cli
+      '@types/react':
+        specifier: ^18.3.0
+        version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.3.0
+        version: 18.3.7(@types/react@18.3.27)
+      lucide-react:
+        specifier: ^0.469.0
+        version: 0.469.0(react@18.3.1)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
   packages/api:
     dependencies:
       react:
