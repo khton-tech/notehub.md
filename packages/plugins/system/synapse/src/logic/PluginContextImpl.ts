@@ -104,6 +104,16 @@ export class PluginContextImpl implements PluginContext {
     registerApi(name: string, handler: (...args: unknown[]) => unknown): void {
         this.ensureNotDisposed('registerApi');
 
+        // Enforce namespace: external plugins must prefix APIs with their plugin ID
+        // Extract the short name from plugin ID (e.g., "nh.features.my-plugin" -> "my-plugin")
+        const parts = this.pluginId.split('.');
+        const shortName = parts[parts.length - 1];
+        if (shortName && !name.startsWith(`${shortName}:`)) {
+            throw new Error(
+                `[PluginContext:${this.pluginId}] API name "${name}" must be namespaced with "${shortName}:" prefix`
+            );
+        }
+
         try {
             // Delegate to Core ApiBus
             this.app.api.register(name, handler);
@@ -166,19 +176,24 @@ export class PluginContextImpl implements PluginContext {
     /**
      * Subscribe to an application event.
      * The subscription is tracked for automatic cleanup on unload.
-     * 
+     *
      * @param event - Event name to subscribe to
      * @param handler - Callback function invoked when event is emitted
+     * @param options - Optional subscription options (priority)
      */
-    subscribe<T = unknown>(event: string, handler: (payload: T) => void): void {
+    subscribe<T = unknown>(
+        event: string,
+        handler: (payload: T, context: import('@notehub.md/api').EventContext) => void,
+        options?: { priority?: number }
+    ): void {
         this.ensureNotDisposed('subscribe');
 
         // Cast handler to EventCallback<unknown> since EventBus uses generic unknown type
         // The type safety is maintained at the API level
-        const callback = handler as (payload: unknown) => void;
+        const callback = handler as (payload: unknown, context: unknown) => void;
 
-        // Subscribe to the event via Core EventBus
-        this.app.events.on(event, callback);
+        // Subscribe to the event via Core EventBus with options
+        this.app.events.on(event, callback, options?.priority != null ? { priority: options.priority } : undefined);
 
         // Store unsubscriber for cleanup
         const unsubscribe = () => {
@@ -237,10 +252,49 @@ export class PluginContextImpl implements PluginContext {
         return this._unsafe;
     }
 
+    /** Lazy-initialized storage accessor */
+    private _storage: PluginContext['storage'] | null = null;
+
+    /**
+     * Per-plugin key-value storage, namespaced by plugin ID.
+     * Uses config-manager under the hood with keys like `plugin-storage:{pluginId}:{key}`.
+     */
+    get storage(): PluginContext['storage'] {
+        if (this._storage) return this._storage;
+
+        const prefix = `plugin-storage:${this.pluginId}:`;
+        const app = this.app;
+
+        this._storage = {
+            async get<T = unknown>(key: string): Promise<T | undefined> {
+                return app.api.invoke<T | undefined>('config:get', `${prefix}${key}`);
+            },
+            async set(key: string, value: unknown): Promise<void> {
+                await app.api.invoke('config:set', `${prefix}${key}`, value);
+            },
+            async delete(key: string): Promise<void> {
+                await app.api.invoke('config:delete', `${prefix}${key}`);
+            },
+            async list(): Promise<string[]> {
+                // config:list-keys may not exist; fallback to empty
+                try {
+                    const allKeys = await app.api.invoke<string[]>('config:list-keys');
+                    return allKeys
+                        .filter((k: string) => k.startsWith(prefix))
+                        .map((k: string) => k.slice(prefix.length));
+                } catch {
+                    return [];
+                }
+            },
+        };
+
+        return this._storage;
+    }
+
     /**
      * Clean up all registrations and subscriptions.
      * Called by PluginLoader when a plugin is unloaded.
-     * 
+     *
      * @internal
      */
     cleanup(): void {
@@ -286,8 +340,9 @@ export class PluginContextImpl implements PluginContext {
         }
         this.hookUnsubscribers = [];
 
-        // Clear unsafe context reference
+        // Clear unsafe and storage context references
         this._unsafe = null;
+        this._storage = null;
 
         for (const widgetId of this.registeredWidgets) {
             try {

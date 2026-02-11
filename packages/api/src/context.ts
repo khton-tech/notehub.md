@@ -7,6 +7,20 @@
  */
 
 /**
+ * Context passed to event handlers, allowing control of event propagation.
+ */
+export interface EventContext {
+    /** Prevent the default action */
+    preventDefault(): void;
+    /** Check if default was prevented */
+    readonly defaultPrevented: boolean;
+    /** Stop calling remaining listeners */
+    stopPropagation(): void;
+    /** Check if propagation was stopped */
+    readonly propagationStopped: boolean;
+}
+
+/**
  * Hook position for API interception.
  */
 export type HookPosition = 'before' | 'after' | 'around';
@@ -110,21 +124,31 @@ export interface PluginContext {
 
     /**
      * Subscribe to an application event.
-     * 
+     *
      * The subscription will be automatically removed when the plugin is unloaded.
-     * 
+     *
      * @typeParam T - Type of the event payload
      * @param event - Event name to subscribe to
      * @param handler - Callback function invoked when event is emitted
-     * 
+     * @param options - Optional subscription options (priority)
+     *
      * @example
      * ```ts
-     * ctx.subscribe<{ noteId: string }>('note:saved', (payload) => {
+     * ctx.subscribe<{ noteId: string }>('note:saved', (payload, context) => {
      *     console.log('Note saved:', payload.noteId);
+     *     // context.preventDefault() to prevent default action
+     *     // context.stopPropagation() to stop further handlers
      * });
+     *
+     * // With priority (higher = runs earlier)
+     * ctx.subscribe('note:saved', handler, { priority: 100 });
      * ```
      */
-    subscribe<T = unknown>(event: string, handler: (payload: T) => void): void;
+    subscribe<T = unknown>(
+        event: string,
+        handler: (payload: T, context: EventContext) => void,
+        options?: { priority?: number }
+    ): void;
 
     /**
      * Emit an event to all subscribers.
@@ -155,6 +179,31 @@ export interface PluginContext {
         id: string;
         name: string;
         version: string;
+    };
+
+    /**
+     * Per-plugin key-value storage.
+     *
+     * Data is namespaced by plugin ID and persisted via the config-manager.
+     * Each plugin can only access its own storage.
+     *
+     * @example
+     * ```ts
+     * await ctx.storage.set('lastOpenedFile', '/path/to/file.md');
+     * const path = await ctx.storage.get<string>('lastOpenedFile');
+     * await ctx.storage.delete('lastOpenedFile');
+     * const keys = await ctx.storage.list();
+     * ```
+     */
+    readonly storage: {
+        /** Get a value by key. Returns undefined if not found. */
+        get<T = unknown>(key: string): Promise<T | undefined>;
+        /** Set a value for a key. */
+        set(key: string, value: unknown): Promise<void>;
+        /** Delete a key. */
+        delete(key: string): Promise<void>;
+        /** List all keys in this plugin's storage. */
+        list(): Promise<string[]>;
     };
 }
 

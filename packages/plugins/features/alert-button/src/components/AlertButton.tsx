@@ -1,47 +1,15 @@
-<<<<<<< HEAD
-
-import React from 'react';
-import { NotificationManager } from './NotificationContainer';
-
-export interface AlertButtonProps {
-    // Portal props usually include 'match' if regex was used
-=======
 import React from 'react';
 import { Bell } from 'lucide-react';
 import { NotificationManager } from './NotificationContainer';
 
-interface AlertButtonProps {
-    // Portal props might include regex match, etc.
->>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
-    match: RegExpExecArray | null;
+export interface AlertButtonProps {
+    // Portal props include regex match
+    match: RegExpExecArray;
 }
 
 export const AlertButton: React.FC<AlertButtonProps> = ({ match }) => {
-<<<<<<< HEAD
-    // Extract message from regex match group 1, or default
-    const message = match && match[1] ? match[1] : 'Hello from Plugin!';
-
-    return (
-        <button
-            onClick={() => NotificationManager.show(message, 'success')}
-            className="nh-button nh-button-primary"
-            style={{
-                margin: '0 4px',
-                padding: '2px 8px',
-                fontSize: '0.9em',
-                borderRadius: '4px',
-                verticalAlign: 'middle'
-            }}
-        >
-            🔔 {message}
-=======
     // Extract text from match group 1 (if available), default to "Alert"
-    // Regex will be /\[\[alert:(.*?)\]\]/ or just /\[\[alert\]\]/
-    // If it's the old syntax, match[1] might be undefined or we might need to handle both.
-    // Let's assume the regex in index.tsx will be updated to `\[\[alert(?::(.*?))?\]\]` to support both?
-    // Or just `\[\[alert:(.*?)\]\]` as requested. 
-    // The user asked for `[[alert:text]]`.
-
+    // Regex will be /\[\[alert(?::(.*?))?\]\]/
     const text = match && match[1] ? match[1] : 'Alert';
     const linkText = text; // Text to show in notification
     const buttonLabel = text.length > 15 ? text.substring(0, 12) + '...' : text;
@@ -80,7 +48,6 @@ export const AlertButton: React.FC<AlertButtonProps> = ({ match }) => {
         >
             <Bell size={14} />
             <span>{buttonLabel}</span>
->>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
         </button>
     );
 };

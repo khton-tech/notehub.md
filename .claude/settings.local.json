@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(xargs find:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm ls:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npx vitest:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm predev:*)",
+      "Bash(find:*)"
+    ]
+  }
+}

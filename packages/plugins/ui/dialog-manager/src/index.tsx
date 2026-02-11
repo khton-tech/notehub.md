@@ -1,4 +1,5 @@
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 import { useState, useEffect, useRef, useCallback, type FC, type ChangeEvent, type KeyboardEvent } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Button } from '@notehub/ck-standard';
@@ -205,7 +206,7 @@ const DialogOverlay: FC<DialogOverlayProps> = ({ dialog, onClose }) => {
  * Provides Promise-based dialog methods (alert, confirm, prompt) that render
  * styled modal dialogs using the application's theme system.
  */
-export class DialogManagerPlugin implements IPlugin {
+export class DialogManagerPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.ui.dialog-manager',
         name: 'DialogManager',
@@ -213,19 +214,9 @@ export class DialogManagerPlugin implements IPlugin {
         type: 'ui',
     };
 
-    private app: NotehubCore | null = null;
     private dialogContainer: HTMLDivElement | null = null;
     private dialogRoot: Root | null = null;
     private currentDialog: DialogState | null = null;
-
-    /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
 
     /**
      * Generate unique dialog ID
@@ -258,7 +249,7 @@ export class DialogManagerPlugin implements IPlugin {
         const dialogId = this.currentDialog?.id;
         this.currentDialog = null;
 
-        if (this.app && dialogId) {
+        if (dialogId) {
             this.app.events.emit('dialog:closed', { id: dialogId });
         }
     }
@@ -287,9 +278,7 @@ export class DialogManagerPlugin implements IPlugin {
 
             this.renderDialog();
 
-            if (this.app) {
-                this.app.events.emit('dialog:opened', { id, type, title });
-            }
+            this.app.events.emit('dialog:opened', { id, type, title });
 
             this.log('info', `Opened ${type} dialog: "${title}"`);
         });
@@ -297,8 +286,7 @@ export class DialogManagerPlugin implements IPlugin {
 
     // =============== Plugin Lifecycle ===============
 
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Create dialog container
@@ -308,15 +296,15 @@ export class DialogManagerPlugin implements IPlugin {
         this.dialogRoot = createRoot(this.dialogContainer);
 
         // Register API methods
-        app.api.register('dialog:alert', (title: string, message: string) => {
+        this.registerApi('dialog:alert', (title: string, message: string) => {
             return this.showDialog<void>('alert', title, message);
         });
 
-        app.api.register('dialog:confirm', (title: string, message: string) => {
+        this.registerApi('dialog:confirm', (title: string, message: string) => {
             return this.showDialog<boolean>('confirm', title, message);
         });
 
-        app.api.register('dialog:prompt', (title: string, message: string, defaultValue?: string) => {
+        this.registerApi('dialog:prompt', (title: string, message: string, defaultValue?: string) => {
             return this.showDialog<string | null>('prompt', title, message, defaultValue);
         });
 
@@ -324,7 +312,7 @@ export class DialogManagerPlugin implements IPlugin {
         this.log('info', 'Loaded successfully');
     }
 
-    async unload(_app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         // Cleanup dialog container
@@ -337,7 +325,6 @@ export class DialogManagerPlugin implements IPlugin {
             this.dialogContainer = null;
         }
 
-        this.app = null;
         this.log('info', 'Unloaded');
     }
 }

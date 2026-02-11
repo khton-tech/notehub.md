@@ -2,7 +2,6 @@
     "id": "features.alert-button",
     "name": "Alert Button",
     "version": "0.1.0",
-<<<<<<< HEAD
     "description": "Adds a button to the editor that triggers an alert notification",
     "main": "dist/main.js",
     "author": "Notehub",
@@ -15,9 +14,3 @@
         "settings:register-custom-view"
     ]
 }
-=======
-    "description": "Alert Button plugin for Notehub.md",
-    "author": "",
-    "main": "main.js"
-}
->>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58

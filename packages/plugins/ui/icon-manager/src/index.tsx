@@ -1,5 +1,6 @@
 import type { FC } from 'react';
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 import { AppLogo } from './icons/AppLogo.js';
 import { PluginLogo } from './icons/PluginLogo.js';
 import {
@@ -59,10 +60,10 @@ let iconRegistryInstance: Map<string, React.ElementType> | null = null;
 
 /**
  * Icon Component
- * 
+ *
  * Renders an icon from the registry by name.
  * Falls back to HelpCircle if icon is not found.
- * 
+ *
  * @example
  * ```tsx
  * <Icon name="folder-open" size={24} className="text-yellow-400" />
@@ -115,24 +116,24 @@ const CORE_ICONS: Record<string, LucideIcon> = {
 
 /**
  * IconManagerPlugin - Icon registry and component provider
- * 
+ *
  * Provides a centralized registry for icons with Lucide React as the default set.
  * Other plugins can register custom icons via the API.
- * 
+ *
  * API Methods:
  * - `icon:register` - Register a custom icon
  * - `icon:get` - Get an icon component by name
- * 
+ *
  * @example
  * ```ts
  * // Register a custom icon
  * app.api.invoke('icon:register', 'my-icon', MyIconComponent);
- * 
+ *
  * // Get an icon component
  * const IconComponent = app.api.invoke('icon:get', 'folder-open');
  * ```
  */
-export class IconManagerPlugin implements IPlugin {
+export class IconManagerPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.ui.icon-manager',
         name: 'IconManager',
@@ -142,18 +143,6 @@ export class IconManagerPlugin implements IPlugin {
 
     /** Icon registry: name -> React component */
     private icons: Map<string, React.ElementType> = new Map();
-
-    /** Reference to kernel */
-    private app: NotehubCore | null = null;
-
-    /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
 
     // =============== API Method Handlers ===============
 
@@ -189,8 +178,7 @@ export class IconManagerPlugin implements IPlugin {
     /**
      * Load the plugin and register core icons
      */
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Register core icon set from Lucide
@@ -207,8 +195,8 @@ export class IconManagerPlugin implements IPlugin {
         iconRegistryInstance = this.icons;
 
         // Register API methods
-        app.api.register('icon:register', this.handleRegister);
-        app.api.register('icon:get', this.handleGet);
+        this.registerApi('icon:register', this.handleRegister);
+        this.registerApi('icon:get', this.handleGet);
 
         this.log('info', 'Loaded successfully');
     }
@@ -216,19 +204,14 @@ export class IconManagerPlugin implements IPlugin {
     /**
      * Unload the plugin
      */
-    async unload(app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         // Clear singleton reference
         iconRegistryInstance = null;
 
-        // Unregister API methods
-        app.api.unregister('icon:register');
-        app.api.unregister('icon:get');
-
         // Clear state
         this.icons.clear();
-        this.app = null;
 
         this.log('info', 'Unloaded');
     }

@@ -10,6 +10,7 @@
         "tauri": "tauri"
     },
     "dependencies": {
+        "@notehub/app-bootstrap": "workspace:*",
         "@notehub/about": "workspace:*",
         "@notehub/backlinks": "workspace:*",
         "@notehub/bootloader": "workspace:*",

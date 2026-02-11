@@ -1,25 +1,25 @@
 /**
  * @fileoverview Editor Plugin Entry Point
- * 
+ *
  * This is the main entry point for the @notehub/editor plugin.
  * It wires up the EditorController, UI component, and event listeners,
  * then registers the editor as the 'editor-main' controller for use
  * in the EditorLayout.
- * 
+ *
  * ## Architecture
- * 
+ *
  * The editor plugin follows the Notehub microkernel architecture:
  * - **Controller**: `EditorController` manages file I/O and state
  * - **View**: `NotehubEditor` wraps CodeMirror 6 with theme integration
  * - **Events**: Uses EventBus for all inter-plugin communication
- * 
+ *
  * ## Events Consumed
  * - `explorer:file-selected` - When user clicks a file in the explorer
- * 
+ *
  * ## Events Emitted
  * - `editor:file-opened` - When a file is successfully opened
  * - `app:status-report` - Status updates for the status bar
- * 
+ *
  * ## Dependencies
  * - `nh.system.fs-manager` - File read/write operations
  * - `nh.system.logger` - Logging
@@ -27,14 +27,15 @@
  * - `nh.ui.dialog-manager` - Error dialogs
  * - `nh.ui.icon-manager` - Icon components
  * - `nh.ui.theme-manager` - Theme CSS variables
- * 
+ *
  * @module @notehub/editor
  * @author Notehub Team
  * @version 0.0.1
  */
 
 import { useState, useEffect } from 'react';
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest, NotehubCore, FileTypeHandler } from '@notehub/core';
 import { Icon } from '@notehub/icon-manager';
 import { EditorController } from './logic/EditorController';
 import { NotehubEditor } from './components/NotehubEditor';
@@ -66,16 +67,16 @@ interface FileOpenedPayload {
 
 /**
  * Creates the editor slot component with proper event subscriptions.
- * 
+ *
  * This factory function creates a React component that:
  * 1. Subscribes to `editor:file-opened` events
  * 2. Displays a placeholder when no file is open
  * 3. Renders the NotehubEditor when a file is loaded
- * 
+ *
  * @param controller - The EditorController instance for file operations
  * @param app - The NotehubCore instance for event subscriptions
  * @returns A React component to be registered as 'editor-main'
- * 
+ *
  * @example
  * ```typescript
  * const EditorSlotComponent = createEditorSlotComponent(controller, app);
@@ -167,23 +168,23 @@ function createEditorSlotComponent(controller: EditorController, app: NotehubCor
 
 /**
  * EditorPlugin - Main plugin class for the Notehub Markdown Editor
- * 
+ *
  * This plugin provides the core editing functionality for Notehub.md,
  * wrapping CodeMirror 6 in the microkernel architecture.
- * 
+ *
  * ## Lifecycle
- * 
+ *
  * 1. **load**: Creates controller, registers UI component, subscribes to events
  * 2. **unload**: Cleans up event handlers, unregisters components, disposes controller
- * 
+ *
  * ## Registration
- * 
+ *
  * The plugin registers a React component as 'editor-main' which is rendered
  * by the EditorLayout in the main content area.
- * 
- * @implements {IPlugin}
+ *
+ * @extends {SystemPlugin}
  */
-export class EditorPlugin implements IPlugin {
+export class EditorPlugin extends SystemPlugin {
     /**
      * Plugin manifest defining identity and dependencies
      * @readonly
@@ -203,39 +204,20 @@ export class EditorPlugin implements IPlugin {
         ]
     };
 
-    /** Reference to the NotehubCore instance */
-    private app: NotehubCore | null = null;
-
     /** EditorController instance managing file state */
     private controller: EditorController | null = null;
 
-    /**
-     * Event cleanup functions for lifecycle hygiene.
-     * Called during unload to prevent memory leaks.
-     * @private
-     */
-    private eventCleanups: Array<() => void> = [];
-
-    /**
-     * Log a message via the Logger plugin
-     * @param level - Log level (info, warn, error)
-     * @param message - Message to log
-     * @private
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
+    /** Registered file type handlers */
+    private fileTypeHandlers: Map<string, FileTypeHandler> = new Map();
 
     /**
      * Handler for file selection events from the explorer plugin.
-     * 
+     *
      * This method:
      * 1. Extracts the file path from the event payload
      * 2. Validates the file is a markdown file (.md)
      * 3. Delegates to the controller to open the file
-     * 
+     *
      * @param payload - Event payload containing the file path
      * @private
      */
@@ -255,9 +237,9 @@ export class EditorPlugin implements IPlugin {
             return;
         }
 
-        // Only open markdown files - other file types are ignored
-        if (!path.endsWith('.md')) {
-            this.log('info', `Ignoring non-markdown file: ${path}`);
+        // Check if any registered handler supports this file type
+        if (!this.canOpenFile(path)) {
+            this.log('info', `No handler registered for: ${path}`);
             return;
         }
 
@@ -269,24 +251,81 @@ export class EditorPlugin implements IPlugin {
     };
 
     /**
+     * Find the best handler for a given file path by extension.
+     * Returns the highest-priority handler whose extensions match.
+     */
+    private getHandlerForFile(filePath: string): FileTypeHandler | null {
+        const lower = filePath.toLowerCase();
+        let best: FileTypeHandler | null = null;
+        for (const handler of this.fileTypeHandlers.values()) {
+            if (handler.extensions.some((ext: string) => lower.endsWith(ext))) {
+                if (!best || (handler.priority ?? 0) > (best.priority ?? 0)) {
+                    best = handler;
+                }
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Check if a file path is supported by any registered handler.
+     */
+    private canOpenFile(filePath: string): boolean {
+        return this.getHandlerForFile(filePath) !== null;
+    }
+
+    /**
      * Initialize the plugin.
-     * 
+     *
      * This method:
      * 1. Creates the EditorController for file operations
      * 2. Creates and registers the editor UI component
      * 3. Subscribes to file selection events from the explorer
-     * 
-     * @param app - The NotehubCore instance
      */
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
+        // Register the default markdown handler
+        this.fileTypeHandlers.set('markdown', {
+            id: 'markdown',
+            name: 'Markdown Editor',
+            extensions: ['.md', '.markdown', '.mdx'],
+            priority: 0,
+        });
+
+        // Register file type handler APIs
+        this.registerApi('editor:register-handler', (handler: FileTypeHandler) => {
+            if (!handler?.id || !handler.extensions?.length) {
+                this.log('warn', 'Invalid file type handler');
+                return;
+            }
+            this.fileTypeHandlers.set(handler.id, handler);
+            this.log('info', `Registered file type handler: ${handler.id} (${handler.extensions.join(', ')})`);
+        });
+
+        this.registerApi('editor:unregister-handler', (handlerId: string) => {
+            if (this.fileTypeHandlers.delete(handlerId)) {
+                this.log('info', `Unregistered file type handler: ${handlerId}`);
+            }
+        });
+
+        this.registerApi('editor:get-handler', (filePath: string) => {
+            return this.getHandlerForFile(filePath);
+        });
+
+        this.registerApi('editor:list-handlers', () => {
+            return Array.from(this.fileTypeHandlers.values());
+        });
+
+        this.registerApi('editor:can-open', (filePath: string) => {
+            return this.canOpenFile(filePath);
+        });
+
         // Register settings with settings-manager for UI
-        registerEditorSettings(app);
+        registerEditorSettings(this.app);
 
         // Create the controller for managing file state and operations
-        this.controller = new EditorController(app);
+        this.controller = new EditorController(this.app);
 
         // Load settings from config-manager
         try {
@@ -300,21 +339,20 @@ export class EditorPlugin implements IPlugin {
         this.controller.restoreLastFile();
 
         // Create the slot component with controller in closure
-        const EditorSlotComponent = createEditorSlotComponent(this.controller, app);
+        const EditorSlotComponent = createEditorSlotComponent(this.controller, this.app);
 
         // Register the UI component as 'editor-main' for EditorLayout to render
-        app.api.invoke('controller:register', 'editor-main', EditorSlotComponent);
+        this.app.api.invoke('controller:register', 'editor-main', EditorSlotComponent);
 
         // Register the singleton Portal Renderer (to be placed in EditorLayout root)
-        app.api.invoke('controller:register', 'editor-portal-renderer', EditorPortalRenderer);
+        this.app.api.invoke('controller:register', 'editor-portal-renderer', EditorPortalRenderer);
 
         // === Event Subscription via EventBus ===
         // Listen for file selection events from the explorer plugin
-        app.events.on('explorer:file-selected', this.handleFileSelected);
-        this.eventCleanups.push(() => app.events.off('explorer:file-selected', this.handleFileSelected));
+        this.registerEvent('explorer:file-selected', this.handleFileSelected);
 
         // Register API for Portals (replacing dynamic widgets)
-        app.api.register('editor:register-portal', (spec: PortalSpec) => {
+        this.registerApi('editor:register-portal', (spec: PortalSpec) => {
             // Validate incoming spec
             if (!spec || !spec.id || !spec.component) {
                 this.log('warn', 'Invalid portal spec registered');
@@ -348,25 +386,25 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Register API for unregistering portals
-        app.api.register('editor:unregister-portal', (id: string) => {
+        this.registerApi('editor:unregister-portal', (id: string) => {
             PortalRegistry.getInstance().unregister(id);
             this.log('info', `Unregistered portal: ${id}`);
         });
 
-        // ⚡ FIX E2: Register API for checking dirty state (used by titlebar on close)
-        app.api.register('editor:is-dirty', () => {
+        // Register API for checking dirty state (used by titlebar on close)
+        this.registerApi('editor:is-dirty', () => {
             return this.controller?.getIsDirty() ?? false;
         });
 
-        // ⚡ FIX E3: Register API for opening files (used by Backlinks/WikiLinks)
-        app.api.register('editor:open', async (path: unknown) => {
+        // Register API for opening files (used by Backlinks/WikiLinks)
+        this.registerApi('editor:open', async (path: unknown) => {
             if (typeof path === 'string' && this.controller) {
                 await this.controller.openFile(path);
             }
         });
 
-        // ⚡ FIX E4: Register API for getting active path
-        app.api.register('editor:get-active-path', () => {
+        // Register API for getting active path
+        this.registerApi('editor:get-active-path', () => {
             return this.controller?.getCurrentPath() ?? null;
         });
 
@@ -375,12 +413,12 @@ export class EditorPlugin implements IPlugin {
         // =====================================================================
 
         // Get full document content
-        app.api.register('editor:get-content', () => {
+        this.registerApi('editor:get-content', () => {
             return this.controller?.getCurrentContent() ?? '';
         });
 
         // Set full document content
-        app.api.register('editor:set-content', (content: unknown) => {
+        this.registerApi('editor:set-content', (content: unknown) => {
             const view = this.controller?.getEditorView();
             if (view && typeof content === 'string') {
                 view.dispatch({
@@ -390,7 +428,7 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Get current selection text
-        app.api.register('editor:get-selection', () => {
+        this.registerApi('editor:get-selection', () => {
             const view = this.controller?.getEditorView();
             if (!view) return '';
             const { from, to } = view.state.selection.main;
@@ -398,7 +436,7 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Replace current selection with text
-        app.api.register('editor:replace-selection', (text: unknown) => {
+        this.registerApi('editor:replace-selection', (text: unknown) => {
             const view = this.controller?.getEditorView();
             if (view && typeof text === 'string') {
                 view.dispatch(view.state.replaceSelection(text));
@@ -406,7 +444,7 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Insert text at cursor
-        app.api.register('editor:insert-text', (text: unknown) => {
+        this.registerApi('editor:insert-text', (text: unknown) => {
             const view = this.controller?.getEditorView();
             if (view && typeof text === 'string') {
                 const pos = view.state.selection.main.head;
@@ -418,7 +456,7 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Get specific line content (0-indexed)
-        app.api.register('editor:get-line', (lineNumber: unknown) => {
+        this.registerApi('editor:get-line', (lineNumber: unknown) => {
             const view = this.controller?.getEditorView();
             if (!view || typeof lineNumber !== 'number') return '';
             const doc = view.state.doc;
@@ -427,7 +465,7 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Get total line count
-        app.api.register('editor:get-line-count', () => {
+        this.registerApi('editor:get-line-count', () => {
             const view = this.controller?.getEditorView();
             return view?.state.doc.lines ?? 0;
         });
@@ -437,7 +475,7 @@ export class EditorPlugin implements IPlugin {
         // =====================================================================
 
         // Get cursor position
-        app.api.register('editor:get-cursor', () => {
+        this.registerApi('editor:get-cursor', () => {
             const view = this.controller?.getEditorView();
             if (!view) return { line: 0, ch: 0 };
             const pos = view.state.selection.main.head;
@@ -446,7 +484,7 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Set cursor position
-        app.api.register('editor:set-cursor', (pos: unknown) => {
+        this.registerApi('editor:set-cursor', (pos: unknown) => {
             const view = this.controller?.getEditorView();
             if (!view || !pos || typeof pos !== 'object') return;
             const { line, ch } = pos as { line?: number; ch?: number };
@@ -460,7 +498,7 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Get selection range
-        app.api.register('editor:get-selection-range', () => {
+        this.registerApi('editor:get-selection-range', () => {
             const view = this.controller?.getEditorView();
             if (!view) return { from: { line: 0, ch: 0 }, to: { line: 0, ch: 0 } };
             const { from, to } = view.state.selection.main;
@@ -473,7 +511,7 @@ export class EditorPlugin implements IPlugin {
         });
 
         // Set selection range
-        app.api.register('editor:set-selection-range', (range: unknown) => {
+        this.registerApi('editor:set-selection-range', (range: unknown) => {
             const view = this.controller?.getEditorView();
             if (!view || !range || typeof range !== 'object') return;
             const { from, to } = range as { from?: { line?: number; ch?: number }; to?: { line?: number; ch?: number } };
@@ -495,14 +533,14 @@ export class EditorPlugin implements IPlugin {
         // =====================================================================
 
         // Get direct CodeMirror EditorView access
-        app.api.register('editor:unsafe_get-view', () => {
+        this.registerApi('editor:unsafe_get-view', () => {
             return this.controller?.getEditorView() ?? null;
         });
 
 
         // === Command Registration (context-aware) ===
         // Register save command only active when editor is focused
-        app.api.invoke('command:register', {
+        this.app.api.invoke('command:register', {
             id: 'editor:save',
             name: 'Save File',
             handler: async () => {
@@ -520,62 +558,26 @@ export class EditorPlugin implements IPlugin {
 
     /**
      * Cleanup the plugin.
-     * 
+     *
      * This method ensures proper lifecycle hygiene:
-     * 1. Unsubscribes all event handlers
-     * 2. Unregisters the controller component
-     * 3. Disposes the controller (clears timers, state)
-     * 4. Clears all references
-     * 
-     * @param app - The NotehubCore instance
+     * 1. Unregisters the controller component
+     * 2. Disposes the controller (clears timers, state)
+     *
+     * Note: API unregistration and event cleanup are handled automatically
+     * by SystemPlugin's cleanup mechanism.
      */
-    async unload(app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
-        // 1. Unsubscribe all event handlers to prevent memory leaks
-        for (const cleanup of this.eventCleanups) {
-            try {
-                cleanup();
-            } catch (error) {
-                this.log('warn', `Error during event cleanup: ${error}`);
-            }
-        }
-        this.eventCleanups = [];
+        // Unregister the controller component from the registry
+        this.app.api.invoke('controller:unregister', 'editor-main');
+        this.app.api.invoke('controller:unregister', 'editor-portal-renderer');
 
-        // 2. Unregister the controller component from the registry
-        app.api.invoke('controller:unregister', 'editor-main');
-        app.api.invoke('controller:unregister', 'editor-portal-renderer');
-
-        // Unregister API
-        app.api.unregister('editor:register-portal');
-        app.api.unregister('editor:unregister-portal');
-        app.api.unregister('editor:is-dirty');
-        app.api.unregister('editor:open');
-        app.api.unregister('editor:get-active-path');
-        // Text manipulation API
-        app.api.unregister('editor:get-content');
-        app.api.unregister('editor:set-content');
-        app.api.unregister('editor:get-selection');
-        app.api.unregister('editor:replace-selection');
-        app.api.unregister('editor:insert-text');
-        app.api.unregister('editor:get-line');
-        app.api.unregister('editor:get-line-count');
-        // Cursor API
-        app.api.unregister('editor:get-cursor');
-        app.api.unregister('editor:set-cursor');
-        app.api.unregister('editor:get-selection-range');
-        app.api.unregister('editor:set-selection-range');
-        // Unsafe API
-        app.api.unregister('editor:unsafe_get-view');
-
-        // 3. Dispose controller (clears debounce timers, internal state)
+        // Dispose controller (clears debounce timers, internal state)
         if (this.controller) {
             this.controller.dispose();
             this.controller = null;
         }
-
-        // 4. Clear app reference
-        this.app = null;
 
         this.log('info', 'Unloaded - all listeners cleaned up');
     }

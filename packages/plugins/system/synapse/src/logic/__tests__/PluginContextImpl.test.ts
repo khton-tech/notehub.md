@@ -97,16 +97,16 @@ describe('PluginContextImpl', () => {
     describe('registerApi', () => {
         it('should register an API with the core', () => {
             const handler = vi.fn();
-            ctx.registerApi('test:api', handler);
+            ctx.registerApi('test-plugin:api', handler);
 
-            expect(mockCore.api.register).toHaveBeenCalledWith('test:api', handler);
+            expect(mockCore.api.register).toHaveBeenCalledWith('test-plugin:api', handler);
             expect(ctx.getStats().registeredApis).toBe(1);
         });
 
         it('should track multiple API registrations', () => {
-            ctx.registerApi('test:api1', vi.fn());
-            ctx.registerApi('test:api2', vi.fn());
-            ctx.registerApi('test:api3', vi.fn());
+            ctx.registerApi('test-plugin:api1', vi.fn());
+            ctx.registerApi('test-plugin:api2', vi.fn());
+            ctx.registerApi('test-plugin:api3', vi.fn());
 
             expect(ctx.getStats().registeredApis).toBe(3);
         });
@@ -114,18 +114,24 @@ describe('PluginContextImpl', () => {
         it('should throw if context is disposed', () => {
             ctx.cleanup();
 
-            expect(() => ctx.registerApi('test:api', vi.fn())).toThrow(
+            expect(() => ctx.registerApi('test-plugin:api', vi.fn())).toThrow(
                 /Cannot call registerApi\(\) - context has been disposed/
+            );
+        });
+
+        it('should enforce namespace prefix on API names', () => {
+            expect(() => ctx.registerApi('other:api', vi.fn())).toThrow(
+                /must be namespaced with "test-plugin:" prefix/
             );
         });
 
         it('should propagate registration errors', () => {
             // Register once
-            ctx.registerApi('test:api', vi.fn());
+            ctx.registerApi('test-plugin:api', vi.fn());
 
             // Try to register again (mock throws)
-            expect(() => ctx.registerApi('test:api', vi.fn())).toThrow(
-                /API "test:api" is already registered/
+            expect(() => ctx.registerApi('test-plugin:api', vi.fn())).toThrow(
+                /API "test-plugin:api" is already registered/
             );
         });
     });
@@ -137,17 +143,17 @@ describe('PluginContextImpl', () => {
     describe('invokeApi', () => {
         it('should invoke API through core', async () => {
             const handler = vi.fn().mockReturnValue('result');
-            (mockCore.api.register as any)('test:api', handler);
+            (mockCore.api.register as any)('test-plugin:api', handler);
 
-            await ctx.invokeApi('test:api', 'arg1', 'arg2');
+            await ctx.invokeApi('test-plugin:api', 'arg1', 'arg2');
 
-            expect(mockCore.api.invoke).toHaveBeenCalledWith('test:api', 'arg1', 'arg2');
+            expect(mockCore.api.invoke).toHaveBeenCalledWith('test-plugin:api', 'arg1', 'arg2');
         });
 
         it('should throw if context is disposed', async () => {
             ctx.cleanup();
 
-            await expect(ctx.invokeApi('test:api')).rejects.toThrow(
+            await expect(ctx.invokeApi('test-plugin:api')).rejects.toThrow(
                 /Cannot call invokeApi\(\) - context has been disposed/
             );
         });
@@ -251,7 +257,7 @@ describe('PluginContextImpl', () => {
             const handler = vi.fn();
             ctx.subscribe('test:event', handler);
 
-            expect(mockCore.events.on).toHaveBeenCalledWith('test:event', handler);
+            expect(mockCore.events.on).toHaveBeenCalledWith('test:event', handler, undefined);
             expect(ctx.getStats().eventSubscriptions).toBe(1);
         });
 
@@ -278,13 +284,13 @@ describe('PluginContextImpl', () => {
 
     describe('cleanup', () => {
         it('should unregister all APIs', () => {
-            ctx.registerApi('api1', vi.fn());
-            ctx.registerApi('api2', vi.fn());
+            ctx.registerApi('test-plugin:api1', vi.fn());
+            ctx.registerApi('test-plugin:api2', vi.fn());
 
             ctx.cleanup();
 
-            expect(mockCore.api.unregister).toHaveBeenCalledWith('api1');
-            expect(mockCore.api.unregister).toHaveBeenCalledWith('api2');
+            expect(mockCore.api.unregister).toHaveBeenCalledWith('test-plugin:api1');
+            expect(mockCore.api.unregister).toHaveBeenCalledWith('test-plugin:api2');
             expect(ctx.isDisposed()).toBe(true);
         });
 
@@ -324,7 +330,7 @@ describe('PluginContextImpl', () => {
         });
 
         it('should reset all stats after cleanup', async () => {
-            ctx.registerApi('api', vi.fn());
+            ctx.registerApi('test-plugin:api', vi.fn());
             ctx.subscribe('event', vi.fn());
             await ctx.invokeApi('editor:register-portal', { id: 'portal', regex: /x/g, component: () => null });
             await ctx.invokeApi('settings:register-tab', { id: 'tab' });
@@ -340,7 +346,7 @@ describe('PluginContextImpl', () => {
         });
 
         it('should be idempotent (second cleanup does nothing)', () => {
-            ctx.registerApi('api', vi.fn());
+            ctx.registerApi('test-plugin:api', vi.fn());
 
             ctx.cleanup();
             const firstCallCount = (mockCore.api.unregister as any).mock.calls.length;
@@ -352,7 +358,7 @@ describe('PluginContextImpl', () => {
         });
 
         it('should handle errors during cleanup gracefully', () => {
-            ctx.registerApi('api', vi.fn());
+            ctx.registerApi('test-plugin:api', vi.fn());
             (mockCore.api.unregister as any).mockImplementation(() => {
                 throw new Error('Unregister failed');
             });
@@ -371,7 +377,7 @@ describe('PluginContextImpl', () => {
         it('should prevent all operations after disposal', async () => {
             ctx.cleanup();
 
-            expect(() => ctx.registerApi('api', vi.fn())).toThrow(/disposed/);
+            expect(() => ctx.registerApi('test-plugin:api', vi.fn())).toThrow(/disposed/);
             await expect(ctx.invokeApi('api')).rejects.toThrow(/disposed/);
             expect(() => ctx.subscribe('event', vi.fn())).toThrow(/disposed/);
         });

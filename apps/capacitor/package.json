@@ -17,6 +17,7 @@
         "@capacitor/filesystem": "^6.0.0",
         "@capacitor/ios": "^6.0.0",
         "@capawesome/capacitor-file-picker": "^6.2.0",
+        "@notehub/app-bootstrap": "workspace:*",
         "@notehub/about": "workspace:*",
         "@notehub/backlinks": "workspace:*",
         "@notehub/bootloader": "workspace:*",

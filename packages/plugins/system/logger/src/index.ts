@@ -1,4 +1,5 @@
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 
 /**
  * Log levels for message severity classification
@@ -36,16 +37,13 @@ export interface LogEntry {
  * Events:
  * - `sys:log` - Emitted on every log call with LogEntry payload
  */
-export class LoggerPlugin implements IPlugin {
+export class LoggerPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.system.logger',
         name: 'Logger',
         version: '0.0.0',
         type: 'system',
     };
-
-    /** Reference to kernel for event emission and API calls */
-    private app: NotehubCore | null = null;
 
     /**
      * Format a log entry as a string
@@ -69,10 +67,10 @@ export class LoggerPlugin implements IPlugin {
     }
 
     /**
-     * Core logging method
-     * Outputs to console and emits sys:log event
+     * Core logging method - uses console directly since this IS the logger.
+     * Overrides SystemPlugin.log() to avoid recursive calls.
      */
-    private log(level: LogLevel, source: string, message: string): void {
+    private selfLog(level: LogLevel, source: string, message: string): void {
         const formattedMessage = this.formatMessage(level, source, message);
         const entry = this.createEntry(level, source, message);
 
@@ -93,9 +91,7 @@ export class LoggerPlugin implements IPlugin {
         }
 
         // Emit event for UI consumption (e.g., Developer Console)
-        if (this.app) {
-            this.app.events.emit('sys:log', entry);
-        }
+        this.app.events.emit('sys:log', entry);
     }
 
     // =============== API Method Handlers ===============
@@ -105,28 +101,28 @@ export class LoggerPlugin implements IPlugin {
      */
     private handleLog = (level: string, source: string, message: string): void => {
         const logLevel = this.parseLevel(level);
-        this.log(logLevel, source, message);
+        this.selfLog(logLevel, source, message);
     };
 
     /**
      * API handler for logger:info
      */
     private handleInfo = (source: string, message: string): void => {
-        this.log(LogLevel.INFO, source, message);
+        this.selfLog(LogLevel.INFO, source, message);
     };
 
     /**
      * API handler for logger:warn
      */
     private handleWarn = (source: string, message: string): void => {
-        this.log(LogLevel.WARN, source, message);
+        this.selfLog(LogLevel.WARN, source, message);
     };
 
     /**
      * API handler for logger:error
      */
     private handleError = (source: string, message: string): void => {
-        this.log(LogLevel.ERROR, source, message);
+        this.selfLog(LogLevel.ERROR, source, message);
     };
 
     /**
@@ -143,35 +139,19 @@ export class LoggerPlugin implements IPlugin {
 
     // =============== Plugin Lifecycle ===============
 
-    /**
-     * Load the plugin: register API methods
-     */
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
-
+    protected async onLoad(): Promise<void> {
         // Register API methods
-        app.api.register('logger:log', this.handleLog);
-        app.api.register('logger:info', this.handleInfo);
-        app.api.register('logger:warn', this.handleWarn);
-        app.api.register('logger:error', this.handleError);
+        this.registerApi('logger:log', this.handleLog);
+        this.registerApi('logger:info', this.handleInfo);
+        this.registerApi('logger:warn', this.handleWarn);
+        this.registerApi('logger:error', this.handleError);
 
         // Log our own initialization
-        this.log(LogLevel.INFO, 'Logger', 'Logger plugin initialized');
+        this.selfLog(LogLevel.INFO, 'Logger', 'Logger plugin initialized');
     }
 
-    /**
-     * Unload the plugin and cleanup
-     */
-    async unload(app: NotehubCore): Promise<void> {
-        this.log(LogLevel.INFO, 'Logger', 'Logger plugin unloading');
-
-        // Unregister API methods
-        app.api.unregister('logger:log');
-        app.api.unregister('logger:info');
-        app.api.unregister('logger:warn');
-        app.api.unregister('logger:error');
-
-        this.app = null;
+    protected async onUnload(): Promise<void> {
+        this.selfLog(LogLevel.INFO, 'Logger', 'Logger plugin unloading');
     }
 }
 

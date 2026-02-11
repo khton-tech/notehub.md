@@ -17,6 +17,7 @@
 import { Command } from 'commander';
 import { buildCommand } from './commands/build.js';
 import { createCommand } from './commands/create.js';
+import { devCommand } from './commands/dev.js';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -70,6 +71,17 @@ program
             minify: options.minify !== false,
             sourcemap: options.sourcemap || false,
             watch: options.watch || false,
+        });
+    });
+
+// Register dev command
+program
+    .command('dev')
+    .description('Start development server - watches and rebuilds on changes')
+    .option('-p, --port <port>', 'Port for reload signaling', '3100')
+    .action(async (options) => {
+        await devCommand({
+            port: parseInt(options.port, 10),
         });
     });
 

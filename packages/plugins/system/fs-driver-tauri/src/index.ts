@@ -1,4 +1,5 @@
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 import type { IFileSystem, DirEntry, CreateDirOptions } from '@notehub/fs-manager';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -7,12 +8,12 @@ import { invoke } from '@tauri-apps/api/core';
 
 /**
  * FsDriverTauriPlugin - Tauri V2 file system driver
- * 
+ *
  * Implements IFileSystem using @tauri-apps/plugin-fs on desktop
  * and custom Rust commands via tauri-plugin-android-fs on Android.
  * Registers itself with fs-manager on load.
  */
-export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
+export class FsDriverTauriPlugin extends SystemPlugin implements IFileSystem {
     readonly manifest: PluginManifest = {
         id: 'nh.system.fs-driver-tauri',
         name: 'FsDriverTauri',
@@ -21,8 +22,6 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
         dependencies: ['nh.system.logger', 'nh.system.fs-manager'],
     };
 
-    private app: NotehubCore | null = null;
-
     /** Whether running on Android (uses Rust commands for content:// URIs) */
     private isAndroid: boolean = false;
 
@@ -30,19 +29,9 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
     private activeWatchers: Set<() => void> = new Set();
 
     /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
-
-    /**
      * Load the driver and register with fs-manager
      */
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Check if we're running in Tauri environment
@@ -61,7 +50,7 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
         }
 
         // Register this driver with fs-manager
-        await app.api.invoke('fs:register-driver', this, 'Tauri');
+        await this.app.api.invoke('fs:register-driver', this, 'Tauri');
 
         this.log('info', `Loaded and registered with fs-manager (Android mode: ${this.isAndroid})`);
     }
@@ -69,7 +58,7 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
     /**
      * Unload the driver
      */
-    async unload(_app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         // Clean up all active file watchers
@@ -85,7 +74,6 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
             this.activeWatchers.clear();
         }
 
-        this.app = null;
         this.log('info', 'Unloaded - all watchers cleaned up');
     }
 
@@ -389,4 +377,3 @@ export class FsDriverTauriPlugin implements IPlugin, IFileSystem {
 
 // Default export for dynamic loading
 export default FsDriverTauriPlugin;
-

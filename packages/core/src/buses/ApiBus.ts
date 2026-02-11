@@ -272,15 +272,19 @@ export class ApiBus {
         // 1. Run before hooks (can modify args)
         let currentArgs = args;
         for (const hook of beforeHooks) {
-            // Check condition if present
-            if (hook.condition) {
-                const shouldRun = await hook.condition(currentArgs);
-                if (!shouldRun) continue;
-            }
-            const beforeHandler = hook.handler as BeforeHook;
-            const modifiedArgs = await beforeHandler(currentArgs);
-            if (modifiedArgs !== undefined) {
-                currentArgs = modifiedArgs;
+            try {
+                // Check condition if present
+                if (hook.condition) {
+                    const shouldRun = await hook.condition(currentArgs);
+                    if (!shouldRun) continue;
+                }
+                const beforeHandler = hook.handler as BeforeHook;
+                const modifiedArgs = await beforeHandler(currentArgs);
+                if (modifiedArgs !== undefined) {
+                    currentArgs = modifiedArgs;
+                }
+            } catch (error) {
+                console.error(`[ApiBus] Error in before hook for "${name}":`, error);
             }
         }
 
@@ -297,12 +301,18 @@ export class ApiBus {
             const hookCondition = hookRecord.condition;
 
             chain = async (a) => {
-                // Check condition for around hook
-                if (hookCondition) {
-                    const shouldRun = await hookCondition(a);
-                    if (!shouldRun) return innerChain(a);
+                try {
+                    // Check condition for around hook
+                    if (hookCondition) {
+                        const shouldRun = await hookCondition(a);
+                        if (!shouldRun) return innerChain(a);
+                    }
+                    return await aroundHook(a, innerChain);
+                } catch (error) {
+                    console.error(`[ApiBus] Error in around hook for "${name}":`, error);
+                    // Fall through to inner chain on error
+                    return innerChain(a);
                 }
-                return aroundHook(a, innerChain);
             };
         }
 
@@ -311,15 +321,19 @@ export class ApiBus {
 
         // 4. Run after hooks (can modify result)
         for (const hook of afterHooks) {
-            // Check condition if present
-            if (hook.condition) {
-                const shouldRun = await hook.condition(currentArgs);
-                if (!shouldRun) continue;
-            }
-            const afterHandler = hook.handler as AfterHook;
-            const modifiedResult = await afterHandler(result, currentArgs);
-            if (modifiedResult !== undefined) {
-                result = modifiedResult;
+            try {
+                // Check condition if present
+                if (hook.condition) {
+                    const shouldRun = await hook.condition(currentArgs);
+                    if (!shouldRun) continue;
+                }
+                const afterHandler = hook.handler as AfterHook;
+                const modifiedResult = await afterHandler(result, currentArgs);
+                if (modifiedResult !== undefined) {
+                    result = modifiedResult;
+                }
+            } catch (error) {
+                console.error(`[ApiBus] Error in after hook for "${name}":`, error);
             }
         }
 

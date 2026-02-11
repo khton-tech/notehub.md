@@ -1,4 +1,5 @@
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 import { VaultService } from './logic/VaultService.js';
 import { VaultList } from './components/VaultList.js';
 import { VaultActions } from './components/VaultActions.js';
@@ -15,7 +16,7 @@ import { VaultActions } from './components/VaultActions.js';
  * 3. If no vault → registers UI components and shows welcome screen
  * 4. Listens for `app:vault-opened` event to transition to editor
  */
-export class VaultPickerPlugin implements IPlugin {
+export class VaultPickerPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.features.vault-picker',
         name: 'VaultPicker',
@@ -23,37 +24,25 @@ export class VaultPickerPlugin implements IPlugin {
         type: 'feature',
     };
 
-    private app: NotehubCore | null = null;
     private service: VaultService | null = null;
-    private vaultOpenedHandler: ((payload: unknown) => void) | null = null;
-
-    /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
 
     /**
      * Load the plugin
      */
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
-        this.service = new VaultService(app);
+    protected async onLoad(): Promise<void> {
+        this.service = new VaultService(this.app);
         this.log('info', 'Loading...');
 
         // Register vault:close API
-        app.api.register('vault:close', () => this.service?.closeVault());
+        this.registerApi('vault:close', () => this.service?.closeVault());
 
         // Set up Phase 2 transition listener
         // Handled by Workbench plugin now
         // this.vaultOpenedHandler = (payload: unknown) => { ... }
-        // app.events.on('app:vault-opened', this.vaultOpenedHandler);
+        // this.registerEvent('app:vault-opened', this.vaultOpenedHandler);
 
         // Listen for vault close to show welcome screen again
-        app.events.on('app:vault-closed', () => {
+        this.registerEvent('app:vault-closed', () => {
             this.log('info', 'Vault closed, showing welcome screen');
             this.showWelcomeScreen();
         });
@@ -88,7 +77,7 @@ export class VaultPickerPlugin implements IPlugin {
      * Register UI components and show welcome layout
      */
     private showWelcomeScreen(): void {
-        if (!this.app || !this.service) return;
+        if (!this.service) return;
 
         const app = this.app;
         const service = this.service;
@@ -117,17 +106,10 @@ export class VaultPickerPlugin implements IPlugin {
     /**
      * Unload the plugin
      */
-    async unload(app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
-        // Remove event listener
-        if (this.vaultOpenedHandler) {
-            app.events.off('app:vault-opened', this.vaultOpenedHandler);
-            this.vaultOpenedHandler = null;
-        }
-
         this.service = null;
-        this.app = null;
 
         this.log('info', 'Unloaded');
     }

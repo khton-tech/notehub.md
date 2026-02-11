@@ -1,15 +1,16 @@
 /**
  * Context Menu Plugin
- * 
+ *
  * Global context menu system that allows plugins to register menu providers
  * for specific contexts and trigger menus via the API.
- * 
+ *
  * API Methods:
  * - `context-menu:register(contextId, provider)` - Register a menu provider
  * - `context-menu:trigger(event, contextId, payload)` - Trigger a context menu
  */
 
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 import { createRoot, type Root } from 'react-dom/client';
 import { contextMenuRegistry } from './logic/ContextMenuRegistry';
 import { ContextMenu } from './components/ContextMenu';
@@ -20,10 +21,10 @@ export type { MenuItem, MenuAction, MenuSeparator, SubMenu, MenuProvider } from 
 
 /**
  * ContextMenuPlugin - Global context menu system
- * 
+ *
  * Provides a centralized context menu that other plugins can extend
  * by registering menu providers for specific contexts.
- * 
+ *
  * @example
  * ```ts
  * // Register a provider for explorer items
@@ -32,14 +33,14 @@ export type { MenuItem, MenuAction, MenuSeparator, SubMenu, MenuProvider } from 
  *     { type: 'separator' },
  *     { type: 'action', id: 'delete', label: 'Delete', icon: 'trash-2', color: 'var(--nh-danger)', onClick: () => delete(payload.path) },
  * ]);
- * 
+ *
  * // Trigger the menu on right-click
  * element.addEventListener('contextmenu', (event) => {
  *     app.api.invoke('context-menu:trigger', event, 'explorer-item', { path: '/path/to/file.md' });
  * });
  * ```
  */
-export class ContextMenuPlugin implements IPlugin {
+export class ContextMenuPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.ui.context-menu',
         name: 'ContextMenu',
@@ -47,7 +48,6 @@ export class ContextMenuPlugin implements IPlugin {
         type: 'ui',
     };
 
-    private app: NotehubCore | null = null;
     private menuContainer: HTMLDivElement | null = null;
     private menuRoot: Root | null = null;
 
@@ -61,16 +61,6 @@ export class ContextMenuPlugin implements IPlugin {
         items: [],
         payload: null,
     };
-
-
-    /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
 
     /**
      * Render the context menu with current state
@@ -116,7 +106,7 @@ export class ContextMenuPlugin implements IPlugin {
 
     /**
      * Handle context-menu:register API call
-     * 
+     *
      * @param contextId - Context identifier (e.g., 'explorer-item')
      * @param provider - Menu provider function
      * @returns Unsubscribe function
@@ -128,7 +118,7 @@ export class ContextMenuPlugin implements IPlugin {
 
     /**
      * Handle context-menu:trigger API call
-     * 
+     *
      * @param event - The original contextmenu event
      * @param contextId - Context identifier
      * @param payload - Contextual data to pass to providers
@@ -166,8 +156,7 @@ export class ContextMenuPlugin implements IPlugin {
 
     // =============== Plugin Lifecycle ===============
 
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Clear any existing providers from previous load (handles React StrictMode double-init)
@@ -196,15 +185,15 @@ export class ContextMenuPlugin implements IPlugin {
         this.log('info', 'Installed global context menu interceptor');
 
         // Register API methods with explicit handler types
-        app.api.register('context-menu:register' as any, this.handleRegister as any);
-        app.api.register('context-menu:trigger' as any, this.handleTrigger as any);
+        this.registerApi('context-menu:register' as any, this.handleRegister as any);
+        this.registerApi('context-menu:trigger' as any, this.handleTrigger as any);
 
         this.log('info', 'Registered API methods: register, trigger');
         this.log('info', 'Loaded successfully');
     }
 
 
-    async unload(_app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         // Remove global context menu interceptor
@@ -226,14 +215,9 @@ export class ContextMenuPlugin implements IPlugin {
             this.menuContainer = null;
         }
 
-        // Unregister API methods
-        _app.api.unregister('context-menu:register');
-        _app.api.unregister('context-menu:trigger');
-
         // Clear registry
         contextMenuRegistry.clear();
 
-        this.app = null;
         this.log('info', 'Unloaded');
     }
 

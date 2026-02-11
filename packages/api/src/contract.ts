@@ -108,6 +108,47 @@ export enum ZoneId {
 }
 
 // ============================================================================
+// Workspace View Types
+// ============================================================================
+
+/**
+ * Configuration for a workspace view (panel that can be shown in sidebar/bottom).
+ * Plugins register views which users can toggle via commands or UI.
+ */
+export interface WorkspaceViewConfig {
+    /** Unique view ID (e.g., "explorer", "backlinks") */
+    id: string;
+    /** Display name (e.g., "File Explorer") */
+    name: string;
+    /** Icon name from icon-manager (e.g., "folder-tree") */
+    icon: string;
+    /** Controller component name (must be registered via controller:register first) */
+    component: string;
+    /** Default location for the view */
+    defaultLocation: 'sidebar-left' | 'panel-right' | 'bottom';
+    /** Priority for ordering within the zone (higher = rendered first). Default: 0 */
+    priority?: number;
+}
+
+// ============================================================================
+// Status Bar Types
+// ============================================================================
+
+/**
+ * Configuration for a status bar item.
+ */
+export interface StatusBarItemConfig {
+    /** Unique item ID */
+    id: string;
+    /** Controller component name (must be registered via controller:register first) */
+    component: string;
+    /** Position in the status bar */
+    position: 'left' | 'right';
+    /** Priority for ordering (higher = rendered first). Default: 0 */
+    priority?: number;
+}
+
+// ============================================================================
 // Editor Types
 // ============================================================================
 
@@ -131,6 +172,25 @@ export interface EditorSelectionRange {
     from: EditorCursor;
     /** Selection end position (exclusive) */
     to: EditorCursor;
+}
+
+/**
+ * Configuration for a file type handler.
+ * Plugins can register handlers for specific file extensions,
+ * allowing the editor to open non-markdown files.
+ */
+export interface FileTypeHandler {
+    /** Unique handler ID (e.g., "markdown", "json-viewer") */
+    id: string;
+    /** File extensions this handler supports (e.g., [".md", ".markdown"]) */
+    extensions: string[];
+    /** Display name (e.g., "Markdown Editor") */
+    name: string;
+    /**
+     * Priority for handlers competing for the same extension.
+     * Higher priority wins. Default: 0.
+     */
+    priority?: number;
 }
 
 // ============================================================================
@@ -407,6 +467,9 @@ export interface NotehubApiMap {
         hookCount: { before: number; after: number; around: number };
     }>;
 
+    /** Get the API version string (e.g., "0.1") */
+    'api:version': () => string;
+
     // =========================================================================
     // Logger Plugin (nh.system.logger)
     // =========================================================================
@@ -567,12 +630,44 @@ export interface NotehubApiMap {
     /**
      * Wait for a zone element to appear in the DOM.
      * Uses MutationObserver to efficiently wait for the element.
-     * 
+     *
      * @param zoneId - Zone ID to wait for (matches data-nh-zone attribute)
      * @param timeout - Optional timeout in milliseconds (default: 5000)
      * @returns The HTMLElement when found, or null on timeout
      */
     'dom:wait-for-zone': (zoneId: string, timeout?: number) => Promise<HTMLElement | null>;
+
+    // =========================================================================
+    // Workspace Views (part of Layout Manager)
+    // =========================================================================
+
+    /** Register a workspace view that can appear in sidebar or panels */
+    'workspace:register-view': (config: WorkspaceViewConfig) => void;
+
+    /** Unregister a workspace view by ID */
+    'workspace:unregister-view': (viewId: string) => void;
+
+    /** Show a workspace view (registers it in its default zone) */
+    'workspace:show-view': (viewId: string) => void;
+
+    /** Hide a workspace view (removes it from its zone) */
+    'workspace:hide-view': (viewId: string) => void;
+
+    /** List all registered workspace views */
+    'workspace:list-views': () => WorkspaceViewConfig[];
+
+    // =========================================================================
+    // Status Bar (part of Layout Manager)
+    // =========================================================================
+
+    /** Add an item to the status bar */
+    'statusbar:add-item': (config: StatusBarItemConfig) => void;
+
+    /** Remove a status bar item by ID */
+    'statusbar:remove-item': (itemId: string) => void;
+
+    /** List all status bar items */
+    'statusbar:list-items': () => StatusBarItemConfig[];
 
     // =========================================================================
     // Dialog Manager Plugin (nh.ui.dialog-manager)
@@ -736,6 +831,29 @@ export interface NotehubApiMap {
     // =========================================================================
     // Editor Plugin (nh.features.editor)
     // =========================================================================
+
+    // -------------------------------------------------------------------------
+    // File Type Handlers
+    // -------------------------------------------------------------------------
+
+    /** Register a file type handler for specific extensions */
+    'editor:register-handler': (handler: FileTypeHandler) => void;
+
+    /** Unregister a file type handler by ID */
+    'editor:unregister-handler': (handlerId: string) => void;
+
+    /** Get the handler for a given file path (by extension match) */
+    'editor:get-handler': (filePath: string) => FileTypeHandler | null;
+
+    /** List all registered file type handlers */
+    'editor:list-handlers': () => FileTypeHandler[];
+
+    /** Check if a file path is supported by any handler */
+    'editor:can-open': (filePath: string) => boolean;
+
+    // -------------------------------------------------------------------------
+    // Portals
+    // -------------------------------------------------------------------------
 
     /** Register a portal (inline widget) */
     'editor:register-portal': (spec: PortalSpec) => void;
@@ -934,6 +1052,76 @@ export interface NotehubApiMap {
     /** Get the current title bar title */
     'titlebar:get-title': () => string;
 }
+
+// ============================================================================
+// NotehubEventMap - Typed Event Definitions
+// ============================================================================
+
+/**
+ * NotehubEventMap defines all known event names and their payload types.
+ *
+ * Plugins should use these event names for type-safe subscriptions.
+ * Custom events not listed here are still supported via string keys.
+ */
+export interface NotehubEventMap {
+    // App / Vault events
+    'app:vault-opened': { path: string; name: string };
+    'app:vault-closed': Record<string, never>;
+    'app:status-report': { level: string; message: string };
+
+    // Editor events
+    'editor:file-opened': { path: string; content: string };
+    'editor:file-closed': Record<string, never>;
+    'editor:file-saved': { path: string };
+    'editor:path-changed': { oldPath: string; newPath: string };
+
+    // Explorer events
+    'explorer:file-selected': { path: string };
+
+    // Config events
+    'config:updated': { key: string; value: unknown };
+    'config:reloaded': Record<string, never>;
+    'config:deleted': { key: string };
+
+    // File system events
+    'fs:deleted': { path: string; isDirectory: boolean };
+    'fs:renamed': { oldPath: string; newPath: string };
+
+    // Theme events
+    'theme:changed': { name: string; palette: ThemePalette };
+
+    // Dialog events
+    'dialog:opened': { id: string; type: string; title: string };
+    'dialog:closed': { id: string };
+
+    // Settings events
+    'settings:opened': Record<string, never>;
+    'settings:closed': Record<string, never>;
+
+    // Context events
+    'context:changed': { key: string; value: unknown };
+
+    // Layout / Zone events
+    'layout:changed': { name: string; props: Record<string, unknown> };
+    'zone:updated': { zoneId: string; items: ZoneItem[] };
+
+    // System events
+    'sys:log': { entry: unknown };
+    'titlebar:title-changed': { title: string };
+
+    // Catch-all for custom/untyped events
+    [key: string]: unknown;
+}
+
+/**
+ * All known event names
+ */
+export type EventName = keyof NotehubEventMap;
+
+/**
+ * Get the payload type for a specific event
+ */
+export type EventPayload<K extends keyof NotehubEventMap> = NotehubEventMap[K];
 
 // ============================================================================
 // Helper Types for Plugin Development

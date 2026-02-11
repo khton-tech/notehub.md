@@ -1,4 +1,4 @@
-export { EventBus, type EventCallback, type EventMap } from './EventBus.js';
+export { EventBus, type EventCallback, type EventMap, type SubscribeOptions, type EmitResult } from './EventBus.js';
 export {
     ApiBus,
     type ApiHandler,

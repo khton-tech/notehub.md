@@ -1,16 +1,15 @@
 /**
  * @fileoverview Settings Manager Plugin
- * 
+ *
  * Provides a metadata-driven settings UI for Notehub.md.
  * Other plugins register their settings, and this plugin renders the modal.
- * 
+ *
  * @module @notehub/settings-manager
  */
 
+import { SystemPlugin } from '@notehub/core';
 import type {
-    IPlugin,
     PluginManifest,
-    NotehubCore,
     SettingsTabDef,
     SettingsGroupDef,
     SettingsItemDef
@@ -27,13 +26,13 @@ export { SettingsRegistry, getSettingsRegistry } from './logic/SettingsRegistry'
 
 /**
  * SettingsManagerPlugin - Metadata-driven settings UI engine
- * 
+ *
  * Features:
  * - Registry API for plugins to register tabs, groups, and items
  * - Command `settings:open` to show the modal
  * - Obsidian/VS Code style settings interface
  */
-export class SettingsManagerPlugin implements IPlugin {
+export class SettingsManagerPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.ui.settings-manager',
         name: 'SettingsManager',
@@ -41,27 +40,15 @@ export class SettingsManagerPlugin implements IPlugin {
         type: 'ui',
     };
 
-    private app: NotehubCore | null = null;
     private modalContainer: HTMLDivElement | null = null;
     private modalRoot: Root | null = null;
     private isOpen = false;
 
     // ========================================================================
-    // Logging
-    // ========================================================================
-
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
-
-    // ========================================================================
     // Plugin Lifecycle
     // ========================================================================
 
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Create modal container
@@ -78,41 +65,41 @@ export class SettingsManagerPlugin implements IPlugin {
         // ====================================================================
 
         // Tab registration
-        app.api.register('settings:register-tab', (tab: SettingsTabDef) => {
+        this.registerApi('settings:register-tab', (tab: SettingsTabDef) => {
             registry.registerTab(tab);
             this.log('info', `Registered tab: ${tab.id}`);
         });
 
         // Group registration
-        app.api.register('settings:register-group', (group: SettingsGroupDef) => {
+        this.registerApi('settings:register-group', (group: SettingsGroupDef) => {
             registry.registerGroup(group);
             this.log('info', `Registered group: ${group.id}`);
         });
 
         // Item registration
-        app.api.register('settings:register-item', (item: SettingsItemDef) => {
+        this.registerApi('settings:register-item', (item: SettingsItemDef) => {
             registry.registerItem(item);
             this.log('info', `Registered item: ${item.key}`);
         });
 
         // Bulk registration
-        app.api.register('settings:register-tabs', (tabs: SettingsTabDef[]) => {
+        this.registerApi('settings:register-tabs', (tabs: SettingsTabDef[]) => {
             registry.registerTabs(tabs);
             this.log('info', `Registered ${tabs.length} tabs`);
         });
 
-        app.api.register('settings:register-groups', (groups: SettingsGroupDef[]) => {
+        this.registerApi('settings:register-groups', (groups: SettingsGroupDef[]) => {
             registry.registerGroups(groups);
             this.log('info', `Registered ${groups.length} groups`);
         });
 
-        app.api.register('settings:register-items', (items: SettingsItemDef[]) => {
+        this.registerApi('settings:register-items', (items: SettingsItemDef[]) => {
             registry.registerItems(items);
             this.log('info', `Registered ${items.length} items`);
         });
 
         // Custom View registration
-        app.api.register('settings:register-custom-view', (args: { tabId: string; view: React.FC<any> }) => {
+        this.registerApi('settings:register-custom-view', (args: { tabId: string; view: React.FC<any> }) => {
             registry.registerCustomView(args.tabId, args.view);
             this.log('info', `Registered custom view for tab: ${args.tabId}`);
         });
@@ -121,36 +108,36 @@ export class SettingsManagerPlugin implements IPlugin {
         // Unregister API Methods
         // ====================================================================
 
-        app.api.register('settings:unregister-tab', (tabId: string) => {
+        this.registerApi('settings:unregister-tab', (tabId: string) => {
             registry.unregisterTab(tabId);
             this.log('info', `Unregistered tab: ${tabId}`);
         });
 
-        app.api.register('settings:unregister-group', (groupId: string) => {
+        this.registerApi('settings:unregister-group', (groupId: string) => {
             registry.unregisterGroup(groupId);
             this.log('info', `Unregistered group: ${groupId}`);
         });
 
-        app.api.register('settings:unregister-item', (itemKey: string) => {
+        this.registerApi('settings:unregister-item', (itemKey: string) => {
             registry.unregisterItem(itemKey);
             this.log('info', `Unregistered item: ${itemKey}`);
         });
 
         // Get structure
-        app.api.register('settings:get-structure', (): SettingsStructure => {
+        this.registerApi('settings:get-structure', (): SettingsStructure => {
             return registry.getStructure();
         });
 
         // Open/close modal
-        app.api.register('settings:open', () => {
+        this.registerApi('settings:open', () => {
             this.openModal();
         });
 
-        app.api.register('settings:close', () => {
+        this.registerApi('settings:close', () => {
             this.closeModal();
         });
 
-        app.api.register('settings:toggle', () => {
+        this.registerApi('settings:toggle', () => {
             if (this.isOpen) {
                 this.closeModal();
             } else {
@@ -163,18 +150,18 @@ export class SettingsManagerPlugin implements IPlugin {
         // ====================================================================
 
         // Listen for settings:open command via events
-        app.events.on('command:settings:open', () => {
+        this.registerEvent('command:settings:open', () => {
             this.openModal();
         });
 
         // Register settings layout
-        app.api.invoke('layout:register-component', 'settings', SettingsLayout);
+        this.app.api.invoke('layout:register-component', 'settings', SettingsLayout);
         this.log('info', 'Registered settings layout');
 
         this.log('info', 'Loaded successfully');
     }
 
-    async unload(_app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         // Cleanup modal
@@ -191,7 +178,6 @@ export class SettingsManagerPlugin implements IPlugin {
         // Clear registry
         SettingsRegistry.resetInstance();
 
-        this.app = null;
         this.log('info', 'Unloaded');
     }
 
@@ -200,7 +186,7 @@ export class SettingsManagerPlugin implements IPlugin {
     // ========================================================================
 
     private openModal(): void {
-        if (!this.app || !this.modalRoot || this.isOpen) return;
+        if (!this.modalRoot || this.isOpen) return;
 
         this.isOpen = true;
         this.modalRoot.render(
@@ -220,10 +206,8 @@ export class SettingsManagerPlugin implements IPlugin {
         this.isOpen = false;
         this.modalRoot.render(null);
 
-        if (this.app) {
-            this.app.events.emit('settings:closed', {});
-            this.log('info', 'Settings modal closed');
-        }
+        this.app.events.emit('settings:closed', {});
+        this.log('info', 'Settings modal closed');
     }
 }
 

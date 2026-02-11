@@ -1,5 +1,6 @@
 import type { FC } from 'react';
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 
 /**
  * Controller component props
@@ -60,7 +61,7 @@ export const Controller: FC<ControllerProps> = ({ type, ...props }) => {
  * const Button = app.api.invoke('controller:get', 'button');
  * ```
  */
-export class ControllersManagerPlugin implements IPlugin {
+export class ControllersManagerPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.ui.controllers-manager',
         name: 'ControllersManager',
@@ -70,18 +71,6 @@ export class ControllersManagerPlugin implements IPlugin {
 
     /** Controller registry: name -> React component */
     private controllers: Map<string, React.FC<any>> = new Map();
-
-    /** Reference to kernel */
-    private app: NotehubCore | null = null;
-
-    /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
 
     // =============== API Method Handlers ===============
 
@@ -131,17 +120,16 @@ export class ControllersManagerPlugin implements IPlugin {
     /**
      * Load the plugin and initialize registry
      */
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Set singleton reference for Controller component access
         controllerRegistryInstance = this.controllers;
 
         // Register API methods
-        app.api.register('controller:register', this.handleRegister);
-        app.api.register('controller:unregister', this.handleUnregister);
-        app.api.register('controller:get', this.handleGet);
+        this.registerApi('controller:register', this.handleRegister);
+        this.registerApi('controller:unregister', this.handleUnregister);
+        this.registerApi('controller:get', this.handleGet);
 
         this.log('info', 'Loaded successfully');
     }
@@ -149,20 +137,14 @@ export class ControllersManagerPlugin implements IPlugin {
     /**
      * Unload the plugin
      */
-    async unload(app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         // Clear singleton reference
         controllerRegistryInstance = null;
 
-        // Unregister API methods
-        app.api.unregister('controller:register');
-        app.api.unregister('controller:unregister');
-        app.api.unregister('controller:get');
-
         // Clear state
         this.controllers.clear();
-        this.app = null;
 
         this.log('info', 'Unloaded');
     }

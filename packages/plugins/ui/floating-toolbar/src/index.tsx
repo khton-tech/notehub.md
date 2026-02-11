@@ -1,9 +1,9 @@
 /**
  * Floating Toolbar Plugin
- * 
+ *
  * A floating formatting toolbar that appears when text is selected.
  * Provides quick access to formatting commands like Bold, Italic, Code, and Link.
- * 
+ *
  * API Methods:
  * - `floating-toolbar:show(x, y)` - Show toolbar at position
  * - `floating-toolbar:hide` - Hide toolbar
@@ -11,7 +11,8 @@
  */
 
 import React from 'react';
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 import { createRoot, type Root } from 'react-dom/client';
 import { FloatingToolbar } from './components/FloatingToolbar.js';
 
@@ -29,11 +30,11 @@ export interface ToolbarState {
 
 /**
  * FloatingToolbarPlugin - Floating formatting toolbar
- * 
+ *
  * Shows a toolbar above selected text with formatting buttons.
  * Uses the command system to apply formatting.
  */
-export class FloatingToolbarPlugin implements IPlugin {
+export class FloatingToolbarPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.ui.floating-toolbar',
         name: 'FloatingToolbar',
@@ -41,7 +42,6 @@ export class FloatingToolbarPlugin implements IPlugin {
         type: 'ui',
     };
 
-    private app: NotehubCore | null = null;
     private toolbarContainer: HTMLDivElement | null = null;
     private toolbarRoot: Root | null = null;
     private boundSelectionHandler: ((e: Event) => void) | null = null;
@@ -53,15 +53,6 @@ export class FloatingToolbarPlugin implements IPlugin {
         position: { x: 0, y: 0 },
         selectedText: '',
     };
-
-    /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
 
     /**
      * Render the toolbar with current state
@@ -187,8 +178,7 @@ export class FloatingToolbarPlugin implements IPlugin {
 
     // =============== Plugin Lifecycle ===============
 
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Create toolbar container
@@ -218,15 +208,15 @@ export class FloatingToolbarPlugin implements IPlugin {
         });
 
         // Register API methods
-        app.api.register('floating-toolbar:show' as any, this.handleShow as any);
-        app.api.register('floating-toolbar:hide' as any, this.handleHide as any);
-        app.api.register('floating-toolbar:toggle' as any, this.handleToggle as any);
+        this.registerApi('floating-toolbar:show' as any, this.handleShow as any);
+        this.registerApi('floating-toolbar:hide' as any, this.handleHide as any);
+        this.registerApi('floating-toolbar:toggle' as any, this.handleToggle as any);
 
         this.log('info', 'Registered API methods: show, hide, toggle');
         this.log('info', 'Loaded successfully');
     }
 
-    async unload(_app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         // Remove event listeners
@@ -252,12 +242,6 @@ export class FloatingToolbarPlugin implements IPlugin {
             this.toolbarContainer = null;
         }
 
-        // Unregister API methods
-        _app.api.unregister('floating-toolbar:show');
-        _app.api.unregister('floating-toolbar:hide');
-        _app.api.unregister('floating-toolbar:toggle');
-
-        this.app = null;
         this.log('info', 'Unloaded');
     }
 }

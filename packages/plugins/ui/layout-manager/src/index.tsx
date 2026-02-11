@@ -1,4 +1,5 @@
-import type { IPlugin, PluginManifest, NotehubCore, ZoneItem } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest, NotehubCore, ZoneItem, WorkspaceViewConfig, StatusBarItemConfig } from '@notehub/core';
 import { useSyncExternalStore, type FC } from 'react';
 import { WelcomeLayout } from './components/WelcomeLayout.js';
 import { EditorLayout } from './components/EditorLayout.js';
@@ -41,6 +42,19 @@ const zoneSubscribers = new Set<() => void>();
 
 /** Zone version for tracking changes (used by useSyncExternalStore) */
 let zoneVersion = 0;
+
+// =============== Workspace View Store ===============
+
+/** Registry of workspace views */
+const viewRegistry = new Map<string, WorkspaceViewConfig>();
+
+/** Set of currently visible view IDs */
+const visibleViews = new Set<string>();
+
+// =============== Status Bar Store ===============
+
+/** Registry of status bar items */
+const statusBarRegistry = new Map<string, StatusBarItemConfig>();
 
 /**
  * Notify all layout subscribers of state change
@@ -232,7 +246,7 @@ export const ZoneRenderer: FC<ZoneRendererProps> = ({ name, className, style }) 
  * - `layout:changed` - Emitted when active layout changes
  * - `zone:updated` - Emitted when a zone is updated
  */
-export class LayoutManagerPlugin implements IPlugin {
+export class LayoutManagerPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.ui.layout-manager',
         name: 'LayoutManager',
@@ -240,18 +254,7 @@ export class LayoutManagerPlugin implements IPlugin {
         type: 'ui',
     };
 
-    /** Reference to kernel */
-    private app: NotehubCore | null = null;
     private windowController: WindowController | null = null;
-
-    /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
 
     // =============== Layout API Method Handlers ===============
 
@@ -283,9 +286,7 @@ export class LayoutManagerPlugin implements IPlugin {
         activeLayout = { name, props };
         notifyLayoutSubscribers();
 
-        if (this.app) {
-            this.app.events.emit('layout:changed', { name, props });
-        }
+        this.app.events.emit('layout:changed', { name, props });
 
         this.log('info', `Active layout set to "${name}"`);
         return true;
@@ -330,9 +331,7 @@ export class LayoutManagerPlugin implements IPlugin {
         zoneRegistry.set(zoneId, items);
         notifyZoneSubscribers();
 
-        if (this.app) {
-            this.app.events.emit('zone:updated', { zoneId, items });
-        }
+        this.app.events.emit('zone:updated', { zoneId, items });
     };
 
     /**
@@ -354,9 +353,7 @@ export class LayoutManagerPlugin implements IPlugin {
             notifyZoneSubscribers();
             this.log('info', `Zone "${zoneId}" cleared`);
 
-            if (this.app) {
-                this.app.events.emit('zone:updated', { zoneId, items: [] });
-            }
+            this.app.events.emit('zone:updated', { zoneId, items: [] });
         }
     };
 
@@ -426,24 +423,110 @@ export class LayoutManagerPlugin implements IPlugin {
     /**
      * Load the plugin
      */
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
-        appInstance = app;
+    protected async onLoad(): Promise<void> {
+        appInstance = this.app;
         this.log('info', 'Loading...');
 
         // Register Layout API methods
-        app.api.register('layout:register-component', this.handleRegisterComponent);
-        app.api.register('layout:set', this.handleSetLayout);
-        app.api.register('layout:get-active', this.handleGetActiveLayout);
-        app.api.register('layout:list', this.handleListLayouts);
+        this.registerApi('layout:register-component', this.handleRegisterComponent);
+        this.registerApi('layout:set', this.handleSetLayout);
+        this.registerApi('layout:get-active', this.handleGetActiveLayout);
+        this.registerApi('layout:list', this.handleListLayouts);
 
         // Register Zone API methods
-        app.api.register('zone:register', this.handleZoneRegister);
-        app.api.register('zone:get', this.handleZoneGet);
-        app.api.register('zone:clear', this.handleZoneClear);
+        this.registerApi('zone:register', this.handleZoneRegister);
+        this.registerApi('zone:get', this.handleZoneGet);
+        this.registerApi('zone:clear', this.handleZoneClear);
 
         // Register DOM utility API methods
-        app.api.register('dom:wait-for-zone', this.handleWaitForZone);
+        this.registerApi('dom:wait-for-zone', this.handleWaitForZone);
+
+        // Register Workspace View API methods
+        this.registerApi('workspace:register-view', (config: WorkspaceViewConfig) => {
+            if (!config?.id || !config.component) {
+                this.log('warn', 'Invalid workspace view config');
+                return;
+            }
+            viewRegistry.set(config.id, config);
+            this.log('info', `Registered workspace view: ${config.id}`);
+        });
+
+        this.registerApi('workspace:unregister-view', (viewId: string) => {
+            if (viewRegistry.delete(viewId)) {
+                // Also hide it if visible
+                if (visibleViews.has(viewId)) {
+                    visibleViews.delete(viewId);
+                    // Remove from zone
+                    const items = zoneRegistry.get(viewRegistry.get(viewId)?.defaultLocation ?? '') ?? [];
+                    const filtered = items.filter(i => i.component !== viewId);
+                    if (filtered.length > 0) {
+                        zoneRegistry.set(viewRegistry.get(viewId)?.defaultLocation ?? '', filtered);
+                    }
+                }
+                this.log('info', `Unregistered workspace view: ${viewId}`);
+            }
+        });
+
+        this.registerApi('workspace:show-view', (viewId: string) => {
+            const config = viewRegistry.get(viewId);
+            if (!config) {
+                this.log('warn', `Workspace view not found: ${viewId}`);
+                return;
+            }
+            if (visibleViews.has(viewId)) return;
+            visibleViews.add(viewId);
+            this.handleZoneRegister(config.defaultLocation, {
+                component: config.component,
+                priority: config.priority ?? 0,
+            });
+        });
+
+        this.registerApi('workspace:hide-view', (viewId: string) => {
+            const config = viewRegistry.get(viewId);
+            if (!config || !visibleViews.has(viewId)) return;
+            visibleViews.delete(viewId);
+            const zoneId = config.defaultLocation;
+            const items = zoneRegistry.get(zoneId) ?? [];
+            const filtered = items.filter(i => i.component !== config.component);
+            zoneRegistry.set(zoneId, filtered);
+            zoneVersion++;
+            notifyZoneSubscribers();
+        });
+
+        this.registerApi('workspace:list-views', () => {
+            return Array.from(viewRegistry.values());
+        });
+
+        // Register Status Bar API methods
+        this.registerApi('statusbar:add-item', (config: StatusBarItemConfig) => {
+            if (!config?.id || !config.component) {
+                this.log('warn', 'Invalid status bar item config');
+                return;
+            }
+            statusBarRegistry.set(config.id, config);
+            // Register in the status-bar zone
+            this.handleZoneRegister('status-bar', {
+                component: config.component,
+                priority: config.priority ?? 0,
+            });
+            this.log('info', `Added status bar item: ${config.id}`);
+        });
+
+        this.registerApi('statusbar:remove-item', (itemId: string) => {
+            const config = statusBarRegistry.get(itemId);
+            if (!config) return;
+            statusBarRegistry.delete(itemId);
+            const items = zoneRegistry.get('status-bar') ?? [];
+            const filtered = items.filter(i => i.component !== config.component);
+            zoneRegistry.set('status-bar', filtered);
+            zoneVersion++;
+            notifyZoneSubscribers();
+            this.log('info', `Removed status bar item: ${itemId}`);
+        });
+
+        this.registerApi('statusbar:list-items', () => {
+            return Array.from(statusBarRegistry.values());
+        });
 
         // Register built-in layouts
         this.handleRegisterComponent('welcome', WelcomeLayout);
@@ -455,7 +538,7 @@ export class LayoutManagerPlugin implements IPlugin {
         // @ts-ignore
         if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
             try {
-                this.windowController = new WindowController(app);
+                this.windowController = new WindowController(this.app);
                 await this.windowController.init();
             } catch (error) {
                 this.log('warn', `Failed to initialize WindowController: ${error}`);
@@ -470,7 +553,7 @@ export class LayoutManagerPlugin implements IPlugin {
     /**
      * Unload the plugin
      */
-    async unload(app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         if (this.windowController) {
@@ -478,26 +561,15 @@ export class LayoutManagerPlugin implements IPlugin {
             this.windowController = null;
         }
 
-        // Unregister Layout API methods
-        app.api.unregister('layout:register-component');
-        app.api.unregister('layout:set');
-        app.api.unregister('layout:get-active');
-        app.api.unregister('layout:list');
-
-        // Unregister Zone API methods
-        app.api.unregister('zone:register');
-        app.api.unregister('zone:get');
-        app.api.unregister('zone:clear');
-
-        // Unregister DOM utility API methods
-        app.api.unregister('dom:wait-for-zone');
-
         // ========== BULLETPROOF STATE CLEANUP ==========
         // Clear all module-level state to prevent zombie listeners on HMR
 
         // 1. Clear registries
         layoutRegistry.clear();
         zoneRegistry.clear();
+        viewRegistry.clear();
+        visibleViews.clear();
+        statusBarRegistry.clear();
 
         // 2. Reset active layout
         activeLayout = null;
@@ -515,9 +587,6 @@ export class LayoutManagerPlugin implements IPlugin {
 
         // 6. Clear module-level app instance reference
         appInstance = null;
-
-        // 7. Clear instance reference
-        this.app = null;
 
         this.log('info', 'Unloaded - all state cleared');
     }

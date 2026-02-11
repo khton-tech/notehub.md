@@ -1,4 +1,5 @@
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 import { colord } from 'colord';
 import { registerThemeSettings } from './logic/ThemeConfig';
 
@@ -193,7 +194,7 @@ const CONFIG_KEY_CURRENT_THEME = 'theme.current';
  * Events:
  * - `theme:changed` - Emitted when theme changes
  */
-export class ThemeManagerPlugin implements IPlugin {
+export class ThemeManagerPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.ui.theme-manager',
         name: 'ThemeManager',
@@ -207,20 +208,8 @@ export class ThemeManagerPlugin implements IPlugin {
     /** Currently active theme name (preference) */
     private currentTheme: string = 'deep-space';
 
-    /** Reference to kernel */
-    private app: NotehubCore | null = null;
-
     /** System theme media query listener */
     private systemMediaQuery: MediaQueryList | null = null;
-
-    /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
 
     /** Style element for global CSS */
     private styleElement: HTMLStyleElement | null = null;
@@ -251,7 +240,7 @@ export class ThemeManagerPlugin implements IPlugin {
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
             }
-            
+
             #root {
                 height: 100%;
                 overflow: hidden;
@@ -347,11 +336,9 @@ export class ThemeManagerPlugin implements IPlugin {
 
         // Get saved accent color
         let accentPrimary = palette['accent-primary'];
-        if (this.app) {
-            const savedAccent = await this.app.api.invoke<string | undefined>('config:get', 'theme.accent-primary');
-            if (savedAccent) {
-                accentPrimary = savedAccent;
-            }
+        const savedAccent = await this.app.api.invoke<string | undefined>('config:get', 'theme.accent-primary');
+        if (savedAccent) {
+            accentPrimary = savedAccent;
         }
 
         // Generate dynamic palette from accent
@@ -440,10 +427,8 @@ export class ThemeManagerPlugin implements IPlugin {
         await this.applyTheme(palette);
 
         // Persist preference
-        if (this.app) {
-            await this.app.api.invoke('config:set', CONFIG_KEY_CURRENT_THEME, name);
-            this.app.events.emit('theme:changed', { name, palette });
-        }
+        await this.app.api.invoke('config:set', CONFIG_KEY_CURRENT_THEME, name);
+        this.app.events.emit('theme:changed', { name, palette });
 
         this.log('info', `Theme changed to "${name}" (effective: "${targetTheme}")`);
         return true;
@@ -475,8 +460,7 @@ export class ThemeManagerPlugin implements IPlugin {
     /**
      * Load the plugin
      */
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Register default themes
@@ -485,14 +469,14 @@ export class ThemeManagerPlugin implements IPlugin {
         this.log('info', 'Default themes registered');
 
         // Register API methods
-        app.api.register('theme:register', this.handleRegister);
-        app.api.register('theme:set', this.handleSet);
-        app.api.register('theme:get-current', this.handleGetCurrent);
-        app.api.register('theme:list', this.handleList);
-        app.api.register('theme:get', this.handleGet);
+        this.registerApi('theme:register', this.handleRegister);
+        this.registerApi('theme:set', this.handleSet);
+        this.registerApi('theme:get-current', this.handleGetCurrent);
+        this.registerApi('theme:list', this.handleList);
+        this.registerApi('theme:get', this.handleGet);
 
         // Load saved theme preference
-        const savedTheme = await app.api.invoke<string | undefined>(
+        const savedTheme = await this.app.api.invoke<string | undefined>(
             'config:get',
             CONFIG_KEY_CURRENT_THEME,
             'deep-space'
@@ -523,7 +507,7 @@ export class ThemeManagerPlugin implements IPlugin {
         }
 
         // Subscribe to accent color changes for live preview
-        app.events.on('config:updated', async (payload: any) => {
+        this.registerEvent('config:updated', async (payload: any) => {
             if (payload.key === 'theme.accent-primary') {
                 // Re-resolve effective theme
                 let themeName = this.currentTheme;
@@ -536,7 +520,7 @@ export class ThemeManagerPlugin implements IPlugin {
             } else if (payload.key === 'theme.accent-preset') {
                 // If preset changes, update the custom accent color to match
                 const newColor = payload.value as string;
-                await app.api.invoke('config:set', 'theme.accent-primary', newColor);
+                await this.app.api.invoke('config:set', 'theme.accent-primary', newColor);
             } else if (payload.key === CONFIG_KEY_CURRENT_THEME) {
                 // Handle external theme changes (e.g. from settings sync)
                 if (payload.value !== this.currentTheme) {
@@ -551,21 +535,21 @@ export class ThemeManagerPlugin implements IPlugin {
     /**
      * Called when all plugins are loaded
      */
-    async onReady(app: NotehubCore): Promise<void> {
+    protected async onPluginReady(): Promise<void> {
         // Register Settings (safe to do here as settings-manager is guaranteed to be loaded)
-        registerThemeSettings(app);
+        registerThemeSettings(this.app);
 
         // Listen for bulk config reloads (e.g. vault switch)
-        app.events.on('config:reloaded', async () => {
+        this.registerEvent('config:reloaded', async () => {
             this.log('info', 'Config reloaded, refreshing theme...');
 
             // Re-fetch current theme preference
-            const savedTheme = await app.api.invoke<string | undefined>('config:get', CONFIG_KEY_CURRENT_THEME);
+            const savedTheme = await this.app.api.invoke<string | undefined>('config:get', CONFIG_KEY_CURRENT_THEME);
 
             // If explicit theme set in this vault, use it. Otherwise default to current (or deep-space)
             // Actually, if we switched vaults, we usually want to respect the new vault's theme or default.
-            // If 'savedTheme' is undefined, it means this vault has no preference. 
-            // We should probably stick to what we have OR reset to default. 
+            // If 'savedTheme' is undefined, it means this vault has no preference.
+            // We should probably stick to what we have OR reset to default.
             // Let's reset to what 'savedTheme' says or 'deep-space' if missing.
             const newTheme = savedTheme ?? 'deep-space';
 
@@ -586,7 +570,7 @@ export class ThemeManagerPlugin implements IPlugin {
     /**
      * Unload the plugin
      */
-    async unload(app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         // Stop listener
@@ -598,16 +582,8 @@ export class ThemeManagerPlugin implements IPlugin {
         // Clear theme from DOM
         this.clearTheme();
 
-        // Unregister API methods
-        app.api.unregister('theme:register');
-        app.api.unregister('theme:set');
-        app.api.unregister('theme:get-current');
-        app.api.unregister('theme:list');
-        app.api.unregister('theme:get');
-
         // Clear state
         this.themes.clear();
-        this.app = null;
 
         this.log('info', 'Unloaded');
     }

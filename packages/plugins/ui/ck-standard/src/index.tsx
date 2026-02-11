@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest, NotehubCore } from '@notehub/core';
 import { Button, Label, Card, StatusBar, RibbonButton, EmptySlot, type StatusBarProps, Toggle, Select, Input } from './components';
 
 export * from './components';
@@ -50,7 +51,7 @@ function createSmartStatusBar(app: NotehubCore): FC<Partial<StatusBarProps>> {
     };
 }
 
-export class CKStandardPlugin implements IPlugin {
+export class CKStandardPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.ui.ck-standard',
         name: 'CKStandard',
@@ -58,39 +59,29 @@ export class CKStandardPlugin implements IPlugin {
         type: 'ui',
     };
 
-    private app: NotehubCore | null = null;
-
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
-
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Create Smart StatusBar that listens to EventBus
-        const SmartStatusBar = createSmartStatusBar(app);
+        const SmartStatusBar = createSmartStatusBar(this.app);
 
         // Register standard components as controllers
-        app.api.invoke('controller:register', 'button', Button);
-        app.api.invoke('controller:register', 'label', Label);
-        app.api.invoke('controller:register', 'card', Card);
-        app.api.invoke('controller:register', 'status-bar', SmartStatusBar);
-        app.api.invoke('controller:register', 'ribbon-button', RibbonButton);
-        app.api.invoke('controller:register', 'empty-slot', EmptySlot);
-        app.api.invoke('controller:register', 'toggle', Toggle);
-        app.api.invoke('controller:register', 'select', Select);
-        app.api.invoke('controller:register', 'input', Input);
-        app.api.invoke('controller:register', 'hotkey-recorder', HotkeyRecorder);
+        this.app.api.invoke('controller:register', 'button', Button);
+        this.app.api.invoke('controller:register', 'label', Label);
+        this.app.api.invoke('controller:register', 'card', Card);
+        this.app.api.invoke('controller:register', 'status-bar', SmartStatusBar);
+        this.app.api.invoke('controller:register', 'ribbon-button', RibbonButton);
+        this.app.api.invoke('controller:register', 'empty-slot', EmptySlot);
+        this.app.api.invoke('controller:register', 'toggle', Toggle);
+        this.app.api.invoke('controller:register', 'select', Select);
+        this.app.api.invoke('controller:register', 'input', Input);
+        this.app.api.invoke('controller:register', 'hotkey-recorder', HotkeyRecorder);
 
         this.log('info', 'Loaded successfully');
     }
 
-    async unload(_app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
-        this.app = null;
         this.log('info', 'Unloaded');
     }
 }

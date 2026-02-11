@@ -1,7 +1,8 @@
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest, NotehubCore } from '@notehub/core';
 import { KeybindingsView } from './components/KeybindingsView';
 
-export class KeybindingsPlugin implements IPlugin {
+export class KeybindingsPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.features.keybindings',
         name: 'Hotkeys',
@@ -15,10 +16,10 @@ export class KeybindingsPlugin implements IPlugin {
         ]
     };
 
-    async load(app: NotehubCore): Promise<void> {
+    protected async onLoad(): Promise<void> {
         console.log('[Keybindings] Loading plugin...');
         // Register custom settings view
-        app.api.invoke('settings:register-tab', {
+        this.app.api.invoke('settings:register-tab', {
             id: 'keybindings',
             label: 'Hotkeys',
             icon: 'keyboard',
@@ -30,14 +31,14 @@ export class KeybindingsPlugin implements IPlugin {
         // Based on settings-manager checking:
         // app.api.register('settings:register-custom-view', (args: { tabId: string; view: React.FC<any> }) => ...
 
-        app.api.invoke('settings:register-custom-view', {
+        this.app.api.invoke('settings:register-custom-view', {
             tabId: 'keybindings',
             view: ({ app }: { app: NotehubCore }) => <KeybindingsView app={app} />
         });
     }
 
-    async unload(app: NotehubCore): Promise<void> {
-        app.api.invoke('settings:unregister-tab', 'keybindings');
+    protected async onUnload(): Promise<void> {
+        this.app.api.invoke('settings:unregister-tab', 'keybindings');
     }
 }
 

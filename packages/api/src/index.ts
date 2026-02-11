@@ -41,7 +41,8 @@ export { NotehubPlugin } from './plugin.js';
 // Note: HookPosition, BeforeHook, AfterHook, AroundHook are exported via @notehub/core
 export type {
     PluginContext,
-    UnsafeContext
+    UnsafeContext,
+    EventContext
 } from './context.js';
 
 // Export API contract types

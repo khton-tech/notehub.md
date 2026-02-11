@@ -1,10 +1,12 @@
 import { EventBus, type EventMap } from './buses/EventBus.js';
 import { ApiBus } from './buses/ApiBus.js';
 import type { IPlugin } from './types.js';
+import type { NotehubEventMap } from './api/contract.js';
 
-// Re-export types and buses
+// Re-export types, buses, and base classes
 export * from './types.js';
 export * from './buses/index.js';
+export { SystemPlugin } from './SystemPlugin.js';
 
 // Re-export API contract types
 export * from './api/contract.js';
@@ -31,7 +33,7 @@ export * from './react/NotehubContext.js';
  * await app.init();
  * ```
  */
-export class NotehubCore<TEvents extends EventMap = EventMap> {
+export class NotehubCore<TEvents extends EventMap = NotehubEventMap> {
     /** Event bus instance for pub/sub communication */
     public readonly events: EventBus<TEvents>;
 
@@ -62,6 +64,7 @@ export class NotehubCore<TEvents extends EventMap = EventMap> {
         this.api.register('api:has', (...args: unknown[]) => this.api.has(args[0] as string));
         this.api.register('api:info', (...args: unknown[]) => this.api.getMethodInfo(args[0] as string));
         this.api.register('api:list-with-metadata', () => this.api.getMethodsWithMetadata());
+        this.api.register('api:version', () => '0.1');
     }
 
     /**

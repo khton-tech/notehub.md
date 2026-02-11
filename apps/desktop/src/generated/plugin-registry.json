@@ -14,7 +14,6 @@
     "id": "features.alert-button",
     "name": "Alert Button",
     "version": "0.1.0",
-<<<<<<< HEAD
     "description": "Adds a button to the editor that triggers an alert notification",
     "main": "dist/main.js",
     "author": "Notehub",
@@ -26,11 +25,6 @@
       "settings:register-tab",
       "settings:register-custom-view"
     ]
-=======
-    "description": "Alert Button plugin for Notehub.md",
-    "author": "",
-    "main": "main.js"
->>>>>>> dc6398e62aa418be5d2acd52a5ef4e9881962f58
   },
   {
     "id": "nh.features.backlinks",
@@ -132,99 +126,6 @@
       "nh.ui.ck-standard",
       "nh.system.state-manager",
       "nh.features.explorer"
-    ]
-  },
-  {
-    "id": "nh.ui.ck-standard",
-    "name": "CKStandard",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.icon-manager",
-      "nh.ui.theme-manager"
-    ]
-  },
-  {
-    "id": "nh.ui.context-menu",
-    "name": "ContextMenu",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.ui.icon-manager",
-      "nh.ui.ck-standard"
-    ]
-  },
-  {
-    "id": "nh.ui.controllers-manager",
-    "name": "ControllersManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
-    "id": "nh.ui.dialog-manager",
-    "name": "DialogManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.ui.ck-standard"
-    ]
-  },
-  {
-    "id": "nh.ui.floating-toolbar",
-    "name": "FloatingToolbar",
-    "version": "0.0.1",
-    "type": "ui",
-    "description": "Floating formatting toolbar that appears on text selection",
-    "dependencies": []
-  },
-  {
-    "id": "nh.ui.icon-manager",
-    "name": "IconManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger"
-    ]
-  },
-  {
-    "id": "nh.ui.layout-manager",
-    "name": "LayoutManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.ui.theme-manager",
-      "nh.ui.icon-manager",
-      "nh.ui.controllers-manager",
-      "nh.ui.ck-standard"
-    ]
-  },
-  {
-    "id": "nh.ui.settings-manager",
-    "name": "SettingsManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.config-manager",
-      "nh.ui.ck-standard",
-      "nh.ui.icon-manager",
-      "nh.ui.dialog-manager"
-    ]
-  },
-  {
-    "id": "nh.ui.theme-manager",
-    "name": "ThemeManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger",
-      "nh.system.config-manager"
     ]
   },
   {
@@ -347,6 +248,99 @@
     "dependencies": [
       "nh.ui.icon-manager",
       "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.ck-standard",
+    "name": "CKStandard",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.controllers-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.theme-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.context-menu",
+    "name": "ContextMenu",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.ui.icon-manager",
+      "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.controllers-manager",
+    "name": "ControllersManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.ui.dialog-manager",
+    "name": "DialogManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.floating-toolbar",
+    "name": "FloatingToolbar",
+    "version": "0.0.1",
+    "type": "ui",
+    "description": "Floating formatting toolbar that appears on text selection",
+    "dependencies": []
+  },
+  {
+    "id": "nh.ui.icon-manager",
+    "name": "IconManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.ui.layout-manager",
+    "name": "LayoutManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.ui.theme-manager",
+      "nh.ui.icon-manager",
+      "nh.ui.controllers-manager",
+      "nh.ui.ck-standard"
+    ]
+  },
+  {
+    "id": "nh.ui.settings-manager",
+    "name": "SettingsManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.config-manager",
+      "nh.ui.ck-standard",
+      "nh.ui.icon-manager",
+      "nh.ui.dialog-manager"
+    ]
+  },
+  {
+    "id": "nh.ui.theme-manager",
+    "name": "ThemeManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger",
+      "nh.system.config-manager"
     ]
   }
 ]

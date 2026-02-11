@@ -218,7 +218,7 @@ export class PluginLoader {
             let context: PluginContextImpl | undefined;
 
             if (this.isNotehubPlugin(plugin)) {
-                context = new PluginContextImpl(this.app, manifest.id);
+                context = new PluginContextImpl(this.app, manifest.id, { name: manifest.name, version: manifest.version });
                 await plugin.onload(context);
             } else {
                 await plugin.load(this.app);
@@ -439,7 +439,7 @@ export class PluginLoader {
 
             let context: PluginContextImpl | undefined;
             if (this.isNotehubPlugin(plugin)) {
-                context = new PluginContextImpl(this.app, manifest.id);
+                context = new PluginContextImpl(this.app, manifest.id, { name: manifest.name, version: manifest.version });
                 await plugin.onload(context);
             } else {
                 await plugin.load(this.app);

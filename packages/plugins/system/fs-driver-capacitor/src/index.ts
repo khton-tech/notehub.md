@@ -1,4 +1,5 @@
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 import type { IFileSystem, DirEntry, CreateDirOptions } from '@notehub/fs-manager';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
@@ -7,7 +8,7 @@ import { FilePicker } from '@capawesome/capacitor-file-picker';
 /**
  * FsDriverCapacitorPlugin - Capacitor file system driver
  */
-export class FsDriverCapacitorPlugin implements IPlugin, IFileSystem {
+export class FsDriverCapacitorPlugin extends SystemPlugin implements IFileSystem {
     readonly manifest: PluginManifest = {
         id: 'nh.system.fs-driver-capacitor',
         name: 'FsDriverCapacitor',
@@ -16,21 +17,11 @@ export class FsDriverCapacitorPlugin implements IPlugin, IFileSystem {
         dependencies: ['nh.system.logger', 'nh.system.fs-manager'],
     };
 
-    private app: NotehubCore | null = null;
     private defaultDirectory = Directory.Documents;
 
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        } else {
-            console.log(`[${this.manifest.id}] [${level}] ${message}`);
-        }
-    }
-
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading Capacitor FS Driver...');
-        await app.api.invoke('fs:register-driver', this, 'Capacitor');
+        await this.app.api.invoke('fs:register-driver', this, 'Capacitor');
 
         // Request permissions on load
         try {
@@ -47,33 +38,24 @@ export class FsDriverCapacitorPlugin implements IPlugin, IFileSystem {
         this.log('info', 'Loaded and registered with fs-manager');
     }
 
-    async unload(_app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
-        this.app = null;
     }
 
     private parseAndroidUri(uri: string): { path: string, directory: Directory } | null {
         if (!uri.startsWith('content:')) return null;
 
         try {
-            // Handle com.android.externalstorage.documents
-            // Example: content://com.android.externalstorage.documents/tree/primary%3ADownload%2FHui
             if (uri.includes('com.android.externalstorage.documents')) {
                 const parts = uri.split('primary%3A');
                 if (parts.length > 1) {
                     const relativePath = decodeURIComponent(parts[1]);
-                    return {
-                        path: relativePath,
-                        directory: Directory.ExternalStorage
-                    };
+                    return { path: relativePath, directory: Directory.ExternalStorage };
                 }
                 const partsDecoded = uri.split('primary:');
                 if (partsDecoded.length > 1) {
                     const relativePath = decodeURIComponent(partsDecoded[1]);
-                    return {
-                        path: relativePath,
-                        directory: Directory.ExternalStorage
-                    };
+                    return { path: relativePath, directory: Directory.ExternalStorage };
                 }
             }
         } catch (e) {
@@ -89,15 +71,12 @@ export class FsDriverCapacitorPlugin implements IPlugin, IFileSystem {
             const parsed = this.parseAndroidUri(path);
             if (parsed) {
                 this.log('info', `Parsed content URI: ${JSON.stringify(parsed)}`);
-                // Ensure we don't start with / for ExternalStorage if it expects relative
                 return {
                     path: parsed.path.replace(/^\/+/, ''),
                     directory: parsed.directory
                 };
             }
             this.log('error', `Failed to parse content URI: ${path}`);
-            // Fallback: try to just pass it through in case some plugins handle it, 
-            // but log warning.
             return {
                 path: path,
                 // @ts-ignore
@@ -112,8 +91,6 @@ export class FsDriverCapacitorPlugin implements IPlugin, IFileSystem {
     }
 
     private normalizePath(path: string): string {
-        // If it's a content URI, don't strip leading slashes (though usually they don't have them in the wrong place)
-        // actually, content:// URIs shouldn't be touched violently.
         if (path.startsWith('content:')) {
             return path;
         }
@@ -140,34 +117,23 @@ export class FsDriverCapacitorPlugin implements IPlugin, IFileSystem {
                 return new Uint8Array(0);
             }
         } catch (e) {
-            // Diagnostic logging for ENOENT
             try {
                 this.log('error', `readFile failed for ${path}: ${e}`);
-
-                // Try to list parent dir to see what IS there
                 const parentPath = path.substring(0, path.lastIndexOf('/'));
                 const fileName = path.substring(path.lastIndexOf('/') + 1);
-
                 this.log('info', `Listing parent dir: ${parentPath} to look for ${fileName}`);
                 const parentEntries = await this.readDir(parentPath);
-
                 const found = parentEntries.find(f => f.name === fileName);
                 this.log('info', `File ${fileName} found in listing? ${!!found}`);
-
-                // Log char codes of requested name
                 const charCodes = fileName.split('').map(c => c.charCodeAt(0)).join(',');
                 this.log('info', `Requested Name CharCodes: ${charCodes}`);
-
-                // Log all entries
                 parentEntries.forEach(entry => {
                     const entryCodes = entry.name.split('').map(c => c.charCodeAt(0)).join(',');
                     this.log('info', `Entry: ${entry.name} [${entryCodes}] (Match: ${entry.name === fileName})`);
                 });
-
             } catch (err2) {
                 this.log('error', `Failed to run diagnostics: ${err2}`);
             }
-
             throw new Error(`readFile failed: ${e}`);
         }
     }
@@ -195,7 +161,6 @@ export class FsDriverCapacitorPlugin implements IPlugin, IFileSystem {
                 binary += String.fromCharCode(data[i]);
             }
             const base64 = btoa(binary);
-
             await Filesystem.writeFile({
                 path: resolvedPath,
                 data: base64,
@@ -243,7 +208,6 @@ export class FsDriverCapacitorPlugin implements IPlugin, IFileSystem {
                 path: resolvedPath,
                 directory: directory,
             });
-
             return result.files.map(f => ({
                 name: f.name,
                 isDirectory: f.type === 'directory',
@@ -303,15 +267,8 @@ export class FsDriverCapacitorPlugin implements IPlugin, IFileSystem {
     }
 
     async rename(oldPath: string, newPath: string): Promise<void> {
-        // For rename, we need to handle mixed cases? 
-        // Usually oldPath and newPath are in the same context.
-        // If oldPath is content URI, newPath should be too? 
-        // Or Capacitor Rename might not support content URIs easily if they are different roots.
-        // But typically rename is within the same dir.
-
         const resolvedOld = this.resolvePath(oldPath);
         const resolvedNew = this.resolvePath(newPath);
-
         await Filesystem.rename({
             from: resolvedOld.path,
             to: resolvedNew.path,

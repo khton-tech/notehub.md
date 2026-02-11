@@ -1,20 +1,21 @@
 /**
  * @fileoverview Command Palette Plugin Entry Point
- * 
+ *
  * Provides a spotlight-style command palette for quick command execution.
  * Uses createRoot to mount the modal directly to the DOM, similar to dialog-manager.
- * 
+ *
  * ## Usage
  * - Press `Mod+P` or `F1` to open the palette
  * - Type to filter commands
  * - Arrow keys to navigate, Enter to execute
- * 
+ *
  * @module @notehub/command-palette
  */
 
 import { useState, useEffect, useRef, useCallback, type FC, type KeyboardEvent } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { IPlugin, PluginManifest, NotehubCore } from '@notehub/core';
+import { SystemPlugin } from '@notehub/core';
+import type { PluginManifest } from '@notehub/core';
 import type { VisibleCommand } from '@notehub.md/api';
 import { Card, ListItem } from '@notehub/ck-standard';
 import { Icon } from '@notehub/icon-manager';
@@ -204,7 +205,7 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose }) =
 /**
  * CommandPalettePlugin - Spotlight-style command palette
  */
-export class CommandPalettePlugin implements IPlugin {
+export class CommandPalettePlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
         id: 'nh.features.command-palette',
         name: 'Command Palette',
@@ -218,25 +219,15 @@ export class CommandPalettePlugin implements IPlugin {
         ],
     };
 
-    private app: NotehubCore | null = null;
     private paletteContainer: HTMLDivElement | null = null;
     private paletteRoot: Root | null = null;
     private isOpen = false;
 
     /**
-     * Log a message via the Logger plugin
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string): void {
-        if (this.app) {
-            this.app.api.invoke(`logger:${level}`, this.manifest.id, message);
-        }
-    }
-
-    /**
      * Open the palette
      */
     private openPalette = async (): Promise<void> => {
-        if (this.isOpen || !this.app || !this.paletteRoot) return;
+        if (this.isOpen || !this.paletteRoot) return;
 
         this.isOpen = true;
 
@@ -259,9 +250,7 @@ export class CommandPalettePlugin implements IPlugin {
      */
     private executeAndClose = async (id: string): Promise<void> => {
         this.closePalette();
-        if (this.app) {
-            await this.app.api.invoke('command:execute', id);
-        }
+        await this.app.api.invoke('command:execute', id);
     };
 
     /**
@@ -280,8 +269,7 @@ export class CommandPalettePlugin implements IPlugin {
     /**
      * Initialize the plugin
      */
-    async load(app: NotehubCore): Promise<void> {
-        this.app = app;
+    protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
         // Create palette container (mounted to body, like dialog-manager)
@@ -291,7 +279,7 @@ export class CommandPalettePlugin implements IPlugin {
         this.paletteRoot = createRoot(this.paletteContainer);
 
         // Register the palette:open command with hotkeys
-        app.api.invoke('command:register', {
+        this.app.api.invoke('command:register', {
             id: 'palette:open',
             name: 'Open Command Palette',
             handler: this.openPalette,
@@ -300,7 +288,7 @@ export class CommandPalettePlugin implements IPlugin {
         });
 
         // Also register F1 as an alternative (hidden from palette display)
-        app.api.invoke('command:register', {
+        this.app.api.invoke('command:register', {
             id: 'palette:open-f1',
             name: 'Open Command Palette (F1)',
             handler: this.openPalette,
@@ -314,7 +302,7 @@ export class CommandPalettePlugin implements IPlugin {
     /**
      * Cleanup the plugin
      */
-    async unload(_app: NotehubCore): Promise<void> {
+    protected async onUnload(): Promise<void> {
         this.log('info', 'Unloading...');
 
         // Cleanup container
@@ -327,7 +315,6 @@ export class CommandPalettePlugin implements IPlugin {
             this.paletteContainer = null;
         }
 
-        this.app = null;
         this.log('info', 'Unloaded');
     }
 }

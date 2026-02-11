@@ -246,7 +246,7 @@ export class EditorController {
             status,
             message
         };
-        this.app.events.emit('app:status-report', report);
+        this.app.events.emit('app:status-report', report as any);
     }
 
     /**
