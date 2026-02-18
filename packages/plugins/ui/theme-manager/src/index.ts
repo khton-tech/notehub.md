@@ -217,16 +217,40 @@ export class ThemeManagerPlugin extends SystemPlugin {
     /**
      * Inject global styles for html and body to prevent resize flash
      */
+    /**
+     * Inject global styles for html and body to prevent resize flash
+     */
+    /**
+     * Inject global styles for html and body to prevent resize flash
+     */
     private injectGlobalStyles(): void {
-        // Remove existing style element if present
-        if (this.styleElement) {
-            this.styleElement.remove();
+        // Reuse existing style element or create new one
+        if (!this.styleElement) {
+            this.styleElement = document.createElement('style');
+            this.styleElement.id = 'nh-theme-global-styles';
+
+            // CSP Nonce Support: Find nonce by iterating scripts (attribute selector often fails)
+            let nonce: string | undefined;
+            const scripts = document.scripts;
+            for (let i = 0; i < scripts.length; i++) {
+                const script = scripts.item(i);
+                if (script && script.nonce) {
+                    nonce = script.nonce;
+                    break;
+                }
+            }
+
+            if (nonce) {
+                this.styleElement.setAttribute('nonce', nonce);
+                this.log('info', 'Applied CSP nonce to global styles');
+            } else {
+                this.log('warn', 'No CSP nonce found for global styles');
+            }
+
+            document.head.appendChild(this.styleElement);
         }
 
-        // Create and inject global styles
-        this.styleElement = document.createElement('style');
-        this.styleElement.id = 'nh-theme-global-styles';
-        this.styleElement.textContent = `
+        const cssContent = `
             /* Base styles */
             html, body {
                 background-color: var(--nh-bg-main, #0A0A0A);
@@ -296,15 +320,21 @@ export class ThemeManagerPlugin extends SystemPlugin {
                 box-shadow: 0 0 0 2px var(--nh-bg-main), 0 0 0 4px var(--nh-accent-primary);
             }
 
-            /* Reduced motion preference */
+            /* Reduced motion preference - DISABLED as it causes "on speed" effect */
+            /*
             @media (prefers-reduced-motion: reduce) {
                 *, *::before, *::after {
                     animation-duration: 0.01ms !important;
                     transition-duration: 0.01ms !important;
                 }
             }
+            */
         `;
-        document.head.appendChild(this.styleElement);
+
+        // Only update if content changed to prevent layout thrashing
+        if (this.styleElement.textContent !== cssContent) {
+            this.styleElement.textContent = cssContent;
+        }
     }
 
     /**
@@ -340,6 +370,9 @@ export class ThemeManagerPlugin extends SystemPlugin {
      * Merges base palette with dynamic accent color preference
      */
     private async applyTheme(palette: ThemePalette): Promise<void> {
+        // Debug log to detect rapid theme application
+        // this.log('debug', `Applying theme with accent: ${palette['accent-primary']}`);
+
         const root = document.documentElement;
 
         // Get saved accent color

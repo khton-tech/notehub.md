@@ -13,6 +13,12 @@ interface EditorLayoutProps {
 }
 
 export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
+    // Debug: Detect Remounts
+    useEffect(() => {
+        console.log('[EditorLayout] Mounted');
+        return () => console.log('[EditorLayout] Unmounted');
+    }, []);
+
     const [sidebarWidth, setSidebarWidth] = useState(250);
     const [isResizing, setIsResizing] = useState(false);
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);

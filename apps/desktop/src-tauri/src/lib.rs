@@ -522,14 +522,21 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init());
-    
+
     // Android-specific: SAF folder picker support
     #[cfg(target_os = "android")]
     {
         builder = builder.plugin(tauri_plugin_android_fs::init());
     }
-    
+
     builder
+        .setup(|app| {
+            #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+            if let Some(window) = app.get_webview_window("main") {
+                // window.open_devtools(); // Disabled on startup, use F12
+            }
+            Ok(())
+        })
         .register_uri_scheme_protocol("plugin", move |app, request| {
             // let url = request.uri().to_string();
             // Expected format: http://plugin.localhost/<id>/<path> or plugin://<id>/<path>

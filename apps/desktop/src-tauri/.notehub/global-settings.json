@@ -1,15 +1,15 @@
 {
   "window.bounds": {
-    "x": 533,
-    "y": 177,
-    "width": 433,
+    "x": 586,
+    "y": 282,
+    "width": 962,
     "height": 639
   },
   "vault.history": [
     {
       "path": "C:\\Users\\khton\\Documents\\Vault",
       "name": "Vault",
-      "lastOpened": 1771386066802
+      "lastOpened": 1771397271024
     }
   ],
   "theme.current": "deep-space",
