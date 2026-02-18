@@ -533,7 +533,7 @@ pub fn run() {
         .setup(|app| {
             #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
             if let Some(window) = app.get_webview_window("main") {
-                window.open_devtools();
+                // window.open_devtools(); // Disabled on startup, use F12
             }
             Ok(())
         })
