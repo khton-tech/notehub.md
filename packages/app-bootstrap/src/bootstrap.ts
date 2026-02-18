@@ -80,6 +80,12 @@ export async function initNotehubApp(
             }
 
             const plugin = new PluginClass();
+
+            if (!plugin || typeof plugin.load !== 'function' || !plugin.manifest?.id) {
+                console.error(`${tag}   Invalid plugin instance from ${packageName}`);
+                continue;
+            }
+
             pluginInstances.push(plugin);
 
             // Register with core

@@ -12,7 +12,8 @@
       "Bash(pnpm install:*)",
       "Bash(pnpm run:*)",
       "Bash(pnpm predev:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx nhp:*)"
     ]
   }
 }

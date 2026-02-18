@@ -12,12 +12,7 @@ import { Controller } from '@notehub/controllers-manager';
  */
 export const WelcomeLayout: FC = () => {
     return (
-        <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--nh-bg-main)] text-[var(--nh-text-primary)] font-sans">
-            {/* Title Bar - Always visible */}
-            <div className="shrink-0">
-                <Controller type="titlebar" />
-            </div>
-
+        <div className="flex flex-col h-full w-full overflow-hidden font-sans">
             {/* Main Content */}
             <div className="flex flex-col md:flex-row flex-1 overflow-hidden gap-2 md:gap-0 p-2">
                 {/* Sidebar - Recent Vaults (Floating with shadow) */}

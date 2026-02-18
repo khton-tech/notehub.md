@@ -82,7 +82,7 @@ export const Toggle: React.FC<ToggleProps> = ({
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nh-accent-primary)]
                 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nh-bg-surface)]
                 ${checked
-                    ? 'bg-[var(--nh-accent-primary,#7c3aed)] shadow-[0_0_12px_rgba(124,58,237,0.5)]'
+                    ? 'bg-[var(--nh-accent-primary,#7c3aed)] shadow-nh-glow-accent'
                     : 'bg-black/50 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]'
                 }
                 ${disabled
@@ -97,7 +97,7 @@ export const Toggle: React.FC<ToggleProps> = ({
                 className={`
                     pointer-events-none inline-block w-5 h-5 transform rounded-full
                     bg-white transition-all duration-300 ease-out
-                    ${checked ? 'translate-x-[18px] shadow-[0_0_8px_rgba(124,58,237,0.6)]' : 'translate-x-[2px] shadow-md'}
+                    ${checked ? 'translate-x-[18px] shadow-nh-glow-accent-sm' : 'translate-x-[2px] shadow-md'}
                     my-auto
                 `}
             />

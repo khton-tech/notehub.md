@@ -37,17 +37,9 @@ export function NotehubApp({ config, children, LoadingScreen, ErrorScreen }: Not
         if (initStartedRef.current) return;
         initStartedRef.current = true;
 
-        const startTime = Date.now();
-
         initNotehubApp(config, setStatus)
             .then(async (coreInstance) => {
                 window.__NOTEHUB__ = coreInstance;
-
-                // Minimum loading time to prevent flash
-                const elapsed = Date.now() - startTime;
-                if (elapsed < 1000) {
-                    await new Promise(resolve => setTimeout(resolve, 1000 - elapsed));
-                }
                 setCore(coreInstance);
             })
             .catch((err) => {

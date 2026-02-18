@@ -1,7 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Controller } from '@notehub/controllers-manager';
 import { Icon } from '@notehub/icon-manager';
+import { ZoneRenderer } from '../index.js';
 import type { NotehubCore } from '@notehub/core';
+
+// Note: ZoneRenderer is imported from parent index.js (circular dep).
+// This is safe because ZoneRenderer is only used lazily in JSX, not at module evaluation time.
 
 interface EditorLayoutProps {
     app?: NotehubCore;
@@ -13,6 +17,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
     const [isResizing, setIsResizing] = useState(false);
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [vaultName] = useState('Notehub');
+    const drawerRef = useRef<HTMLDivElement>(null);
 
     // Load width and vault name from state/api
     useEffect(() => {
@@ -54,31 +59,84 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
         }
     }, [isResizing]);
 
+    const resizeTouch = useCallback((e: TouchEvent) => {
+        const touch = e.touches[0];
+        if (isResizing && touch) {
+            const newWidth = touch.clientX - 56 - 8;
+            if (newWidth > 150 && newWidth < 600) {
+                setSidebarWidth(newWidth);
+            }
+        }
+    }, [isResizing]);
+
     useEffect(() => {
         if (isResizing) {
             window.addEventListener('mousemove', resize);
             window.addEventListener('mouseup', stopResizing);
+            window.addEventListener('touchmove', resizeTouch);
+            window.addEventListener('touchend', stopResizing);
         }
 
         return () => {
             window.removeEventListener('mousemove', resize);
             window.removeEventListener('mouseup', stopResizing);
+            window.removeEventListener('touchmove', resizeTouch);
+            window.removeEventListener('touchend', stopResizing);
         };
-    }, [isResizing, resize, stopResizing]);
+    }, [isResizing, resize, resizeTouch, stopResizing]);
+
+    // Mobile drawer: close on Escape and trap focus
+    useEffect(() => {
+        if (!isMobileMenuOpen) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                return;
+            }
+            if (e.key === 'Tab' && drawerRef.current) {
+                const focusable = drawerRef.current.querySelectorAll<HTMLElement>(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                if (focusable.length === 0) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (!first || !last) return;
+                if (e.shiftKey) {
+                    if (document.activeElement === first) {
+                        e.preventDefault();
+                        last.focus();
+                    }
+                } else {
+                    if (document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Focus first focusable element in drawer
+        if (drawerRef.current) {
+            const first = drawerRef.current.querySelector<HTMLElement>(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            first?.focus();
+        }
+
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isMobileMenuOpen]);
 
     // Gap size for floating panels
     const gap = 16;
 
     return (
         <div
-            className="w-screen h-screen overflow-hidden bg-[var(--nh-bg-main)] text-[var(--nh-text-primary)] flex flex-col"
+            className="w-full h-full overflow-hidden flex flex-col"
         >
-            {/* Title Bar - Always visible at all screen sizes */}
-            <div className="shrink-0">
-                <Controller type="titlebar" app={app} />
-                <Controller type="editor-portal-renderer" />
-            </div>
-
             {/* Main Content Area */}
             <div
                 className="flex-1 overflow-hidden p-2"
@@ -120,39 +178,54 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     >
                         <Controller type="explorer-tree" />
 
-                        {/* Resize Handle */}
+                        {/* Resize Handle — padded for touch, visually thin */}
                         <div
                             onMouseDown={startResizing}
+                            onTouchStart={startResizing}
                             style={{
                                 position: 'absolute',
-                                right: -4,
+                                right: -13,
                                 top: 8,
-                                width: 6,
+                                width: 24,
                                 height: 'calc(100% - 16px)',
                                 cursor: 'col-resize',
                                 zIndex: 10,
-                                borderRadius: 3,
-                                backgroundColor: isResizing ? 'var(--nh-accent-primary)' : 'transparent',
-                                opacity: isResizing ? 0.8 : 0,
-                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'stretch',
+                                justifyContent: 'center',
+                                touchAction: 'none',
                             }}
-                            className="hover:bg-[var(--nh-accent-primary)] hover:opacity-60 hover:shadow-[0_0_8px_var(--nh-accent-primary)]"
-                        />
+                        >
+                            <div
+                                style={{
+                                    width: 6,
+                                    borderRadius: 3,
+                                    backgroundColor: isResizing ? 'var(--nh-accent-primary)' : 'transparent',
+                                    opacity: isResizing ? 0.8 : 0,
+                                    transition: 'all 0.2s ease',
+                                }}
+                                className="hover:bg-[var(--nh-accent-primary)] hover:opacity-60 hover:shadow-[0_0_8px_var(--nh-accent-primary)]"
+                            />
+                        </div>
                     </div>
 
                     {/* Main Editor Area - Floating Panel */}
                     <div
                         style={{ gridArea: 'main' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] overflow-auto relative"
+                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] overflow-auto relative flex flex-col"
                     >
-                        <Controller type="editor-main" />
+                        <ZoneRenderer name="tabbar" className="shrink-0" />
+                        <div className="flex-1 overflow-auto">
+                            <Controller type="editor-main" />
+                        </div>
                     </div>
 
                     {/* Status Bar - Floating Panel */}
                     <div
                         style={{ gridArea: 'status' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm)] border border-[var(--nh-accent-primary)] px-3 py-1.5 text-xs"
+                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] px-3 py-1.5 text-xs overflow-visible"
                     >
+                        <ZoneRenderer name="status-bar" />
                         <Controller type="status-bar" props={{ status: 'ready' }} />
                     </div>
                 </div>
@@ -173,12 +246,16 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     </div>
 
                     {/* Mobile Content */}
-                    <div className="flex-1 bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm)] overflow-auto">
-                        <Controller type="editor-main" />
+                    <div className="flex-1 bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm)] overflow-auto flex flex-col">
+                        <ZoneRenderer name="tabbar" className="shrink-0" />
+                        <div className="flex-1 overflow-auto">
+                            <Controller type="editor-main" />
+                        </div>
                     </div>
 
                     {/* Mobile Status */}
-                    <div className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm)] border border-[var(--nh-accent-primary)] px-3 py-1.5 text-xs shrink-0">
+                    <div className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] px-3 py-1.5 text-xs shrink-0 overflow-visible">
+                        <ZoneRenderer name="status-bar" />
                         <Controller type="status-bar" props={{ status: 'ready' }} />
                     </div>
                 </div>
@@ -186,15 +263,16 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                 {/* Mobile Backdrop */}
                 {isMobileMenuOpen && (
                     <div
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-200"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] md:hidden animate-in fade-in duration-200"
                         onClick={() => setMobileMenuOpen(false)}
                     />
                 )}
 
                 {/* Mobile Drawer */}
                 <div
+                    ref={drawerRef}
                     className={`
-                    fixed inset-y-0 left-0 z-50 flex h-full transition-transform duration-300 transform p-2
+                    fixed inset-y-0 left-0 z-[350] flex h-full transition-transform duration-300 transform p-2
                     ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
                     md:hidden
                 `}
@@ -225,7 +303,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                         left: 0,
                         width: '100vw',
                         height: '100vh',
-                        zIndex: 9999,
+                        zIndex: 300,
                         cursor: 'col-resize'
                     }} />
                 )}

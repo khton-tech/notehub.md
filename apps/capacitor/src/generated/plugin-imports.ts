@@ -3,8 +3,8 @@
  * DO NOT EDIT MANUALLY
  *
  * Platform: capacitor
- * Generated: 2026-02-11T10:37:16.804Z
- * Plugins: 27
+ * Generated: 2026-02-18T03:40:40.480Z
+ * Plugins: 28
  */
 import type { PluginModule } from '@notehub/app-bootstrap';
 
@@ -67,6 +67,8 @@ export async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/explorer');
         case '@notehub/keybindings':
             return import('@notehub/keybindings');
+        case '@notehub/tabbar':
+            return import('@notehub/tabbar');
         case '@notehub/vault-picker':
             return import('@notehub/vault-picker');
         case '@notehub/workbench':

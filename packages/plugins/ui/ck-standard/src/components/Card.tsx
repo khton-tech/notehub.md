@@ -81,6 +81,7 @@ export const Card: FC<CardProps> = ({
         'transition-all duration-200 ease-out',
         // Focus states
         'outline-none',
+        'focus-visible:ring-2 focus-visible:ring-[var(--nh-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nh-bg-main)]',
     ].join(' ');
 
     const variantClass = variantClasses[variant] || variantClasses.default;

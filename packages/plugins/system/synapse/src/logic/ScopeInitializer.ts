@@ -20,9 +20,12 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import * as ReactDOMClient from 'react-dom/client';
+import * as JsxRuntime from 'react/jsx-runtime';
+import * as JsxDevRuntime from 'react/jsx-dev-runtime';
 import * as NotehubCore from '@notehub/core';
 import * as NotehubApi from '@notehub.md/api';
 import * as NotehubUI from '@notehub/ck-standard';
+import * as LucideReact from 'lucide-react';
 
 // SystemJS global type declaration (SystemJS 6.x)
 // Includes addImportMap for programmatic import map registration
@@ -84,6 +87,7 @@ export function initSharedScope(): void {
         '@notehub/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
         '@notehub.md/api': `${SHARED_SCOPE_PREFIX}notehub-api`,
         '@notehub/ui': `${SHARED_SCOPE_PREFIX}notehub-ui`,
+        'lucide-react': `${SHARED_SCOPE_PREFIX}lucide-react`,
     };
 
     // Step 1: Add import map to map bare specifiers to our synthetic URLs
@@ -132,18 +136,18 @@ export function initSharedScope(): void {
 
     // Register JSX Runtime for modern JSX transform (jsx: 'react-jsx' in tsconfig)
     // This enables external plugins to use modern JSX without manually importing React
+    // Use the REAL jsx-runtime functions — NOT React.createElement!
+    // jsx(type, propsWithChildren, key) ≠ createElement(type, props, ...children)
+    // Using createElement here causes children in props to be dropped when a key is passed.
     const jsxRuntimeModule = {
-        jsx: React.createElement,
-        jsxs: React.createElement,
-        Fragment: React.Fragment,
+        ...JsxRuntime,
         __esModule: true,
     };
     System.set(moduleUrls['react/jsx-runtime']!, jsxRuntimeModule);
 
     // Register JSX Dev Runtime (used in development mode)
     const jsxDevRuntimeModule = {
-        jsxDEV: React.createElement,
-        Fragment: React.Fragment,
+        ...JsxDevRuntime,
         __esModule: true,
     };
     System.set(moduleUrls['react/jsx-dev-runtime']!, jsxDevRuntimeModule);
@@ -169,8 +173,15 @@ export function initSharedScope(): void {
         __esModule: true,
     });
 
+    // Register lucide-react - Icon library shared with plugins
+    System.set(moduleUrls['lucide-react']!, {
+        ...LucideReact,
+        default: LucideReact,
+        __esModule: true,
+    });
+
     scopeInitialized = true;
-    console.log('[ScopeInitializer] Shared scope initialized with React, ReactDOM, JSX Runtime, @notehub/core, @notehub/api, and @notehub/ui');
+    console.log('[ScopeInitializer] Shared scope initialized with React, ReactDOM, JSX Runtime, @notehub/core, @notehub/api, @notehub/ui, and lucide-react');
 
     // Step 3: ALSO register modules at bare specifier names directly
     // This is needed for plugins loaded from Blob URLs, where import map doesn't work
@@ -234,7 +245,13 @@ export function initSharedScope(): void {
         __esModule: true,
     });
 
-    console.log('[ScopeInitializer] Direct bare specifier registrations added for Blob URL support (including JSX runtime)');
+    safeSet('lucide-react', {
+        ...LucideReact,
+        default: LucideReact,
+        __esModule: true,
+    });
+
+    console.log('[ScopeInitializer] Direct bare specifier registrations added for Blob URL support (including JSX runtime, lucide-react)');
 }
 
 /**

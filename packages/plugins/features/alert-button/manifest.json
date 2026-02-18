@@ -1,5 +1,5 @@
 {
-    "id": "features.alert-button",
+    "id": "nh.features.alert-button",
     "name": "Alert Button",
     "version": "0.1.0",
     "description": "Adds a button to the editor that triggers an alert notification",

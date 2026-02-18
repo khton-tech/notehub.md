@@ -23,11 +23,13 @@
             }
         ],
         "security": {
-            "csp": null,
+            "csp": "default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data: blob:; font-src 'self'",
             "assetProtocol": {
                 "enable": true,
                 "scope": [
-                    "**/*"
+                    "$APPDATA/**",
+                    "$RESOURCE/**",
+                    "$HOME/**"
                 ]
             }
         }

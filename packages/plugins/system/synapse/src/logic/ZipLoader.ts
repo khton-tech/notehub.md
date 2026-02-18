@@ -81,10 +81,14 @@ export class ZipLoader {
         const manifestContent = await manifestFile.async('string');
         const manifest = parseManifestOrThrow(manifestContent, filename);
 
-        // Step 5: Extract main.js and create Blob URL
-        const mainJsContent = await mainJsFile.async('blob');
+        // Step 5: Extract main.js, rewrite bare specifiers, and create Blob URL
+        // SystemJS import maps don't reliably resolve bare specifiers from blob URL contexts
+        // (especially in Tauri production builds). Rewrite them to the notehub://shared/ URLs
+        // that are already registered via System.set() in ScopeInitializer.
+        let mainJsText = await mainJsFile.async('string');
+        mainJsText = this.rewriteSpecifiers(mainJsText);
         const blobUrl = URL.createObjectURL(
-            new Blob([mainJsContent], { type: 'application/javascript' })
+            new Blob([mainJsText], { type: 'application/javascript' })
         );
 
         // Step 6: Extract styles.css if present
@@ -115,6 +119,37 @@ export class ZipLoader {
         });
 
         return files;
+    }
+
+    /**
+     * Rewrite bare module specifiers to notehub://shared/ URLs.
+     * This ensures SystemJS can resolve dependencies from blob URL contexts
+     * where import maps may not apply (e.g. Tauri production builds).
+     *
+     * Order matters: longer specifiers (react/jsx-runtime) must be replaced
+     * before shorter ones (react) to avoid partial matches.
+     */
+    private rewriteSpecifiers(js: string): string {
+        const SHARED = 'notehub://shared/';
+        const map: [string, string][] = [
+            ['react/jsx-dev-runtime', `${SHARED}react-jsx-dev-runtime`],
+            ['react/jsx-runtime', `${SHARED}react-jsx-runtime`],
+            ['react-dom/client', `${SHARED}react-dom-client`],
+            ['react-dom', `${SHARED}react-dom`],
+            ['react', `${SHARED}react`],
+            ['@notehub.md/api', `${SHARED}notehub-api`],
+            ['@notehub/api', `${SHARED}notehub-api`],
+            ['@notehub/core', `${SHARED}notehub-core`],
+            ['@notehub/ui', `${SHARED}notehub-ui`],
+            ['lucide-react', `${SHARED}lucide-react`],
+        ];
+
+        for (const [bare, url] of map) {
+            js = js.replaceAll(`"${bare}"`, `"${url}"`);
+            js = js.replaceAll(`'${bare}'`, `'${url}'`);
+        }
+
+        return js;
     }
 
     /**

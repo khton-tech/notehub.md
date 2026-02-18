@@ -133,7 +133,7 @@ const DialogOverlay: FC<DialogOverlayProps> = ({ dialog, onClose }) => {
 
     return (
         <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] animate-[dialogFadeIn_0.2s_ease-out]"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[400] animate-[dialogFadeIn_0.2s_ease-out]"
             onClick={handleCancel}
             role="dialog"
             aria-modal="true"

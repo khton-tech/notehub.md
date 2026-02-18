@@ -1,0 +1,13 @@
+{
+    "id": "nh.features.catty",
+    "name": "Catty",
+    "version": "0.1.0",
+    "description": "Adds a walking cat to the status bar",
+    "main": "dist/main.js",
+    "author": "Notehub",
+    "license": "MIT",
+    "dependencies": [],
+    "permissions": [
+        "statusbar:add-item"
+    ]
+}

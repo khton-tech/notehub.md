@@ -109,7 +109,7 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose }) =
 
     return (
         <div
-            className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] bg-black/60 backdrop-blur-sm animate-[paletteIn_0.15s_ease-out]"
+            className="fixed inset-0 z-[400] flex items-start justify-center pt-[15vh] bg-black/60 backdrop-blur-sm animate-[paletteIn_0.15s_ease-out]"
             onClick={handleBackdropClick}
         >
             <Card

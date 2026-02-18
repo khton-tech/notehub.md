@@ -22,6 +22,9 @@ export class FsManagerPlugin extends SystemPlugin {
     // Write locks per file path to prevent concurrent writes
     private writeLocks = new Map<string, Promise<void>>();
 
+    /** Timeout for waiting on an existing write lock (ms) */
+    private static readonly WRITE_LOCK_TIMEOUT = 30_000;
+
     protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
@@ -78,14 +81,25 @@ export class FsManagerPlugin extends SystemPlugin {
     }
 
     private async writeFile(path: string, data: Uint8Array): Promise<void> {
+        let isNew = false;
+        try {
+            isNew = !(await this.ensureDriver().exists(path));
+        } catch { /* assume existing */ }
+
         const existingLock = this.writeLocks.get(path);
         const newLock = (async () => {
-            if (existingLock) await existingLock.catch(() => { });
+            if (existingLock) {
+                await Promise.race([
+                    existingLock.catch(() => {}),
+                    new Promise<void>(resolve => setTimeout(resolve, FsManagerPlugin.WRITE_LOCK_TIMEOUT))
+                ]);
+            }
             await this.ensureDriver().writeFile(path, data);
         })();
         this.writeLocks.set(path, newLock);
         try {
             await newLock;
+            this.app.events.emit('fs:written', { path, isNew });
         } finally {
             if (this.writeLocks.get(path) === newLock) {
                 this.writeLocks.delete(path);
@@ -94,14 +108,26 @@ export class FsManagerPlugin extends SystemPlugin {
     }
 
     private async writeTextFile(path: string, content: string): Promise<void> {
+        // Check if file exists before write to determine isNew
+        let isNew = false;
+        try {
+            isNew = !(await this.ensureDriver().exists(path));
+        } catch { /* assume existing */ }
+
         const existingLock = this.writeLocks.get(path);
         const newLock = (async () => {
-            if (existingLock) await existingLock.catch(() => { });
+            if (existingLock) {
+                await Promise.race([
+                    existingLock.catch(() => {}),
+                    new Promise<void>(resolve => setTimeout(resolve, FsManagerPlugin.WRITE_LOCK_TIMEOUT))
+                ]);
+            }
             await this.ensureDriver().writeTextFile(path, content);
         })();
         this.writeLocks.set(path, newLock);
         try {
             await newLock;
+            this.app.events.emit('fs:written', { path, isNew });
         } finally {
             if (this.writeLocks.get(path) === newLock) {
                 this.writeLocks.delete(path);
@@ -110,7 +136,8 @@ export class FsManagerPlugin extends SystemPlugin {
     }
 
     private async createDir(path: string, options?: CreateDirOptions): Promise<void> {
-        return this.ensureDriver().createDir(path, options);
+        await this.ensureDriver().createDir(path, options);
+        this.app.events.emit('fs:dir-created', { path });
     }
 
     private async readDir(path: string): Promise<DirEntry[]> {

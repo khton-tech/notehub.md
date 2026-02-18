@@ -222,13 +222,16 @@ export class Bootloader {
             this.plugins.set(plugin.manifest.id, plugin);
         }
 
-        // Build edges (handles missing required dependencies by throwing)
-        try {
-            this.graph.buildEdges();
-        } catch (error) {
-            // If a required dependency is missing, we need to handle it gracefully
-            this.log('error', `Resolution failed: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
+        // Build edges — collect missing dependency errors instead of throwing
+        const missingDeps = this.graph.buildEdges();
+
+        if (missingDeps.length > 0) {
+            for (const { pluginId, missingDep } of missingDeps) {
+                const error = new Error(`Required dependency "${missingDep}" not found`);
+                this.log('error', `  ✗ Plugin "${pluginId}" missing dependency "${missingDep}"`);
+                this.markFailed(pluginId, error);
+                this.cascadeFailure(pluginId);
+            }
         }
 
         this.log('info', '  Graph built successfully');

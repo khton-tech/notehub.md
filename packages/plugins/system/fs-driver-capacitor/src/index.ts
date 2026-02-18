@@ -244,37 +244,99 @@ export class FsDriverCapacitorPlugin extends SystemPlugin implements IFileSystem
         }
     }
 
-    async watch(_path: string, _onChange: (event: any) => void): Promise<() => void> {
-        this.log('warn', 'watch not implemented on Capacitor');
-        return () => { };
+    async watch(path: string, onChange: (event: any) => void): Promise<() => void> {
+        const POLL_INTERVAL = 2000;
+        let snapshot = new Map<string, { name: string; isDirectory: boolean }>();
+        let stopped = false;
+
+        // Initial snapshot
+        try {
+            const entries = await this.readDir(path);
+            for (const entry of entries) {
+                snapshot.set(entry.name, { name: entry.name, isDirectory: entry.isDirectory });
+            }
+        } catch (e) {
+            this.log('warn', `watch: failed to read initial directory state: ${e}`);
+        }
+
+        const poll = async () => {
+            if (stopped) return;
+            try {
+                const entries = await this.readDir(path);
+                const current = new Map<string, { name: string; isDirectory: boolean }>();
+                for (const entry of entries) {
+                    current.set(entry.name, { name: entry.name, isDirectory: entry.isDirectory });
+                }
+
+                // Detect new entries
+                for (const [name] of current) {
+                    if (!snapshot.has(name)) {
+                        onChange({ type: 'create', path: `${path}/${name}` });
+                    }
+                }
+
+                // Detect deleted entries
+                for (const [name] of snapshot) {
+                    if (!current.has(name)) {
+                        onChange({ type: 'remove', path: `${path}/${name}` });
+                    }
+                }
+
+                snapshot = current;
+            } catch (e) {
+                this.log('warn', `watch poll error: ${e}`);
+            }
+
+            if (!stopped) {
+                setTimeout(poll, POLL_INTERVAL);
+            }
+        };
+
+        setTimeout(poll, POLL_INTERVAL);
+
+        return () => {
+            stopped = true;
+        };
     }
 
     async removeFile(path: string): Promise<void> {
-        const { path: resolvedPath, directory } = this.resolvePath(path);
-        await Filesystem.deleteFile({
-            path: resolvedPath,
-            directory: directory,
-        });
+        try {
+            const { path: resolvedPath, directory } = this.resolvePath(path);
+            await Filesystem.deleteFile({
+                path: resolvedPath,
+                directory: directory,
+            });
+        } catch (e) {
+            throw new Error(`removeFile failed for "${path}": ${e}`);
+        }
     }
 
     async removeDir(path: string, options?: { recursive?: boolean }): Promise<void> {
-        const { path: resolvedPath, directory } = this.resolvePath(path);
-        await Filesystem.rmdir({
-            path: resolvedPath,
-            directory: directory,
-            recursive: options?.recursive,
-        });
+        try {
+            const { path: resolvedPath, directory } = this.resolvePath(path);
+            await Filesystem.rmdir({
+                path: resolvedPath,
+                directory: directory,
+                recursive: options?.recursive,
+            });
+        } catch (e) {
+            throw new Error(`removeDir failed for "${path}": ${e}`);
+        }
     }
 
     async rename(oldPath: string, newPath: string): Promise<void> {
-        const resolvedOld = this.resolvePath(oldPath);
-        const resolvedNew = this.resolvePath(newPath);
-        await Filesystem.rename({
-            from: resolvedOld.path,
-            to: resolvedNew.path,
-            directory: resolvedOld.directory,
-            toDirectory: resolvedNew.directory,
-        });
+        try {
+            const resolvedOld = this.resolvePath(oldPath);
+            const resolvedNew = this.resolvePath(newPath);
+            await Filesystem.rename({
+                from: resolvedOld.path,
+                to: resolvedNew.path,
+                directory: resolvedOld.directory,
+                toDirectory: resolvedNew.directory,
+            });
+        } catch (e) {
+            throw new Error(`rename failed from "${oldPath}" to "${newPath}": ${e}`);
+        }
     }
 }
 

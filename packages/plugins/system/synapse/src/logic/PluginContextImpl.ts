@@ -297,7 +297,7 @@ export class PluginContextImpl implements PluginContext {
      *
      * @internal
      */
-    cleanup(): void {
+    async cleanup(): Promise<void> {
         if (this.disposed) {
             this.log('warn', 'Context already disposed, skipping cleanup');
             return;
@@ -305,7 +305,7 @@ export class PluginContextImpl implements PluginContext {
 
         this.log('info', 'Starting cleanup...');
 
-        // Unregister all APIs
+        // Phase 1: Synchronous cleanup (unregister APIs, events, hooks)
         for (const apiName of this.registeredApis) {
             try {
                 const unregistered = this.app.api.unregister(apiName);
@@ -320,7 +320,6 @@ export class PluginContextImpl implements PluginContext {
         }
         this.registeredApis = [];
 
-        // Call all event unsubscribers
         for (const unsubscribe of this.eventUnsubscribers) {
             try {
                 unsubscribe();
@@ -330,7 +329,6 @@ export class PluginContextImpl implements PluginContext {
         }
         this.eventUnsubscribers = [];
 
-        // Call all hook unsubscribers
         for (const unsubscribe of this.hookUnsubscribers) {
             try {
                 unsubscribe();
@@ -344,36 +342,40 @@ export class PluginContextImpl implements PluginContext {
         this._unsafe = null;
         this._storage = null;
 
+        // Phase 2: Async cleanup (portals, settings) — await all
+        const asyncOps: Promise<unknown>[] = [];
+
         for (const widgetId of this.registeredWidgets) {
-            try {
+            asyncOps.push(
                 this.app.api.invoke('editor:unregister-portal', widgetId).catch(err => {
                     this.log('warn', `Failed to unregister portal "${widgetId}" during cleanup: ${err}`);
-                });
-                this.log('info', `Unregistered portal: ${widgetId}`);
-            } catch (error) {
-                this.log('error', `Failed to unregister portal "${widgetId}": ${error}`);
-            }
+                })
+            );
         }
         this.registeredWidgets = [];
 
-        // Unregister settings resources
-        // Note: We unregister items first, then groups, then tabs to be safe,
-        // although the registry handles cascading deletion.
-
         for (const key of this.registeredSettingsItems) {
-            this.app.api.invoke('settings:unregister-item', key).catch(() => { });
+            asyncOps.push(
+                this.app.api.invoke('settings:unregister-item', key).catch(() => { })
+            );
         }
         this.registeredSettingsItems = [];
 
         for (const id of this.registeredSettingsGroups) {
-            this.app.api.invoke('settings:unregister-group', id).catch(() => { });
+            asyncOps.push(
+                this.app.api.invoke('settings:unregister-group', id).catch(() => { })
+            );
         }
         this.registeredSettingsGroups = [];
 
         for (const id of this.registeredSettingsTabs) {
-            this.app.api.invoke('settings:unregister-tab', id).catch(() => { });
+            asyncOps.push(
+                this.app.api.invoke('settings:unregister-tab', id).catch(() => { })
+            );
         }
         this.registeredSettingsTabs = [];
+
+        await Promise.allSettled(asyncOps);
 
         this.disposed = true;
         this.log('info', 'Cleanup complete');

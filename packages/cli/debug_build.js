@@ -54,10 +54,9 @@ export async function buildCommand(options) {
     console.log(chalk.white(`Plugin: ${chalk.bold(manifest.name)} (${manifest.id})`));
     console.log(chalk.white(`Version: ${manifest.version}\n`));
     // Step 2: Determine entry point
-    const entryPoint = manifest.main || 'src/index.ts';
-    const entryPath = join(cwd, entryPoint);
-    // Try common entry points if the default doesn't exist
-    const possibleEntries = [entryPoint, 'src/index.ts', 'src/index.tsx', 'src/main.ts', 'src/main.tsx', 'index.ts'];
+    // Note: manifest.main points to the *output* (dist/main.js), not the source.
+    // Always search for source entry points first, falling back to manifest.main only as last resort.
+    const possibleEntries = ['src/index.ts', 'src/index.tsx', 'src/main.ts', 'src/main.tsx', 'index.ts', 'index.tsx'];
     let actualEntry = null;
     for (const entry of possibleEntries) {
         const fullPath = join(cwd, entry);
@@ -96,21 +95,21 @@ export async function buildCommand(options) {
                         'react-dom',
                         'react-dom/client',
                         'react/jsx-runtime',
-                        '@notehub.md/api'
+                        '@notehub.md/api',
+                        'lucide-react'
                     ];
                     if (externals.includes(id))
                         return true;
                     if (id.startsWith('react/') || id.startsWith('react-dom/'))
                         return true;
-                    // Do NOT externalize lucide-react (or anything else)
                     return false;
                 },
-                output: {
-                    format: 'system',
-                    entryFileNames: 'main.js',
-                    // Don't use named exports - we need anonymous module
-                    exports: 'auto',
-                },
+                // output: {
+                //     // format: 'system', // Handled by lib.formats
+                //     entryFileNames: 'main.js',
+                //     // Don't use named exports - we need anonymous module
+                //     exports: 'auto' as const,
+                // },
             },
             // Watch mode configuration
             watch: options.watch ? {} : null,

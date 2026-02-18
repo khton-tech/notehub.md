@@ -52,7 +52,7 @@ const variantClasses: Record<string, string> = {
         'bg-[var(--nh-accent-primary,#7c3aed)]',
         'text-[var(--nh-button-text,#ffffff)]',
         'shadow-[var(--nh-shadow-sm)]',
-        'hover:shadow-[0_0_20px_rgba(124,58,237,0.4)]',
+        'hover:shadow-nh-glow-accent',
         'hover:brightness-110',
     ].join(' '),
     secondary: [
@@ -71,7 +71,7 @@ const variantClasses: Record<string, string> = {
         'bg-[var(--nh-danger,#ef4444)]',
         'text-[var(--nh-button-text,#ffffff)]',
         'shadow-[var(--nh-shadow-sm)]',
-        'hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]',
+        'hover:shadow-[0_0_20px_rgba(239,68,68,0.35)]',
         'hover:brightness-110',
     ].join(' '),
     glass: [
@@ -110,7 +110,7 @@ export const Button: FC<ButtonProps> = ({
         // Shape - softer corners
         'rounded-xl',
         // Transitions - smooth for glow effect
-        'transition-all duration-200 ease-out',
+        'transition-[background,color,box-shadow,transform,opacity] duration-[200ms] ease-out',
         // Tactile click feedback
         'active:scale-[0.97]',
         // Focus states - glow ring

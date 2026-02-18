@@ -1,0 +1,12 @@
+{
+    "id": "nh.features.tabbar",
+    "name": "Tab Bar",
+    "version": "0.1.0",
+    "type": "features",
+    "dependencies": [
+        "nh.features.editor",
+        "nh.ui.controllers-manager",
+        "nh.ui.layout-manager",
+        "nh.ui.context-menu"
+    ]
+}

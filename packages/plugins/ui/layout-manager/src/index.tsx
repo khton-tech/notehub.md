@@ -1,6 +1,7 @@
 import { SystemPlugin } from '@notehub/core';
 import type { PluginManifest, NotehubCore, ZoneItem, WorkspaceViewConfig, StatusBarItemConfig } from '@notehub/core';
-import { useSyncExternalStore, type FC } from 'react';
+import React, { useSyncExternalStore, type FC } from 'react';
+import { Controller } from '@notehub/controllers-manager';
 import { WelcomeLayout } from './components/WelcomeLayout.js';
 import { EditorLayout } from './components/EditorLayout.js';
 import { WindowController } from './logic/WindowController.js';
@@ -136,19 +137,30 @@ export const LayoutRenderer: FC = () => {
         getLayoutSnapshot
     );
 
-    if (!currentLayout) {
-        return null;
-    }
+    const Component = currentLayout
+        ? layoutRegistry.get(currentLayout.name)
+        : null;
 
-    const Component = layoutRegistry.get(currentLayout.name);
-
-    if (!Component) {
+    if (currentLayout && !Component) {
         console.warn(`[LayoutManager] Layout "${currentLayout.name}" not found in registry`);
-        return null;
     }
 
-    // Inject app instance into layout component
-    return <Component {...currentLayout.props} app={appInstance} />;
+    return (
+        <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--nh-bg-main)] text-[var(--nh-text-primary)]">
+            {/* Global Titlebar — always above all layouts */}
+            <div className="shrink-0 relative z-[500]">
+                <Controller type="titlebar" app={appInstance} />
+                <Controller type="editor-portal-renderer" />
+            </div>
+
+            {/* Active Layout */}
+            <div className="flex-1 overflow-hidden">
+                {Component && currentLayout && (
+                    <Component {...currentLayout.props} app={appInstance} />
+                )}
+            </div>
+        </div>
+    );
 };
 
 // =============== ZoneRenderer Component ===============
@@ -195,25 +207,6 @@ export const ZoneRenderer: FC<ZoneRendererProps> = ({ name, className, style }) 
 
     if (sortedItems.length === 0) {
         return null;
-    }
-
-    // Get the Controller component from the registry
-    const Controller = appInstance?.api.invoke('controller:get', 'Controller') as FC<{ type: string }> | undefined;
-
-    if (!Controller) {
-        // Fallback: render items directly by invoking controller:get for each
-        return (
-            <div className={className} style={style} data-nh-zone={name}>
-                {sortedItems.map((item, index) => {
-                    const Component = appInstance?.api.invoke('controller:get', item.component) as FC | undefined;
-                    if (!Component) {
-                        console.warn(`[ZoneRenderer] Component "${item.component}" not found in controller registry`);
-                        return null;
-                    }
-                    return <Component key={`${item.component}-${index}`} />;
-                })}
-            </div>
-        );
     }
 
     return (

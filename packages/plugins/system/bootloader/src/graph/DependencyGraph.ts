@@ -1,6 +1,14 @@
 import type { PluginManifest } from '../schema.js';
 
 /**
+ * Error returned when a required dependency is not found in the graph
+ */
+export interface MissingDependencyError {
+    pluginId: string;
+    missingDep: string;
+}
+
+/**
  * Plugin status during the loading process
  */
 export type PluginStatus =
@@ -94,44 +102,52 @@ export class DependencyGraph {
      * Build edges based on plugin dependencies
      * 
      * Must be called after all nodes are added.
-     * 
+     *
      * Rules (RFC Section 4.1):
-     * - Required dependencies: edge created, missing = error thrown
+     * - Required dependencies: edge created, missing = collected as error (plugin excluded from graph)
      * - Optional dependencies: edge created ONLY if dependency exists
      * - Self-dependencies: silently ignored
-     * 
-     * @throws Error if a required dependency is not found in the graph
+     *
+     * @returns Array of missing dependency errors. Empty if all dependencies are satisfied.
      */
-    buildEdges(): void {
+    buildEdges(): MissingDependencyError[] {
+        const errors: MissingDependencyError[] = [];
+        const excludedPlugins = new Set<string>();
+
+        // First pass: detect plugins with missing required dependencies
         for (const [pluginId, node] of this.nodes) {
+            for (const depId of Object.keys(node.manifest.dependencies)) {
+                if (depId === pluginId) continue;
+                if (!this.nodes.has(depId)) {
+                    errors.push({ pluginId, missingDep: depId });
+                    excludedPlugins.add(pluginId);
+                }
+            }
+        }
+
+        // Second pass: build edges only for valid plugins
+        for (const [pluginId, node] of this.nodes) {
+            if (excludedPlugins.has(pluginId)) continue;
+
             const deps: string[] = [];
 
             // Process required dependencies
             for (const depId of Object.keys(node.manifest.dependencies)) {
-                // Ignore self-dependency
                 if (depId === pluginId) {
                     console.warn(`[DependencyGraph] Plugin "${pluginId}" has self-dependency, ignoring`);
                     continue;
                 }
-
-                if (!this.nodes.has(depId)) {
-                    throw new Error(
-                        `Plugin "${pluginId}" requires missing dependency "${depId}"`
-                    );
-                }
-
+                // Skip edges to excluded plugins (they'll be marked FAILED upstream)
+                if (excludedPlugins.has(depId)) continue;
                 deps.push(depId);
             }
 
             // Process optional dependencies (RFC Section 4.1)
             // Edge is created ONLY if the optional dependency exists
             for (const depId of Object.keys(node.manifest.optionalDependencies)) {
-                // Ignore self-dependency
-                if (depId === pluginId) {
-                    continue;
-                }
+                if (depId === pluginId) continue;
+                if (excludedPlugins.has(depId)) continue;
 
-                // Only create edge if optional dependency is present
                 if (this.nodes.has(depId)) {
                     deps.push(depId);
                 } else {
@@ -149,6 +165,8 @@ export class DependencyGraph {
                 this.dependents.get(depId)!.add(pluginId);
             }
         }
+
+        return errors;
     }
 
     /**

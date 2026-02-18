@@ -763,17 +763,16 @@ export interface NotehubApiMap {
 
     // =========================================================================
     // Bootloader Plugin (nh.system.bootloader)
-    // Note: Uses dot notation for legacy compatibility
     // =========================================================================
 
     /** Load a set of plugins with dependency resolution */
-    'bootloader.load': (plugins: unknown[]) => Promise<unknown>;
+    'bootloader:load': (plugins: unknown[]) => Promise<unknown>;
 
     /** Get the result of the last load operation */
-    'bootloader.getResult': () => unknown | null;
+    'bootloader:get-result': () => unknown | null;
 
     /** Get the bootloader instance for advanced usage */
-    'bootloader.getInstance': () => unknown | null;
+    'bootloader:get-instance': () => unknown | null;
 
     // =========================================================================
     // Vault Picker Plugin (nh.features.vault-picker)
@@ -826,7 +825,7 @@ export interface NotehubApiMap {
     'settings:unregister-item': (key: string) => void;
 
     /** Register a custom view for a tab */
-    'settings:register-custom-view': (args: { tabId: string; view: FC<any> }) => void;
+    'settings:register-custom-view': (args: { tabId: string; view: FC<Record<string, unknown>> }) => void;
 
     // =========================================================================
     // Editor Plugin (nh.features.editor)
@@ -1084,6 +1083,8 @@ export interface NotehubEventMap {
     'config:deleted': { key: string };
 
     // File system events
+    'fs:written': { path: string; isNew: boolean };
+    'fs:dir-created': { path: string };
     'fs:deleted': { path: string; isDirectory: boolean };
     'fs:renamed': { oldPath: string; newPath: string };
 

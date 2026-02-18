@@ -22,9 +22,6 @@ interface FileTreeProps {
     controller: ExplorerController;
 }
 
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-
 export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     const app = useNotehub();
     const treeRef = useRef<TreeApi<FileNode>>(null);
@@ -283,10 +280,10 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     const isEmpty = data.length === 0;
 
     return (
-        <DndProvider backend={HTML5Backend}>
+        <>
             <style>{`
-                /* Remove browser default outline on all tree elements */
-                .react-arborist-tree * {
+                /* Only suppress mouse-click focus outlines, keep keyboard focus visible */
+                .react-arborist-tree *:focus:not(:focus-visible) {
                     outline: none !important;
                 }
             `}</style>
@@ -410,7 +407,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                     )}
                 </div>
             </div>
-        </DndProvider>
+        </>
     );
 };
 

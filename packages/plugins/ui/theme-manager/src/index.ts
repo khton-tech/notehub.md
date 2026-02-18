@@ -85,7 +85,7 @@ const DEEP_SPACE_THEME: ThemePalette = {
     // Text
     'text-primary': '#E0E0E0', // Slightly warmer white
     'text-secondary': '#A0A0A0',
-    'text-muted': 'rgba(255, 255, 255, 0.45)',
+    'text-muted': 'rgba(255, 255, 255, 0.55)',
     'text-error': '#f87171', // Red-400 (softer)
 
     // Button
@@ -143,7 +143,7 @@ const LIGHT_THEME: ThemePalette = {
     // Text
     'text-primary': '#1A1A1A',
     'text-secondary': '#525252',
-    'text-muted': 'rgba(0, 0, 0, 0.45)',
+    'text-muted': 'rgba(0, 0, 0, 0.55)',
     'text-error': '#dc2626',
 
     // Button
@@ -291,9 +291,17 @@ export class ThemeManagerPlugin extends SystemPlugin {
             }
 
             /* Focus ring utility */
-            .nh-focus-ring:focus {
+            .nh-focus-ring:focus-visible {
                 outline: none;
                 box-shadow: 0 0 0 2px var(--nh-bg-main), 0 0 0 4px var(--nh-accent-primary);
+            }
+
+            /* Reduced motion preference */
+            @media (prefers-reduced-motion: reduce) {
+                *, *::before, *::after {
+                    animation-duration: 0.01ms !important;
+                    transition-duration: 0.01ms !important;
+                }
             }
         `;
         document.head.appendChild(this.styleElement);
@@ -351,6 +359,10 @@ export class ThemeManagerPlugin extends SystemPlugin {
             'border-accent': accentPrimary,
             // Generate focus ring (transparent accent)
             'ring-focus': colord(accentPrimary).alpha(0.4).toHex(),
+            // Generate glow accent variants
+            'glow-accent-sm': `0 0 8px ${colord(accentPrimary).alpha(0.25).toRgbString()}`,
+            'glow-accent-md': `0 0 14px ${colord(accentPrimary).alpha(0.35).toRgbString()}`,
+            'glow-accent-lg': `0 0 22px ${colord(accentPrimary).alpha(0.45).toRgbString()}`,
         };
 
         for (const [key, value] of Object.entries(dynamicPalette)) {

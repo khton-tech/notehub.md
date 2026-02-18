@@ -7,7 +7,7 @@ export interface PluginRegistryEntry {
     id: string;
     name: string;
     version: string;
-    type: string;
+    type: 'system' | 'ui' | 'feature';
     dependencies?: string[];
 }
 

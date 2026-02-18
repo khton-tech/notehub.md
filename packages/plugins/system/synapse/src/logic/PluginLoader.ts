@@ -34,11 +34,25 @@ export class PluginLoader {
     /** Map of all discovered plugins (loaded or not) by ID */
     private discoveredPlugins: Map<string, DiscoveredPluginRecord> = new Map();
 
+    /** Per-plugin operation locks to prevent concurrent load/unload */
+    private operationLocks: Map<string, Promise<any>> = new Map();
+
     /** Core application instance */
     private app: NotehubCore;
 
     constructor(app: NotehubCore) {
         this.app = app;
+    }
+
+    /**
+     * Queue an async operation for a specific plugin ID.
+     * Ensures only one load/unload runs at a time per plugin.
+     */
+    private async withLock<T>(pluginId: string, fn: () => Promise<T>): Promise<T> {
+        const prev = this.operationLocks.get(pluginId) ?? Promise.resolve();
+        const current = prev.then(fn, fn);
+        this.operationLocks.set(pluginId, current.catch(() => {}));
+        return current;
     }
 
     /**
@@ -167,8 +181,9 @@ export class PluginLoader {
 
         const manifestPath = `${pluginPath}/manifest.json`;
 
+        // Read manifest outside the lock to get the plugin ID
+        let manifest: ExternalPluginManifest | undefined;
         try {
-            // Step 1: Check if manifest exists
             const manifestExists = await this.app.api.invoke('fs:exists', manifestPath);
             if (!manifestExists) {
                 const error = `No manifest.json found at ${manifestPath}`;
@@ -176,154 +191,163 @@ export class PluginLoader {
                 return { success: false, error };
             }
 
-            // Step 2: Read and parse manifest
             const manifestJson = await this.app.api.invoke('fs:read-text-file', manifestPath);
-            const manifest = parseManifest(manifestJson as string, pluginPath);
+            manifest = parseManifest(manifestJson as string, pluginPath) ?? undefined;
             if (!manifest) {
                 return { success: false, error: 'Invalid manifest.json format' };
             }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `Failed to read manifest from ${pluginPath}: ${errorMessage}`);
+            return { success: false, error: errorMessage };
+        }
 
-            // Step 3: Check if already loaded
-            if (this.loadedPlugins.has(manifest.id)) {
-                this.log('warn', `Plugin ${manifest.id} is already loaded, skipping`);
-                // Ensure discovered status is active
-                const discovered = this.discoveredPlugins.get(manifest.id);
+        // Acquire per-plugin lock for the actual load operation
+        return this.withLock(manifest.id, async () => {
+            try {
+                // Check if already loaded
+                if (this.loadedPlugins.has(manifest!.id)) {
+                    this.log('warn', `Plugin ${manifest!.id} is already loaded, skipping`);
+                    const discovered = this.discoveredPlugins.get(manifest!.id);
+                    if (discovered) {
+                        discovered.status = 'Active';
+                        delete discovered.error;
+                    }
+                    return { success: true, pluginId: manifest!.id };
+                }
+
+                // Construct file URL for the entry point
+                const entryPoint = manifest!.main || 'main.js';
+                const url = this.constructFileUrl(pluginPath, entryPoint);
+
+                this.log('info', `Loading external plugin: ${manifest!.id} from ${url}`);
+
+                // Dynamic import via SystemJS with timeout
+                const module = await withTimeout(
+                    System.import(url),
+                    PLUGIN_LOAD_TIMEOUT_MS,
+                    `Plugin ${manifest!.id} load timeout after ${PLUGIN_LOAD_TIMEOUT_MS / 1000}s`
+                );
+
+                // Get and validate the plugin class/instance
+                const plugin = this.extractPlugin(module, manifest!.id);
+                if (!plugin) {
+                    return { success: false, error: 'Module does not export a valid plugin' };
+                }
+
+                // Determine plugin type and call appropriate load method
+                let context: PluginContextImpl | undefined;
+
+                if (this.isNotehubPlugin(plugin)) {
+                    context = new PluginContextImpl(this.app, manifest!.id, { name: manifest!.name, version: manifest!.version });
+                    await plugin.onload(context);
+                } else {
+                    await plugin.load(this.app);
+                }
+
+                // Store in registry
+                this.loadedPlugins.set(manifest!.id, {
+                    manifest: manifest!,
+                    plugin,
+                    context,
+                    url,
+                    sourcePath: pluginPath,
+                    loadedAt: new Date(),
+                });
+
+                const stats = context ? ` (${context.getStats().registeredApis} APIs, ${context.getStats().eventSubscriptions} subscriptions)` : '';
+                this.log('info', `External plugin loaded: ${manifest!.id} v${manifest!.version}${stats}`);
+
+                // Update discovered record status
+                const discovered = this.discoveredPlugins.get(manifest!.id);
                 if (discovered) {
                     discovered.status = 'Active';
                     delete discovered.error;
+                } else {
+                    this.discoveredPlugins.set(manifest!.id, {
+                        manifest: manifest!,
+                        sourcePath: pluginPath,
+                        status: 'Active',
+                        isNhp: false
+                    });
                 }
-                return { success: true, pluginId: manifest.id };
+
+                return { success: true, pluginId: manifest!.id };
+
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.log('error', `Failed to load plugin from ${pluginPath}: ${errorMessage}`);
+                return { success: false, error: errorMessage };
             }
-
-            // Step 4: Construct file URL for the entry point
-            const entryPoint = manifest.main || 'main.js';
-            const url = this.constructFileUrl(pluginPath, entryPoint);
-
-            this.log('info', `Loading external plugin: ${manifest.id} from ${url}`);
-
-            // Step 5: Dynamic import via SystemJS with timeout
-            const module = await withTimeout(
-                System.import(url),
-                PLUGIN_LOAD_TIMEOUT_MS,
-                `Plugin ${manifest.id} load timeout after ${PLUGIN_LOAD_TIMEOUT_MS / 1000}s`
-            );
-
-            // Step 6: Get and validate the plugin class/instance
-            const plugin = this.extractPlugin(module, manifest.id);
-            if (!plugin) {
-                return { success: false, error: 'Module does not export a valid plugin' };
-            }
-
-            // Step 7: Determine plugin type and call appropriate load method
-            let context: PluginContextImpl | undefined;
-
-            if (this.isNotehubPlugin(plugin)) {
-                context = new PluginContextImpl(this.app, manifest.id, { name: manifest.name, version: manifest.version });
-                await plugin.onload(context);
-            } else {
-                await plugin.load(this.app);
-            }
-
-            // Step 8: Store in registry
-            this.loadedPlugins.set(manifest.id, {
-                manifest,
-                plugin,
-                context,
-                url,
-                sourcePath: pluginPath,
-                loadedAt: new Date(),
-            });
-
-            const stats = context ? ` (${context.getStats().registeredApis} APIs, ${context.getStats().eventSubscriptions} subscriptions)` : '';
-            this.log('info', `External plugin loaded: ${manifest.id} v${manifest.version}${stats}`);
-
-            // Update discovered record status
-            const discovered = this.discoveredPlugins.get(manifest.id);
-            if (discovered) {
-                discovered.status = 'Active';
-                delete discovered.error;
-            } else {
-                this.discoveredPlugins.set(manifest.id, {
-                    manifest,
-                    sourcePath: pluginPath,
-                    status: 'Active',
-                    isNhp: false
-                });
-            }
-
-            return { success: true, pluginId: manifest.id };
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.log('error', `Failed to load plugin from ${pluginPath}: ${errorMessage}`);
-            return { success: false, error: errorMessage };
-        }
+        });
     }
 
     /**
      * Unload a previously loaded plugin
      */
     async unloadPlugin(pluginId: string): Promise<boolean> {
-        const record = this.loadedPlugins.get(pluginId);
-        if (!record) {
-            this.log('warn', `Cannot unload plugin ${pluginId}: not found in registry`);
-            return false;
-        }
-
-        try {
-            // Step 1: Clean up context
-            if (record.context) {
-                record.context.cleanup();
+        return this.withLock(pluginId, async () => {
+            const record = this.loadedPlugins.get(pluginId);
+            if (!record) {
+                this.log('warn', `Cannot unload plugin ${pluginId}: not found in registry`);
+                return false;
             }
 
-            // Step 2: Call appropriate unload method
-            if (this.isNotehubPlugin(record.plugin)) {
-                await record.plugin.onunload();
-            } else {
-                await record.plugin.unload(this.app);
-            }
-
-            // Step 3: Clean up SystemJS registry
-            System.delete(record.url);
-
-            // Step 4: Revoke Blob URL
-            if (record.blobUrl) {
-                URL.revokeObjectURL(record.blobUrl);
-            }
-
-            // Step 5: Remove injected CSS
-            if (record.isNhp) {
-                const styleTag = document.getElementById(`style-${pluginId}`);
-                if (styleTag) {
-                    styleTag.remove();
+            try {
+                // Step 1: Clean up context
+                if (record.context) {
+                    await record.context.cleanup();
                 }
+
+                // Step 2: Call appropriate unload method
+                if (this.isNotehubPlugin(record.plugin)) {
+                    await record.plugin.onunload();
+                } else {
+                    await record.plugin.unload(this.app);
+                }
+
+                // Step 3: Clean up SystemJS registry
+                System.delete(record.url);
+
+                // Step 4: Revoke Blob URL
+                if (record.blobUrl) {
+                    URL.revokeObjectURL(record.blobUrl);
+                }
+
+                // Step 5: Remove injected CSS
+                if (record.isNhp) {
+                    const styleTag = document.getElementById(`style-${pluginId}`);
+                    if (styleTag) {
+                        styleTag.remove();
+                    }
+                }
+
+                // Step 6: Remove from registry
+                this.loadedPlugins.delete(pluginId);
+
+                this.log('info', `External plugin unloaded: ${pluginId}`);
+
+                // Update status to Inactive
+                const discovered = this.discoveredPlugins.get(pluginId);
+                if (discovered) {
+                    discovered.status = 'Inactive';
+                }
+
+                return true;
+
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.log('error', `Error unloading plugin ${pluginId}: ${errorMessage}`);
+
+                // Cleanup on error
+                this.loadedPlugins.delete(pluginId);
+                if (record.blobUrl) URL.revokeObjectURL(record.blobUrl);
+                const styleTag = document.getElementById(`style-${pluginId}`);
+                if (styleTag) styleTag.remove();
+
+                return false;
             }
-
-            // Step 6: Remove from registry
-            this.loadedPlugins.delete(pluginId);
-
-            this.log('info', `External plugin unloaded: ${pluginId}`);
-
-            // Update status to Inactive
-            const discovered = this.discoveredPlugins.get(pluginId);
-            if (discovered) {
-                discovered.status = 'Inactive';
-            }
-
-            return true;
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.log('error', `Error unloading plugin ${pluginId}: ${errorMessage}`);
-
-            // Cleanup on error
-            this.loadedPlugins.delete(pluginId);
-            if (record.blobUrl) URL.revokeObjectURL(record.blobUrl);
-            const styleTag = document.getElementById(`style-${pluginId}`);
-            if (styleTag) styleTag.remove();
-
-            return false;
-        }
+        });
     }
 
     /**
@@ -394,104 +418,113 @@ export class PluginLoader {
      * Load an external plugin from an NHP file buffer
      */
     async loadFromNhp(buffer: ArrayBuffer, sourcePath: string): Promise<PluginLoadResult> {
-        let blobUrl: string | undefined;
-        let manifest: ExternalPluginManifest | undefined;
-        let cssInjected = false;
-
+        // Parse ZIP outside the lock to get the plugin ID
+        let nhpResult: NhpLoadResult;
         try {
             const zipLoader = new ZipLoader();
-            const nhpResult: NhpLoadResult = await zipLoader.loadFromBuffer(buffer, sourcePath);
-            manifest = nhpResult.manifest;
-            blobUrl = nhpResult.blobUrl;
-            const css = nhpResult.css;
+            nhpResult = await zipLoader.loadFromBuffer(buffer, sourcePath);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `Failed to parse NHP from ${sourcePath}: ${errorMessage}`);
+            return { success: false, error: errorMessage };
+        }
 
-            if (this.loadedPlugins.has(manifest.id)) {
-                this.log('warn', `Plugin ${manifest.id} is already loaded, skipping`);
-                // Ensure discovered status is active
+        const pluginId = nhpResult.manifest.id;
+
+        // Acquire per-plugin lock for the actual load operation
+        return this.withLock(pluginId, async () => {
+            let blobUrl: string | undefined = nhpResult.blobUrl;
+            const manifest = nhpResult.manifest;
+            const css = nhpResult.css;
+            let cssInjected = false;
+
+            try {
+                if (this.loadedPlugins.has(manifest.id)) {
+                    this.log('warn', `Plugin ${manifest.id} is already loaded, skipping`);
+                    const discovered = this.discoveredPlugins.get(manifest.id);
+                    if (discovered) {
+                        discovered.status = 'Active';
+                        delete discovered.error;
+                    }
+                    URL.revokeObjectURL(blobUrl!);
+                    return { success: true, pluginId: manifest.id };
+                }
+
+                this.log('info', `Loading NHP plugin: ${manifest.id} from ${sourcePath}`);
+
+                if (css) {
+                    const styleTag = document.createElement('style');
+                    styleTag.id = `style-${manifest.id}`;
+                    styleTag.textContent = css;
+                    document.head.appendChild(styleTag);
+                    cssInjected = true;
+                }
+
+                const module = await withTimeout(
+                    System.import(blobUrl!),
+                    PLUGIN_LOAD_TIMEOUT_MS,
+                    `NHP plugin ${manifest.id} load timeout after ${PLUGIN_LOAD_TIMEOUT_MS / 1000}s`
+                );
+                const plugin = this.extractPlugin(module, manifest.id);
+                if (!plugin) {
+                    return { success: false, error: 'Module does not export a valid plugin' };
+                }
+
+                let context: PluginContextImpl | undefined;
+                if (this.isNotehubPlugin(plugin)) {
+                    context = new PluginContextImpl(this.app, manifest.id, { name: manifest.name, version: manifest.version });
+                    await plugin.onload(context);
+                } else {
+                    await plugin.load(this.app);
+                }
+
+                this.loadedPlugins.set(manifest.id, {
+                    manifest,
+                    plugin,
+                    context,
+                    url: blobUrl!,
+                    blobUrl,
+                    isNhp: true,
+                    sourcePath,
+                    loadedAt: new Date(),
+                });
+
+                // Transfer ownership to loadedPlugins, don't revoke in finally
+                blobUrl = undefined;
+                cssInjected = false;
+
+                const stats = context ? ` (${context.getStats().registeredApis} APIs, ${context.getStats().eventSubscriptions} subscriptions)` : '';
+                this.log('info', `NHP plugin loaded: ${manifest.id} v${manifest.version}${stats}`);
+
                 const discovered = this.discoveredPlugins.get(manifest.id);
                 if (discovered) {
                     discovered.status = 'Active';
                     delete discovered.error;
+                } else {
+                    this.discoveredPlugins.set(manifest.id, {
+                        manifest,
+                        sourcePath,
+                        status: 'Active',
+                        isNhp: true
+                    });
                 }
-                URL.revokeObjectURL(blobUrl);
+
                 return { success: true, pluginId: manifest.id };
+
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.log('error', `Failed to load NHP plugin from ${sourcePath}: ${errorMessage}`);
+                return { success: false, error: errorMessage };
+            } finally {
+                if (blobUrl) {
+                    URL.revokeObjectURL(blobUrl);
+                }
+                if (cssInjected) {
+                    const styleTag = document.getElementById(`style-${manifest.id}`);
+                    if (styleTag) styleTag.remove();
+                }
             }
-
-            this.log('info', `Loading NHP plugin: ${manifest.id} from ${sourcePath}`);
-
-            if (css) {
-                const styleTag = document.createElement('style');
-                styleTag.id = `style-${manifest.id}`;
-                styleTag.textContent = css;
-                document.head.appendChild(styleTag);
-                cssInjected = true;
-            }
-
-            const module = await withTimeout(
-                System.import(blobUrl),
-                PLUGIN_LOAD_TIMEOUT_MS,
-                `NHP plugin ${manifest.id} load timeout after ${PLUGIN_LOAD_TIMEOUT_MS / 1000}s`
-            );
-            const plugin = this.extractPlugin(module, manifest.id);
-            if (!plugin) {
-                return { success: false, error: 'Module does not export a valid plugin' };
-            }
-
-            let context: PluginContextImpl | undefined;
-            if (this.isNotehubPlugin(plugin)) {
-                context = new PluginContextImpl(this.app, manifest.id, { name: manifest.name, version: manifest.version });
-                await plugin.onload(context);
-            } else {
-                await plugin.load(this.app);
-            }
-
-            this.loadedPlugins.set(manifest.id, {
-                manifest,
-                plugin,
-                context,
-                url: blobUrl,
-                blobUrl,
-                isNhp: true,
-                sourcePath,
-                loadedAt: new Date(),
-            });
-
-            // Transfer ownership to loadedPlugins, don't revoke in finally
-            blobUrl = undefined;
-            cssInjected = false; // CSS is now owned by loaded plugin
-
-            const stats = context ? ` (${context.getStats().registeredApis} APIs, ${context.getStats().eventSubscriptions} subscriptions)` : '';
-            this.log('info', `NHP plugin loaded: ${manifest.id} v${manifest.version}${stats}`);
-
-            const discovered = this.discoveredPlugins.get(manifest.id);
-            if (discovered) {
-                discovered.status = 'Active';
-                delete discovered.error;
-            } else {
-                this.discoveredPlugins.set(manifest.id, {
-                    manifest,
-                    sourcePath,
-                    status: 'Active',
-                    isNhp: true
-                });
-            }
-
-            return { success: true, pluginId: manifest.id };
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.log('error', `Failed to load NHP plugin from ${sourcePath}: ${errorMessage}`);
-            return { success: false, error: errorMessage };
-        } finally {
-            // Cleanup on failure: revoke blob URL and remove CSS if not transferred to loadedPlugins
-            if (blobUrl) {
-                URL.revokeObjectURL(blobUrl);
-            }
-            if (cssInjected && manifest) {
-                const styleTag = document.getElementById(`style-${manifest.id}`);
-                if (styleTag) styleTag.remove();
-            }
-        }
+        });
     }
 
     /**

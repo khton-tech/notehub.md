@@ -12,7 +12,7 @@ import type { NotehubCore as NotehubCoreTyped } from './index.js';
 type NotehubCore = NotehubCoreTyped<any>;
 import type { IPlugin, PluginManifest } from './types.js';
 import type { EventCallback } from './buses/EventBus.js';
-import type { ApiHandler } from './buses/ApiBus.js';
+import type { ApiHandler, BeforeHook, AfterHook, AroundHook } from './buses/ApiBus.js';
 
 /**
  * Abstract base class for internal (bundled) plugins.
@@ -171,7 +171,15 @@ export abstract class SystemPlugin implements IPlugin {
         handler: (...args: unknown[]) => unknown,
         options?: { priority?: number; condition?: (args: unknown[]) => boolean | Promise<boolean> }
     ): () => void {
-        const unsubscribe = (this.app.api.hook as Function)(method, position, handler, options);
+        // Position is a union type at this level; use type assertion to match overloads.
+        // Safety: ApiBus.hook implementation accepts HookPosition union internally.
+        const hookFn = this.app.api.hook.bind(this.app.api) as (
+            method: string,
+            position: 'before' | 'after' | 'around',
+            handler: BeforeHook | AfterHook | AroundHook,
+            options?: { priority?: number; condition?: (args: unknown[]) => boolean | Promise<boolean> }
+        ) => () => void;
+        const unsubscribe = hookFn(method, position, handler as BeforeHook & AfterHook & AroundHook, options);
         this._hookUnsubscribers.push(unsubscribe);
         return unsubscribe;
     }
@@ -188,8 +196,8 @@ export abstract class SystemPlugin implements IPlugin {
         for (const name of this._registeredApis) {
             try {
                 this.app.api.unregister(name);
-            } catch {
-                // ignore
+            } catch (e) {
+                console.warn(`[${this.manifest.id}] Failed to unregister API "${name}":`, e);
             }
         }
         this._registeredApis = [];
@@ -198,8 +206,8 @@ export abstract class SystemPlugin implements IPlugin {
         for (const unsub of this._eventUnsubscribers) {
             try {
                 unsub();
-            } catch {
-                // ignore
+            } catch (e) {
+                console.warn(`[${this.manifest.id}] Failed to unsubscribe from event:`, e);
             }
         }
         this._eventUnsubscribers = [];
@@ -208,8 +216,8 @@ export abstract class SystemPlugin implements IPlugin {
         for (const unsub of this._hookUnsubscribers) {
             try {
                 unsub();
-            } catch {
-                // ignore
+            } catch (e) {
+                console.warn(`[${this.manifest.id}] Failed to remove hook:`, e);
             }
         }
         this._hookUnsubscribers = [];

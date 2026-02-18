@@ -43,6 +43,7 @@
         "@notehub/settings-manager": "workspace:*",
         "@notehub/state-manager": "workspace:*",
         "@notehub/synapse": "workspace:*",
+        "@notehub/tabbar": "workspace:*",
         "@notehub/theme-manager": "workspace:*",
         "@notehub/titlebar": "workspace:*",
         "@notehub/vault-picker": "workspace:*",

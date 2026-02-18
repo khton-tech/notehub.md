@@ -127,6 +127,60 @@ export class ExplorerController {
             this.app.events.off('editor:file-opened', fileOpenedHandler);
             this.app.events.off('editor:open', fileOpenedHandler);
         });
+
+        // Subscribe to fs-manager events so the tree updates on ALL platforms
+        // (critical for Capacitor where fs:watch is a no-op, but also useful on desktop
+        //  for operations done by plugins other than the explorer itself)
+        const fsWrittenHandler = (payload: any) => {
+            const { path, isNew } = payload as { path: string; isNew: boolean };
+            if (!path || !this.rootPath || !isNew) return; // Only care about new files
+            if (this.ignoredPaths.has(path)) return;
+            const parentPath = getParentPath(path);
+            if (this.nodes.has(parentPath)) {
+                this.loadDir(parentPath);
+            }
+        };
+
+        const fsDirCreatedHandler = (payload: any) => {
+            const { path } = payload as { path: string };
+            if (!path || !this.rootPath) return;
+            if (this.ignoredPaths.has(path)) return;
+            const parentPath = getParentPath(path);
+            if (this.nodes.has(parentPath)) {
+                this.loadDir(parentPath);
+            }
+        };
+
+        const fsDeletedHandler = (payload: any) => {
+            const { path } = payload as { path: string; isDirectory: boolean };
+            if (!path || !this.rootPath) return;
+            if (this.ignoredPaths.has(path)) return;
+            const parentPath = getParentPath(path);
+            if (this.nodes.has(parentPath)) {
+                this.loadDir(parentPath);
+            }
+        };
+
+        const fsRenamedHandler = (payload: any) => {
+            const { oldPath, newPath } = payload as { oldPath: string; newPath: string };
+            if (!oldPath || !newPath || !this.rootPath) return;
+            if (this.ignoredPaths.has(oldPath) || this.ignoredPaths.has(newPath)) return;
+            const oldParent = getParentPath(oldPath);
+            const newParent = getParentPath(newPath);
+            if (this.nodes.has(oldParent)) this.loadDir(oldParent);
+            if (newParent !== oldParent && this.nodes.has(newParent)) this.loadDir(newParent);
+        };
+
+        this.app.events.on('fs:written', fsWrittenHandler as any);
+        this.app.events.on('fs:dir-created', fsDirCreatedHandler as any);
+        this.app.events.on('fs:deleted', fsDeletedHandler as any);
+        this.app.events.on('fs:renamed', fsRenamedHandler as any);
+        this.eventCleanups.push(() => {
+            this.app.events.off('fs:written', fsWrittenHandler as any);
+            this.app.events.off('fs:dir-created', fsDirCreatedHandler as any);
+            this.app.events.off('fs:deleted', fsDeletedHandler as any);
+            this.app.events.off('fs:renamed', fsRenamedHandler as any);
+        });
     }
 
     cleanup(): void {

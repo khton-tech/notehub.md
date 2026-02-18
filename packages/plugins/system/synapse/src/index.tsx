@@ -189,6 +189,21 @@ export class SynapsePlugin extends SystemPlugin {
         }
     }
 
+    /**
+     * Wait for a file to become stable (fully written to disk).
+     * Retries fs:exists checks with intervals to confirm the file is ready.
+     */
+    private async waitForFileStability(path: string, maxRetries = 5, intervalMs = 200): Promise<boolean> {
+        for (let i = 0; i < maxRetries; i++) {
+            await new Promise(r => setTimeout(r, intervalMs));
+            try {
+                const exists = await this.app.api.invoke('fs:exists', path);
+                if (exists) return true;
+            } catch { /* file not ready yet */ }
+        }
+        return false;
+    }
+
     private async processFsEvent(event: { path: string; type: string }): Promise<void> {
         const { path, type } = event;
         const normalizedPath = path.replace(/\\/g, '/');
@@ -210,8 +225,12 @@ export class SynapsePlugin extends SystemPlugin {
                 const sourcePath = record?.sourcePath;
                 await this.loader!.unloadPlugin(affectedPluginId);
                 if (sourcePath) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    await this.loadPluginByPath(sourcePath);
+                    const stable = await this.waitForFileStability(sourcePath);
+                    if (stable) {
+                        await this.loadPluginByPath(sourcePath);
+                    } else {
+                        this.log('warn', `File not stable after retries, skipping reload: ${sourcePath}`);
+                    }
                 }
                 return;
             }

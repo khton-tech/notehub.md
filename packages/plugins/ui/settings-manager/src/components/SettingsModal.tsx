@@ -130,7 +130,7 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
 
     return (
         <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] animate-[settingsFadeIn_0.2s_ease-out]"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[400] animate-[settingsFadeIn_0.2s_ease-out]"
             onClick={onClose}
         >
             {/* Modal Container */}

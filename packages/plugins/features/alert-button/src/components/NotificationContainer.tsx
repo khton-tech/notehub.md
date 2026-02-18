@@ -92,7 +92,7 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({ on
                 position: 'fixed',
                 bottom: '20px',
                 right: '20px',
-                zIndex: 9999,
+                zIndex: 500,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-end',

@@ -124,6 +124,9 @@ export class NotehubCore<TEvents extends EventMap = NotehubEventMap> {
         return this.pluginRegistry.entries();
     }
 
+    /** Timeout for individual plugin load (ms) */
+    private static readonly PLUGIN_LOAD_TIMEOUT = 30_000;
+
     /**
      * Initialize the kernel and load all registered plugins
      *
@@ -141,7 +144,15 @@ export class NotehubCore<TEvents extends EventMap = NotehubEventMap> {
         for (const [id, plugin] of this.pluginRegistry) {
             try {
                 console.log(`[NotehubCore] Loading plugin "${id}"...`);
-                await plugin.load(this);
+                await Promise.race([
+                    plugin.load(this),
+                    new Promise<never>((_, reject) =>
+                        setTimeout(
+                            () => reject(new Error(`Plugin "${id}" timed out after ${NotehubCore.PLUGIN_LOAD_TIMEOUT}ms`)),
+                            NotehubCore.PLUGIN_LOAD_TIMEOUT
+                        )
+                    )
+                ]);
                 console.log(`[NotehubCore] Plugin "${id}" loaded successfully`);
             } catch (error) {
                 console.error(`[NotehubCore] Failed to load plugin "${id}":`, error);

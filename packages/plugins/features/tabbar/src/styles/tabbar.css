@@ -1,0 +1,117 @@
+/**
+ * Tab Bar styles
+ *
+ * Uses Notehub CSS custom properties for theme integration.
+ * Modern pill-style floating tabs.
+ * @module @notehub/tabbar/styles
+ */
+
+.nh-tabbar {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px 0;
+    min-height: 40px;
+    max-height: 40px;
+    user-select: none;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.nh-tabbar__scroll {
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex: 1;
+    gap: 2px;
+    scrollbar-width: none;
+}
+
+.nh-tabbar__scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.nh-tabbar__tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    height: 32px;
+    min-width: 0;
+    max-width: 200px;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    font-size: 12px;
+    color: var(--nh-text-muted, #888);
+    white-space: nowrap;
+    background: transparent;
+    border: none;
+    flex-shrink: 0;
+    transition: background 150ms, color 150ms, box-shadow 150ms;
+    outline: none;
+}
+
+.nh-tabbar__tab:hover {
+    background: var(--nh-bg-hover, #1E1E1E);
+    color: var(--nh-text-primary, #e0e0e0);
+}
+
+.nh-tabbar__tab:focus-visible {
+    box-shadow: 0 0 0 2px var(--nh-bg-main), 0 0 0 4px var(--nh-accent-primary);
+}
+
+.nh-tabbar__tab--active {
+    background: var(--nh-bg-secondary, #1A1A1A);
+    color: var(--nh-text-primary, #e0e0e0);
+    box-shadow: var(--nh-panel-glow);
+}
+
+.nh-tabbar__tab--drag-over {
+    border-left: 2px solid var(--nh-accent-primary, #7c5bf0);
+}
+
+.nh-tabbar__icon {
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.nh-tabbar__tab--active .nh-tabbar__icon {
+    opacity: 0.9;
+}
+
+.nh-tabbar__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+.nh-tabbar__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border: none;
+    background: transparent;
+    color: var(--nh-text-muted, #888);
+    cursor: pointer;
+    border-radius: 6px;
+    flex-shrink: 0;
+    padding: 0;
+    margin-left: 2px;
+    opacity: 0;
+    transition: opacity 0.1s, background 0.15s;
+}
+
+.nh-tabbar__tab:hover .nh-tabbar__close,
+.nh-tabbar__tab--active .nh-tabbar__close {
+    opacity: 1;
+}
+
+.nh-tabbar__close:hover {
+    background: var(--nh-bg-hover, rgba(255, 255, 255, 0.1));
+    color: var(--nh-text-primary, #e0e0e0);
+}

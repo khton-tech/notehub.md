@@ -96,7 +96,7 @@ const styles: Record<string, React.CSSProperties> = {
         border: '1px solid var(--nh-border-subtle, rgba(255,255,255,0.1))',
         borderRadius: '8px',
         boxShadow: '0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)',
-        zIndex: 10000,
+        zIndex: 300,
         transform: 'translateX(-50%)',
         animation: 'floatingToolbarFadeIn 0.15s ease-out',
     },

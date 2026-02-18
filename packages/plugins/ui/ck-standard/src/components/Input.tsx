@@ -110,8 +110,8 @@ export const Input: React.FC<InputProps> = ({
             placeholder:text-[var(--nh-text-muted,rgba(255,255,255,0.4))]
             focus:outline-none
             focus:border-[var(--nh-accent-primary,#7c3aed)]
-            focus:ring-2 focus:ring-[var(--nh-accent-primary)]/40 focus:ring-offset-2 focus:ring-offset-[var(--nh-bg-main)]
-            transition-all duration-200
+            focus-visible:ring-2 focus-visible:ring-[var(--nh-accent-primary)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nh-bg-main)]
+            transition-[background,color,border-color,box-shadow] duration-[200ms]
             hover:bg-[var(--nh-bg-hover,#1E1E1E)]
             ${type === 'number' ? 'w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none' : 'w-full max-w-xs'}
         `;

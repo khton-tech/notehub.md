@@ -100,28 +100,38 @@ export abstract class ReactBridgeWidget<P = any> extends WidgetType {
         container.style.userSelect = 'none';
         container.style.webkitUserSelect = 'none';
 
-        // NUCLEAR FIX (CAPTURE PHASE): Stop propagation during CAPTURE phase.
-        // This runs *down* the DOM tree before reaching the target and before bubbling up.
-        // It ensures CodeMirror (which listens on bubble) NEVER sees the event.
-        // We block mousedown, pointerdown, and touchstart to prevent all forms of CM selection/cursor placement.
-        const stopPropagation = (e: Event) => {
-            // console.log('[ReactBridgeWidget] Stopping propagation for:', e.type);
-            e.stopPropagation();
-            // e.preventDefault(); // Trying to see if stopPropagation alone is enough if we debug it.
-            // Actually, let's enable preventDefault for mousedown to be sure.
-            if (e.type === 'mousedown' || e.type === 'touchstart') {
-                e.preventDefault();
-            }
-        };
+        // Eliminate 300ms tap delay on mobile and prevent double-tap zoom
+        container.style.touchAction = 'manipulation';
 
+        // Ensure minimum touch target for mobile (44×44 CSS pixels per Apple HIG / WCAG 2.5.5)
+        container.style.minHeight = '44px';
+        container.style.minWidth = '44px';
+
+        // CAPTURE PHASE: Stop propagation so CodeMirror (which listens on bubble) never sees events.
+        // IMPORTANT: We only preventDefault on mousedown (desktop) to prevent CM text selection.
+        // We must NOT preventDefault on touchstart — doing so kills the touchstart→touchend→click
+        // chain, which means React onClick handlers never fire on mobile.
         const captureOptions = { capture: true };
-        container.addEventListener('mousedown', stopPropagation, captureOptions);
-        container.addEventListener('pointerdown', stopPropagation, captureOptions);
-        container.addEventListener('touchstart', stopPropagation, captureOptions);
 
-        // Allow click to propagate so React can see it (synthetic events rely on bubbling to root)
-        // But we rely on ignoreEvent() to prevent CodeMirror from handling it
-        // container.addEventListener('click', stopPropagation, captureOptions);
+        container.addEventListener('mousedown', (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault(); // Prevent CM text selection on desktop
+        }, captureOptions);
+
+        container.addEventListener('pointerdown', (e: Event) => {
+            e.stopPropagation();
+            // No preventDefault — let the pointer event chain complete for touch devices
+        }, captureOptions);
+
+        container.addEventListener('touchstart', (e: Event) => {
+            e.stopPropagation();
+            // NO preventDefault here! It would kill the click event on mobile.
+        }, captureOptions);
+
+        container.addEventListener('touchend', (e: Event) => {
+            e.stopPropagation();
+            // Let touchend propagate to React — this is part of the tap→click chain
+        }, captureOptions);
 
         // Store reference
         this.container = container;

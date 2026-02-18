@@ -26,9 +26,9 @@ export class BootloaderPlugin extends SystemPlugin {
 
         this.bootloader = new Bootloader(this.app);
 
-        this.registerApi('bootloader.load', this.loadPlugins.bind(this) as (plugins: unknown[]) => Promise<unknown>);
-        this.registerApi('bootloader.getResult', this.getLastResult.bind(this) as () => unknown);
-        this.registerApi('bootloader.getInstance', this.getInstance.bind(this) as () => unknown);
+        this.registerApi('bootloader:load', this.loadPlugins.bind(this) as (plugins: unknown[]) => Promise<unknown>);
+        this.registerApi('bootloader:get-result', this.getLastResult.bind(this) as () => unknown);
+        this.registerApi('bootloader:get-instance', this.getInstance.bind(this) as () => unknown);
 
         this.log('info', 'Loaded successfully');
     }

@@ -1,7 +1,7 @@
 /**
  * Alert Button Plugin
  * 
- * @module features.alert-button
+ * @module nh.features.alert-button
  */
 
 import { NotehubPlugin, PluginContext, PortalSpec } from '@notehub.md/api';
