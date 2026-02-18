@@ -129,7 +129,7 @@ const notehubTheme = EditorView.theme({
         borderLeftWidth: '2px',
         transition: 'left 0.1s ease-out, top 0.1s ease-out',
     },
-    // Disable transition while typing
+    // Disable transition while typing (handled by cursorAnimationPlugin)
     '.cm-editor.is-typing .cm-cursor': {
         transition: 'none !important',
     },
@@ -373,6 +373,7 @@ const cursorAnimationPlugin = ViewPlugin.fromClass(class {
     }
 });
 
+
 /**
  * NotehubEditor - CodeMirror 6 React wrapper component
  * 
@@ -434,7 +435,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 lineWrappingCompartment.of(settings.wordWrap ? EditorView.lineWrapping : []),
                 fontSizeCompartment.of(createFontSizeTheme(settings.fontSize)),
                 portalsCompartment.of(portalPlugin),
-                cursorAnimationPlugin,
+                cursorAnimationPlugin, // Restored for smooth cursor typing snap
 
                 // Core functionality
                 tooltips(), // Default parent is editor wrapper, ensures consistent theming

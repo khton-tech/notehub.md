@@ -338,6 +338,7 @@ export class TabBarPlugin extends SystemPlugin {
     user-select: none;
     gap: 2px;
     overflow: hidden;
+    background: transparent;
 }
 .nh-tabbar__scroll {
     display: flex;
@@ -417,6 +418,22 @@ export class TabBarPlugin extends SystemPlugin {
     color: var(--nh-text-primary, #e0e0e0);
 }`;
         this.styleEl = document.createElement('style');
+
+        // CSP Nonce Support
+        let nonce: string | undefined;
+        const scripts = document.scripts;
+        for (let i = 0; i < scripts.length; i++) {
+            const script = scripts.item(i);
+            if (script && script.nonce) {
+                nonce = script.nonce;
+                break;
+            }
+        }
+
+        if (nonce) {
+            this.styleEl.setAttribute('nonce', nonce);
+        }
+
         this.styleEl.textContent = css;
         this.styleEl.setAttribute('data-plugin', 'nh.features.tabbar');
         document.head.appendChild(this.styleEl);

@@ -69,9 +69,7 @@ function ErrorScreen({ error }: { error: string }): React.ReactElement {
 
 // Mount React app
 ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-        <NotehubApp config={desktopConfig} LoadingScreen={LoadingScreen} ErrorScreen={ErrorScreen}>
-            <LayoutRenderer />
-        </NotehubApp>
-    </React.StrictMode>
+    <NotehubApp config={desktopConfig} LoadingScreen={LoadingScreen} ErrorScreen={ErrorScreen}>
+        <LayoutRenderer />
+    </NotehubApp>
 );

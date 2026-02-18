@@ -65,7 +65,7 @@ export class DragController {
         // Listen for drag enter (when files first enter window)
         const unlistenEnter = await listen<FileDropHoverPayload>('tauri://drag-enter', (event) => {
             console.log('[DragDrop] drag-enter event:', event.payload);
-            this.log('info', `Drag entered with ${event.payload.paths.length} files`);
+            this.log('info', `Drag entered with ${event.payload.paths.length} files: ${JSON.stringify(event.payload.paths)}`);
             // Show overlay for all file drags - will filter on drop
             this.onDragStateChange(true);
         });

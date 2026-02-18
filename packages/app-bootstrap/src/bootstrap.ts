@@ -117,6 +117,7 @@ export async function initNotehubApp(
                 console.warn(`${tag}   Skipping incompatible/unknown plugin: ${packageName}`);
             } else {
                 console.error(`${tag}   Failed to import ${entry.id}:`, error);
+                alert(`${tag} Failed to import ${entry.id}: ${error}`);
             }
         }
     }
@@ -138,6 +139,7 @@ export async function initNotehubApp(
 
     if (result.failed.length > 0) {
         console.warn(`${tag} Failed plugins:`, result.failed);
+        alert(`${tag} Failed plugins: ${JSON.stringify(result.failed)}`);
     }
     if (result.skipped.length > 0) {
         console.warn(`${tag} Skipped plugins:`, result.skipped);

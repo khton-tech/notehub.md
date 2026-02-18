@@ -2,7 +2,7 @@
  * Tab Bar styles
  *
  * Uses Notehub CSS custom properties for theme integration.
- * Modern pill-style floating tabs.
+ * Minimal tabs - only tab buttons visible, no panel background.
  * @module @notehub/tabbar/styles
  */
 
@@ -15,6 +15,7 @@
     user-select: none;
     gap: 2px;
     overflow: hidden;
+    background: transparent;
 }
 
 .nh-tabbar__scroll {
@@ -103,7 +104,7 @@
     padding: 0;
     margin-left: 2px;
     opacity: 0;
-    transition: opacity 0.1s, background 0.15s;
+    transition: opacity 0.1s, color 0.15s;
 }
 
 .nh-tabbar__tab:hover .nh-tabbar__close,
@@ -112,6 +113,5 @@
 }
 
 .nh-tabbar__close:hover {
-    background: var(--nh-bg-hover, rgba(255, 255, 255, 0.1));
     color: var(--nh-text-primary, #e0e0e0);
 }

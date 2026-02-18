@@ -84,15 +84,46 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
 
     // Measure container height for virtualization
     useEffect(() => {
+        console.log('[FileTree] Mounted');
+        return () => console.log('[FileTree] Unmounted');
+    }, []);
+
+    useEffect(() => {
+        let animationFrameId: number;
         const updateHeight = () => {
             if (containerRef.current) {
-                setContainerHeight(containerRef.current.clientHeight);
+                const newHeight = containerRef.current.clientHeight;
+
+                // IGNORE 0 HEIGHT (prevents initial layout thrashing)
+                if (newHeight === 0) {
+                    // console.log('[FileTree] Height is 0, ignoring update');
+                    return;
+                }
+
+                setContainerHeight(prev => {
+                    if (prev !== newHeight) {
+                        console.log('[FileTree] Height changed:', prev, '->', newHeight);
+                        return newHeight;
+                    }
+                    return prev;
+                });
             }
         };
-        updateHeight();
-        const observer = new ResizeObserver(updateHeight);
+
+        const observer = new ResizeObserver(() => {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = requestAnimationFrame(updateHeight);
+        });
+
         if (containerRef.current) observer.observe(containerRef.current);
-        return () => observer.disconnect();
+
+        // Initial measurement
+        updateHeight();
+
+        return () => {
+            observer.disconnect();
+            cancelAnimationFrame(animationFrameId);
+        };
     }, []);
 
     // Ref для отслеживания предыдущего activeFilePath (избегаем кражи фокуса при ре-рендерах)

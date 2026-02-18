@@ -3,7 +3,7 @@
  * DO NOT EDIT MANUALLY
  *
  * Platform: capacitor
- * Generated: 2026-02-18T03:40:40.480Z
+ * Generated: 2026-02-18T06:49:58.213Z
  * Plugins: 28
  */
 import type { PluginModule } from '@notehub/app-bootstrap';

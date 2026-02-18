@@ -19,11 +19,11 @@
                 "fullscreen": false,
                 "decorations": false,
                 "transparent": false,
-                "backgroundColor": "#1a1a1a"
+                "backgroundColor": "#1a1a1a",
+                "devtools": true
             }
         ],
         "security": {
-            "csp": "default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data: blob:; font-src 'self'",
             "assetProtocol": {
                 "enable": true,
                 "scope": [

@@ -11,6 +11,17 @@
     ]
   },
   {
+    "id": "nh.features.backlinks",
+    "name": "Backlinks",
+    "version": "0.1.5",
+    "type": "feature",
+    "description": "WikiLinks and Backlinks support for Notehub",
+    "dependencies": [
+      "nh.features.editor",
+      "nh.system.fs-manager"
+    ]
+  },
+  {
     "id": "nh.features.alert-button",
     "name": "Alert Button",
     "version": "0.1.0",
@@ -24,17 +35,6 @@
       "command:register",
       "settings:register-tab",
       "settings:register-custom-view"
-    ]
-  },
-  {
-    "id": "nh.features.backlinks",
-    "name": "Backlinks",
-    "version": "0.1.5",
-    "type": "feature",
-    "description": "WikiLinks and Backlinks support for Notehub",
-    "dependencies": [
-      "nh.features.editor",
-      "nh.system.fs-manager"
     ]
   },
   {
