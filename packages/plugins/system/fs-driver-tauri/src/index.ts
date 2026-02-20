@@ -373,6 +373,15 @@ export class FsDriverTauriPlugin extends SystemPlugin implements IFileSystem {
         }
         await tauriFs.rename(oldPath, newPath);
     }
+
+    async pickFile(options?: { extensions?: string[]; mimeTypes?: string[] }): Promise<string | null> {
+        const dialogOptions = options?.extensions
+            ? { directory: false as const, multiple: false as const, filters: [{ name: 'Allowed Files', extensions: options.extensions }] }
+            : { directory: false as const, multiple: false as const };
+        const result = await open(dialogOptions);
+        if (result === null || result === undefined) return null;
+        return typeof result === 'string' ? result : String(result);
+    }
 }
 
 // Default export for dynamic loading

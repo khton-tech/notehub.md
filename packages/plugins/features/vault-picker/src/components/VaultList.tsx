@@ -33,9 +33,10 @@ export const VaultList: FC<VaultListProps> = ({ service }) => {
         }
     };
 
-    const handleDeleteClick = (e: React.MouseEvent, _path: string) => {
+    const handleDeleteClick = async (e: React.MouseEvent, path: string) => {
         e.stopPropagation();
-        // TODO: Implement vault deletion from history
+        await service.removeFromHistory(path);
+        setVaults(prev => prev.filter(v => v.path !== path));
     };
 
     return (

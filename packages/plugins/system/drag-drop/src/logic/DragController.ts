@@ -32,19 +32,21 @@ interface FileDropHoverPayload {
     position: { x: number; y: number };
 }
 
+export type DragType = 'plugin' | 'markdown' | 'mixed' | 'unknown';
+
 export class DragController {
     private app: NotehubCore;
     private unlistenHover: UnlistenFn | null = null;
     private unlistenCancelled: UnlistenFn | null = null;
     private unlistenDrop: UnlistenFn | null = null;
-    private onDragStateChange: (isDragging: boolean) => void;
+    private onDragStateChange: (isDragging: boolean, dragType: DragType) => void;
 
-    constructor(app: NotehubCore, onDragStateChange: (isDragging: boolean) => void) {
+    constructor(app: NotehubCore, onDragStateChange: (isDragging: boolean, dragType: DragType) => void) {
         this.app = app;
         // Wrap callback to track state internally
-        this.onDragStateChange = (isDragging: boolean) => {
+        this.onDragStateChange = (isDragging: boolean, dragType: DragType) => {
             this.isDragging = isDragging;
-            onDragStateChange(isDragging);
+            onDragStateChange(isDragging, dragType);
         };
     }
 
@@ -56,26 +58,97 @@ export class DragController {
     }
 
     /**
+     * Determine the type of files being dragged
+     */
+    private determineDragType(paths: string[]): DragType {
+        let hasNhp = false;
+        let hasMd = false;
+        let hasOther = false;
+
+        for (const path of paths) {
+            if (path.endsWith('.nhp')) {
+                hasNhp = true;
+            } else if (path.endsWith('.md')) {
+                hasMd = true;
+            } else {
+                hasOther = true;
+            }
+        }
+
+        if (hasNhp && !hasMd && !hasOther) return 'plugin';
+        if (!hasNhp && hasMd && !hasOther) return 'markdown';
+        if ((hasNhp || hasMd) && !hasOther) return 'mixed';
+
+        // If we have supported files mixed with unsupported, treat as mixed/unknown or just unknown?
+        // Let's allow mixed if at least one supported type is present, but for now stick to simple logic.
+        // If there are ONLY supported files (mixed), return mixed.
+        // If there are ANY unsupported files, return unknown for now (to avoid encouraging dropping trash).
+
+        if (hasOther) return 'unknown';
+
+        return 'unknown';
+    }
+
+    private isDragging = false;
+    private isInternalDrag = false;
+
+    /**
+     * Window drag start handler
+     */
+    private handleGlobalDragStart = (): void => {
+        this.isInternalDrag = true;
+        console.log('[DragDrop] Global drag start detected (internal drag)');
+    };
+
+    /**
+     * Window drag end handler
+     */
+    private handleGlobalDragEnd = (): void => {
+        this.isInternalDrag = false;
+        console.log('[DragDrop] Global drag end detected');
+    };
+
+    /**
      * Start listening for Tauri file-drop events
      */
     async start(): Promise<void> {
         this.log('info', 'Starting drag controller...');
         console.log('[DragDrop] Starting drag controller...');
 
+        // Listen for internal drags
+        window.addEventListener('dragstart', this.handleGlobalDragStart);
+        window.addEventListener('dragend', this.handleGlobalDragEnd);
+        window.addEventListener('drop', this.handleGlobalDragEnd); // Ensure reset on drop too
+
         // Listen for drag enter (when files first enter window)
         const unlistenEnter = await listen<FileDropHoverPayload>('tauri://drag-enter', (event) => {
+            if (this.isInternalDrag) {
+                console.log('[DragDrop] Ignoring drag-enter (internal drag)');
+                return;
+            }
+            if (!event.payload.paths || event.payload.paths.length === 0) {
+                return;
+            }
             console.log('[DragDrop] drag-enter event:', event.payload);
-            this.log('info', `Drag entered with ${event.payload.paths.length} files: ${JSON.stringify(event.payload.paths)}`);
-            // Show overlay for all file drags - will filter on drop
-            this.onDragStateChange(true);
+            this.log('info', `Drag entered with ${event.payload.paths.length} files`);
+
+            const dragType = this.determineDragType(event.payload.paths);
+            this.onDragStateChange(true, dragType);
         });
 
         // Listen for file hover (continuous while dragging over)
         this.unlistenHover = await listen<FileDropHoverPayload>('tauri://drag-over', (event) => {
+            if (this.isInternalDrag) {
+                return;
+            }
+            if (!event.payload.paths || event.payload.paths.length === 0) {
+                return;
+            }
             // Don't spam logs, but keep overlay visible
             if (!this.isDragging) {
                 console.log('[DragDrop] drag-over event:', event.payload);
-                this.onDragStateChange(true);
+                const dragType = this.determineDragType(event.payload.paths);
+                this.onDragStateChange(true, dragType);
             }
         });
 
@@ -88,16 +161,26 @@ export class DragController {
 
         // Listen for drag cancelled (drag leave)
         this.unlistenCancelled = await listen<void>('tauri://drag-leave', () => {
+            // We don't check isInternalDrag here because if it's internal, we simply want 
+            // to ignore start/hover. If leave happens, ensuring UI is hidden is fine.
+            // But technically if it's internal, we never showed UI, so hiding it is a no-op.
             console.log('[DragDrop] drag-leave event');
-            this.log('info', 'Drag left window');
-            this.onDragStateChange(false);
+
+            if (!this.isInternalDrag) {
+                this.log('info', 'Drag left window');
+            }
+            this.onDragStateChange(false, 'unknown');
         });
 
         // Listen for file drop
         this.unlistenDrop = await listen<FileDropPayload>('tauri://drag-drop', async (event) => {
+            if (this.isInternalDrag) {
+                console.log('[DragDrop] Ignoring drag-drop (internal drag)');
+                return;
+            }
             console.log('[DragDrop] drag-drop event:', event.payload);
             this.log('info', `Drop received with ${event.payload.paths.length} files`);
-            this.onDragStateChange(false);
+            this.onDragStateChange(false, 'unknown');
             await this.handleFileDrop(event.payload.paths);
         });
 
@@ -105,13 +188,15 @@ export class DragController {
         console.log('[DragDrop] Drag controller started - all listeners registered');
     }
 
-    private isDragging = false;
-
     /**
      * Stop listening for events and cleanup
      */
     stop(): void {
         this.log('info', 'Stopping drag controller...');
+
+        window.removeEventListener('dragstart', this.handleGlobalDragStart);
+        window.removeEventListener('dragend', this.handleGlobalDragEnd);
+        window.removeEventListener('drop', this.handleGlobalDragEnd);
 
         this.unlistenHover?.();
         this.unlistenCancelled?.();
@@ -125,22 +210,105 @@ export class DragController {
     }
 
     /**
-     * Handle dropped files - filter for .nhp and install
+     * Handle dropped files - filter for .nhp and .md files
      */
     private async handleFileDrop(paths: string[]): Promise<void> {
-        // Filter for .nhp files only
+        // Filter for .nhp files
         const nhpFiles = paths.filter(path => path.endsWith('.nhp'));
+        // Filter for .md files
+        const mdFiles = paths.filter(path => path.endsWith('.md'));
 
-        if (nhpFiles.length === 0) {
-            this.log('info', 'No .nhp files in drop, ignoring');
+        if (nhpFiles.length === 0 && mdFiles.length === 0) {
+            this.log('info', 'No supported files (.nhp, .md) in drop, ignoring');
             return;
         }
 
-        this.log('info', `Received ${nhpFiles.length} .nhp file(s)`);
+        this.log('info', `Received ${nhpFiles.length} .nhp file(s) and ${mdFiles.length} .md file(s)`);
 
-        // Process each .nhp file
+        // Process .nhp files
         for (const filePath of nhpFiles) {
             await this.installPlugin(filePath);
+        }
+
+        // Process .md files
+        for (const filePath of mdFiles) {
+            await this.importMarkdown(filePath);
+        }
+    }
+
+    /**
+     * Import a single .md file
+     */
+    private async importMarkdown(sourcePath: string): Promise<void> {
+        // Extract filename from path
+        const filename = sourcePath.split(/[/\\]/).pop() || 'untitled.md';
+
+        this.log('info', `Importing markdown: ${filename}`);
+
+        try {
+            // Confirm import
+            const confirmed = await this.app.api.invoke(
+                'dialog:confirm',
+                `Import "${filename}"?`,
+                `Do you want to import "${filename}" into your vault?`
+            );
+
+            if (!confirmed) {
+                this.log('info', 'User cancelled markdown import');
+                return;
+            }
+
+            // Get vault path from config
+            const vaultPath = await this.app.api.invoke('config:get', 'vault.last-opened') as string;
+            if (!vaultPath) {
+                throw new Error('No vault path configured');
+            }
+
+            // Determine destination path
+            const destinationPath = `${vaultPath}/${filename}`;
+
+            // Check if file already exists
+            const exists = await this.app.api.invoke('fs:exists', destinationPath);
+            if (exists) {
+                const overwrite = await this.app.api.invoke(
+                    'dialog:confirm',
+                    'File already exists',
+                    `"${filename}" already exists in the vault. Overwrite?`
+                );
+                if (!overwrite) {
+                    this.log('info', 'User cancelled overwrite');
+                    return;
+                }
+            }
+
+            this.log('info', `Copying to: ${destinationPath}`);
+
+            // Read source file
+            const fileData = await this.app.api.invoke('fs:read-file', sourcePath) as Uint8Array;
+
+            // Write to destination
+            await this.app.api.invoke('fs:write-file', destinationPath, fileData);
+
+            this.log('info', `Imported ${filename}`);
+
+            // Notify user
+            await this.app.api.invoke(
+                'dialog:alert',
+                'Imported',
+                `"${filename}" has been imported.`
+            );
+
+            // Open the file in editor
+            await this.app.api.invoke('editor:open', destinationPath);
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log('error', `Failed to import markdown: ${errorMessage}`);
+            await this.app.api.invoke(
+                'dialog:alert',
+                'Import Failed',
+                `Failed to import "${filename}": ${errorMessage}`
+            );
         }
     }
 

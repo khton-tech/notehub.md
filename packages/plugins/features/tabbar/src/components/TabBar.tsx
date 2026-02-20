@@ -3,8 +3,8 @@
  *
  * Renders a horizontal scrollable tab bar for open files.
  * Each tab shows the filename with a close button.
- * Supports drag-and-drop reordering, middle-click close,
- * context menu actions, and full keyboard navigation.
+ * Supports drag-and-drop reordering (pointer events — works on desktop AND mobile),
+ * middle-click close, context menu actions, and full keyboard navigation.
  *
  * @module @notehub/tabbar/components/TabBar
  */
@@ -38,10 +38,25 @@ export interface TabBarProps {
     onReorder: (tabs: TabItem[]) => void;
 }
 
+/** Minimum pointer movement (px) before we consider it a drag vs a click */
+const DRAG_THRESHOLD = 5;
+
 export function TabBar({ app, tabs, activeTabId, onActivate, onClose, onReorder }: TabBarProps) {
-    const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
-    const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+    // Visual-only state (drives re-renders for opacity/highlight)
+    const [visualDraggedIdx, setVisualDraggedIdx] = useState<number | null>(null);
+    const [visualDropIdx, setVisualDropIdx] = useState<number | null>(null);
+
+    // Refs for the actual drag state — avoids stale-closure issues in pointer handlers
+    const draggedIdxRef = useRef<number | null>(null);
+    const dropIdxRef = useRef<number | null>(null);
+    const dragStartXRef = useRef<number | null>(null);
+    const wasDragRef = useRef(false);
+
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Keep a live ref to `tabs` so pointer handlers always see the current list
+    const tabsRef = useRef(tabs);
+    useEffect(() => { tabsRef.current = tabs; }, [tabs]);
 
     // Auto-scroll active tab into view
     useEffect(() => {
@@ -52,45 +67,81 @@ export function TabBar({ app, tabs, activeTabId, onActivate, onClose, onReorder 
         }
     }, [activeTabId]);
 
-    const handleDragStart = useCallback((e: React.DragEvent, idx: number) => {
-        setDraggedIdx(idx);
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(idx));
-        if (e.currentTarget instanceof HTMLElement) {
-            e.currentTarget.style.opacity = '0.5';
+    // ── Pointer-based drag-and-drop ────────────────────────────────────────────
+    // Uses the Pointer Events API so it works on both desktop (mouse) and mobile
+    // (touch). setPointerCapture ensures we keep receiving events even when the
+    // pointer leaves the originating element.
+
+    const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, idx: number) => {
+        // Only primary button on mouse; any pointer type (touch, pen) is fine
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+        e.currentTarget.setPointerCapture(e.pointerId);
+        dragStartXRef.current = e.clientX;
+        wasDragRef.current = false;
+        draggedIdxRef.current = idx;
+        dropIdxRef.current = idx;
+        setVisualDraggedIdx(idx);
+        setVisualDropIdx(idx);
+    }, []);
+
+    const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        if (draggedIdxRef.current === null || dragStartXRef.current === null) return;
+
+        // Only commit to a drag once the pointer has moved enough
+        if (Math.abs(e.clientX - dragStartXRef.current) > DRAG_THRESHOLD) {
+            wasDragRef.current = true;
+        }
+        if (!wasDragRef.current) return;
+
+        // elementsFromPoint works correctly even with pointer capture active —
+        // it performs a visual hit-test ignoring the capture.
+        const elements = document.elementsFromPoint(e.clientX, e.clientY);
+        for (const el of elements) {
+            if (el instanceof HTMLElement && el.dataset.tabId) {
+                const targetIdx = tabsRef.current.findIndex(t => t.id === el.dataset.tabId);
+                if (targetIdx >= 0 && targetIdx !== dropIdxRef.current) {
+                    dropIdxRef.current = targetIdx;
+                    setVisualDropIdx(targetIdx);
+                }
+                return;
+            }
         }
     }, []);
 
-    const handleDragEnd = useCallback((e: React.DragEvent) => {
-        if (e.currentTarget instanceof HTMLElement) {
-            e.currentTarget.style.opacity = '1';
+    const handlePointerUp = useCallback((_e: React.PointerEvent<HTMLDivElement>) => {
+        if (draggedIdxRef.current === null) return;
+
+        const dragIdx = draggedIdxRef.current;
+        const dropIdx = dropIdxRef.current;
+
+        if (wasDragRef.current && dropIdx !== null && dropIdx !== dragIdx) {
+            const newTabs = [...tabsRef.current];
+            const [moved] = newTabs.splice(dragIdx, 1);
+            if (moved) {
+                newTabs.splice(dropIdx, 0, moved);
+                onReorder(newTabs);
+            }
         }
-        setDraggedIdx(null);
-        setDragOverIdx(null);
-    }, []);
 
-    const handleDragOver = useCallback((e: React.DragEvent, idx: number) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        setDragOverIdx(idx);
-    }, []);
+        draggedIdxRef.current = null;
+        dropIdxRef.current = null;
+        dragStartXRef.current = null;
+        setVisualDraggedIdx(null);
+        setVisualDropIdx(null);
+        // wasDragRef is intentionally NOT reset here — onClick reads it right after
+    }, [onReorder]);
 
-    const handleDrop = useCallback((e: React.DragEvent, dropIdx: number) => {
-        e.preventDefault();
-        if (draggedIdx === null || draggedIdx === dropIdx) {
-            setDraggedIdx(null);
-            setDragOverIdx(null);
+    // ── Click / keyboard / wheel ───────────────────────────────────────────────
+
+    const handleClick = useCallback((tabId: string) => {
+        // Suppress the click that fires after a completed drag
+        if (wasDragRef.current) {
+            wasDragRef.current = false;
             return;
         }
-        const newTabs = [...tabs];
-        const [moved] = newTabs.splice(draggedIdx, 1);
-        if (moved) {
-            newTabs.splice(dropIdx, 0, moved);
-            onReorder(newTabs);
-        }
-        setDraggedIdx(null);
-        setDragOverIdx(null);
-    }, [draggedIdx, tabs, onReorder]);
+        onActivate(tabId);
+    }, [onActivate]);
 
     const handleMouseDown = useCallback((e: React.MouseEvent, tabId: string) => {
         if (e.button === 1) {
@@ -175,14 +226,23 @@ export function TabBar({ app, tabs, activeTabId, onActivate, onClose, onReorder 
     }, [tabs, onActivate, onClose]);
 
     // Empty state — all hooks are above this point (Rules of Hooks compliance)
-    if (tabs.length === 0) return null;
+    if (tabs.length === 0) {
+        return (
+            <div className="nh-tabbar nh-tabbar--empty" role="tablist">
+                <span className="nh-tabbar__empty-hint">No open files</span>
+            </div>
+        );
+    }
+
+    const isDragging = visualDraggedIdx !== null;
 
     return (
         <div className="nh-tabbar" role="tablist" onWheel={handleWheel}>
             <div className="nh-tabbar__scroll" ref={scrollRef}>
                 {tabs.map((tab, idx) => {
                     const isActive = tab.id === activeTabId;
-                    const isDragOver = dragOverIdx === idx && draggedIdx !== idx;
+                    const isBeingDragged = visualDraggedIdx === idx;
+                    const isDragOver = visualDropIdx === idx && visualDraggedIdx !== idx;
                     const displayName = getFileName(tab.path);
 
                     const classes = [
@@ -200,15 +260,20 @@ export function TabBar({ app, tabs, activeTabId, onActivate, onClose, onReorder 
                             role="tab"
                             aria-selected={isActive}
                             tabIndex={isActive ? 0 : -1}
-                            draggable
-                            onClick={() => onActivate(tab.id)}
+                            style={{
+                                opacity: isBeingDragged ? 0.5 : 1,
+                                cursor: isDragging ? 'grabbing' : 'grab',
+                                // Disable browser scroll-on-touch so pointer events fire cleanly
+                                touchAction: 'none',
+                            }}
+                            onClick={() => handleClick(tab.id)}
                             onMouseDown={(e) => handleMouseDown(e, tab.id)}
                             onContextMenu={(e) => handleContextMenu(e, tab.id)}
                             onKeyDown={(e) => handleKeyDown(e, tab.id, idx)}
-                            onDragStart={(e) => handleDragStart(e, idx)}
-                            onDragEnd={handleDragEnd}
-                            onDragOver={(e) => handleDragOver(e, idx)}
-                            onDrop={(e) => handleDrop(e, idx)}
+                            onPointerDown={(e) => handlePointerDown(e, idx)}
+                            onPointerMove={handlePointerMove}
+                            onPointerUp={handlePointerUp}
+                            onPointerCancel={handlePointerUp}
                         >
                             <FileText size={14} className="nh-tabbar__icon" />
                             <span className="nh-tabbar__label">{displayName}</span>

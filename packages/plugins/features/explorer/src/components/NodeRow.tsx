@@ -101,7 +101,7 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
 
     if (isHighlighted) {
         baseClasses.push(
-            'text-white',
+            'text-[var(--nh-text-primary)]',
             'mx-1.5 rounded-lg',
             'bg-[var(--nh-accent-secondary)]'
         );
@@ -116,7 +116,7 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
 
     // Icon color classes - monochrome for consistency
     const iconColorClass = isHighlighted
-        ? 'text-white'
+        ? 'text-[var(--nh-accent-primary)]'
         : 'text-[var(--nh-text-muted)]';
 
     return (
@@ -137,13 +137,13 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
             {/* Chevron for directories */}
             {data.isDir ? (
                 <span
-                    className="w-4 flex-shrink-0 flex items-center justify-center cursor-pointer hover:text-white transition-colors"
+                    className="w-4 flex-shrink-0 flex items-center justify-center cursor-pointer hover:text-[var(--nh-text-primary)] transition-colors"
                     onClick={handleChevronClick}
                 >
                     <Icon
                         name={node.isOpen ? 'chevron-down' : 'chevron-right'}
                         size={14}
-                        className={isHighlighted ? 'text-white/80' : 'text-[var(--nh-text-muted)]'}
+                        className={isHighlighted ? 'text-[var(--nh-accent-primary)]' : 'text-[var(--nh-text-muted)]'}
                     />
                 </span>
             ) : (

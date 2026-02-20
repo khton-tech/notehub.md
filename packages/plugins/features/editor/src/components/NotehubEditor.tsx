@@ -36,7 +36,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { EditorState, Compartment } from '@codemirror/state';
 import type { NotehubCore } from '@notehub/core';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, ViewPlugin, ViewUpdate, tooltips } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { notehubMarkdown } from '../lezer';
 import { exposeDebugFunction, removeDebugFunction } from '../debug/tree-visualizer';
@@ -446,6 +446,7 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
 
                 // Keymaps for editing
                 keymap.of([
+                    indentWithTab,
                     ...defaultKeymap,
                     ...historyKeymap,
                     ...closeBracketsKeymap,

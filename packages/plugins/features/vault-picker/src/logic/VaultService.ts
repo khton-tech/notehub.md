@@ -208,6 +208,18 @@ export class VaultService {
     }
 
     /**
+     * Remove a vault from the recent history
+     *
+     * @param path - Full path of the vault to remove
+     */
+    async removeFromHistory(path: string): Promise<void> {
+        const currentHistory = await this.getRecentVaults();
+        const newHistory = currentHistory.filter((v) => v.path !== path);
+        await this.app.api.invoke('config:set', 'vault.history', newHistory);
+        this.log('info', `Vault removed from history: ${path}`);
+    }
+
+    /**
      * Get the last opened vault path
      */
     async getLastOpenedVault(): Promise<string | null> {

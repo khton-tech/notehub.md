@@ -19,6 +19,9 @@ export class FsDriverCapacitorPlugin extends SystemPlugin implements IFileSystem
 
     private defaultDirectory = Directory.Documents;
 
+    /** Cache for data returned by pickFile() — avoids content URI resolution issues on Android */
+    private pickedFileCache = new Map<string, Uint8Array>();
+
     protected async onLoad(): Promise<void> {
         this.log('info', 'Loading Capacitor FS Driver...');
         await this.app.api.invoke('fs:register-driver', this, 'Capacitor');
@@ -98,6 +101,16 @@ export class FsDriverCapacitorPlugin extends SystemPlugin implements IFileSystem
     }
 
     async readFile(path: string): Promise<Uint8Array> {
+        // Synthetic paths from pickFile() — data already in memory cache
+        if (path.startsWith('/__nhp_picked__/')) {
+            const cached = this.pickedFileCache.get(path);
+            if (cached) {
+                this.pickedFileCache.delete(path);
+                return cached;
+            }
+            throw new Error(`Picked file cache expired or not found: ${path}`);
+        }
+
         try {
             const { path: resolvedPath, directory } = this.resolvePath(path);
             const result = await Filesystem.readFile({
@@ -336,6 +349,41 @@ export class FsDriverCapacitorPlugin extends SystemPlugin implements IFileSystem
             });
         } catch (e) {
             throw new Error(`rename failed from "${oldPath}" to "${newPath}": ${e}`);
+        }
+    }
+
+    async pickFile(options?: { extensions?: string[]; mimeTypes?: string[] }): Promise<string | null> {
+        try {
+            const result = await FilePicker.pickFiles({
+                types: options?.mimeTypes,
+                limit: 1,
+                readData: true,
+            });
+            if (result.files.length === 0) return null;
+
+            const file = result.files[0];
+            const fileName = file.name || 'plugin.nhp';
+
+            // Prefer cached data path to avoid content URI resolution issues on Android.
+            // FilePicker returns content:// URIs from arbitrary providers (Downloads, Media)
+            // that our resolvePath/parseAndroidUri can't reliably handle.
+            if (file.data) {
+                const binaryString = atob(file.data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const id = `${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+                const syntheticPath = `/__nhp_picked__/${id}/${fileName}`;
+                this.pickedFileCache.set(syntheticPath, bytes);
+                return syntheticPath;
+            }
+
+            // Fallback: return direct path if data wasn't provided
+            return file.path ?? null;
+        } catch (error) {
+            this.log('warn', `pickFile failed/cancelled: ${error}`);
+            return null;
         }
     }
 }

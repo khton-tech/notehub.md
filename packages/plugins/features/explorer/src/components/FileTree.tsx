@@ -30,10 +30,15 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
 
     const [data, setData] = useState<FileNode[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
     const [showNewMenu, setShowNewMenu] = useState(false);
     const [containerHeight, setContainerHeight] = useState(400);
     const [rootName, setRootName] = useState<string>('');
     const [renamingId, setRenamingId] = useState<string | null>(null);
+
+    // react-arborist uses the HTML5 DnD backend which doesn't fire on touch devices.
+    // Disable drag on touch so there's no broken grab-but-nothing-moves experience.
+    const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
     // ⚡ selectedId напрямую привязан к activeFilePath — единый источник правды
     const selectedId = controller.activeFilePath;
@@ -43,7 +48,6 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
         const refresh = () => {
             // Force new array reference specifically to ensure react-arborist updates
             const treeData = controller.getTreeData();
-            // console.log('FileTree: Refreshing data', treeData.length, 'nodes');
             setData([...treeData]);
 
             const tree = controller.getTree();
@@ -75,7 +79,6 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     // Sync renaming state to Arborist
     useEffect(() => {
         if (renamingId && treeRef.current) {
-            console.log('[Explorer] Triggering edit for:', renamingId);
             treeRef.current.edit(renamingId);
         }
     }, [renamingId]);
@@ -84,29 +87,15 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
 
     // Measure container height for virtualization
     useEffect(() => {
-        console.log('[FileTree] Mounted');
-        return () => console.log('[FileTree] Unmounted');
-    }, []);
-
-    useEffect(() => {
         let animationFrameId: number;
         const updateHeight = () => {
             if (containerRef.current) {
                 const newHeight = containerRef.current.clientHeight;
 
                 // IGNORE 0 HEIGHT (prevents initial layout thrashing)
-                if (newHeight === 0) {
-                    // console.log('[FileTree] Height is 0, ignoring update');
-                    return;
-                }
+                if (newHeight === 0) return;
 
-                setContainerHeight(prev => {
-                    if (prev !== newHeight) {
-                        console.log('[FileTree] Height changed:', prev, '->', newHeight);
-                        return newHeight;
-                    }
-                    return prev;
-                });
+                setContainerHeight(prev => prev !== newHeight ? newHeight : prev);
             }
         };
 
@@ -325,13 +314,25 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                     onContextMenu={handleRootContextMenu}
                 >
                     <span
-                        className="text-xs font-bold uppercase tracking-wider text-[var(--nh-text-muted)] truncate select-none"
+                        className="text-xs font-semibold text-[var(--nh-text-muted)] truncate select-none"
                         title={rootName}
                     >
-                        {rootName || 'EXPLORER'}
+                        {rootName || 'Explorer'}
                     </span>
 
                     <div className="relative flex items-center gap-1">
+                        {/* Search toggle */}
+                        <button
+                            className={`p-1 rounded transition-colors ${showSearch ? 'text-[var(--nh-accent-primary)] bg-[var(--nh-accent-secondary)]' : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-hover)]'}`}
+                            onClick={() => {
+                                setShowSearch(s => !s);
+                                if (showSearch) setSearchTerm('');
+                            }}
+                            title="Search files"
+                        >
+                            <Icon name="search" size={15} />
+                        </button>
+
                         {/* New button */}
                         <button
                             className="p-1 rounded hover:bg-[var(--nh-bg-hover)] text-[var(--nh-text-secondary)] transition-colors"
@@ -360,40 +361,43 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                     </div>
                 </div>
 
-                {/* Search/Filter Input */}
-                <div className="px-2 py-1.5 border-b border-[var(--nh-border-subtle)]">
-                    <div className="relative">
-                        <Icon
-                            name="search"
-                            size={14}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--nh-text-muted)]"
-                        />
-                        <input
-                            type="text"
-                            placeholder="Filter files..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="
-                                w-full pl-7 pr-2 py-1 text-xs
-                                bg-[var(--nh-bg-main)] 
-                                border border-[var(--nh-border-subtle)]
-                                rounded outline-none
-                                text-[var(--nh-text-primary)]
-                                placeholder:text-[var(--nh-text-muted)]
-                                focus:border-[var(--nh-accent-primary)]
-                                transition-colors
-                            "
-                        />
-                        {searchTerm && (
-                            <button
-                                onClick={() => setSearchTerm('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)]"
-                            >
-                                <Icon name="x" size={12} />
-                            </button>
-                        )}
+                {/* Search/Filter Input — visible only when toggled */}
+                {showSearch && (
+                    <div className="px-2 py-1.5 border-b border-[var(--nh-border-subtle)]">
+                        <div className="relative">
+                            <Icon
+                                name="search"
+                                size={14}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--nh-text-muted)]"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Filter files..."
+                                value={searchTerm}
+                                autoFocus
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="
+                                    w-full pl-7 pr-2 py-1 text-xs
+                                    bg-[var(--nh-bg-main)]
+                                    border border-[var(--nh-border-subtle)]
+                                    rounded outline-none
+                                    text-[var(--nh-text-primary)]
+                                    placeholder:text-[var(--nh-text-muted)]
+                                    focus:border-[var(--nh-accent-primary)]
+                                    transition-colors
+                                "
+                            />
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)]"
+                                >
+                                    <Icon name="x" size={12} />
+                                </button>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Tree Content */}
                 <div
@@ -405,8 +409,15 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                     tabIndex={0}
                 >
                     {isEmpty ? (
-                        <div className="px-4 py-8 text-center text-xs text-[var(--nh-text-muted)] italic">
-                            Empty vault
+                        <div className="flex flex-col items-center justify-center gap-3 px-4 py-10 text-center">
+                            <Icon name="file" size={32} className="text-[var(--nh-text-muted)] opacity-40" />
+                            <span className="text-xs text-[var(--nh-text-muted)]">Vault is empty</span>
+                            <button
+                                onClick={handleCreateNote}
+                                className="text-xs text-[var(--nh-accent-primary)] hover:underline"
+                            >
+                                + Create first note
+                            </button>
                         </div>
                     ) : (
                         <Tree
@@ -415,7 +426,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                             openByDefault={false}
                             width="100%"
                             height={containerHeight}
-                            rowHeight={24}
+                            rowHeight={28}
                             indent={16}
                             searchTerm={searchTerm}
                             selection={selectedId || ''}
@@ -428,8 +439,8 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                             onRename={handleRename}
                             onSelect={handleSelect}
                             onToggle={(id) => handleToggle(id)}
-                            disableDrag={false}
-                            disableDrop={false}
+                            disableDrag={isTouchDevice}
+                            disableDrop={isTouchDevice}
                             disableEdit={false}
                             className="outline-none"
                         >

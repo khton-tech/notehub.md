@@ -60,7 +60,7 @@ const DynamicIcon: React.FC<{ name: string; app?: NotehubCore; size?: number; st
         return null;
     }
 
-    return <IconComponent size={size} style={style} />;
+    return <IconComponent size={size} style={style || {}} />;
 };
 
 /**
@@ -101,6 +101,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({ controller, app }) => {
     return (
         <div
             className="titlebar"
+            data-tauri-drag-region
+            onMouseDown={handleDragStart}
             style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -129,8 +131,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ controller, app }) => {
 
             {/* Draggable Title Area - Center */}
             <div
-                data-tauri-drag-region
-                onMouseDown={handleDragStart}
+                // Drag handlers moved to root container
                 style={{
                     flex: 1,
                     display: 'flex',
@@ -213,6 +214,7 @@ const WindowButton: React.FC<WindowButtonProps> = ({ onClick, title, isClose, ch
         <button
             onClick={onClick}
             title={title}
+            onMouseDown={(e) => e.stopPropagation()}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             style={{

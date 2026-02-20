@@ -13,11 +13,6 @@ interface EditorLayoutProps {
 }
 
 export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
-    // Debug: Detect Remounts
-    useEffect(() => {
-        console.log('[EditorLayout] Mounted');
-        return () => console.log('[EditorLayout] Unmounted');
-    }, []);
 
     const [sidebarWidth, setSidebarWidth] = useState(250);
     const [isResizing, setIsResizing] = useState(false);
@@ -141,14 +136,17 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
 
     return (
         <div
-            className="w-full h-full overflow-hidden flex flex-col"
+            className="w-full h-full overflow-hidden flex flex-col relative"
         >
             {/* Main Content Area */}
             <div
-                className="flex-1 overflow-hidden p-2"
+                className="flex-1 overflow-hidden"
                 style={{
-                    // Safe Area Padding for Mobile Notches
+                    // Safe Area Padding for Mobile Notches (all sides)
+                    paddingTop: `max(8px, env(safe-area-inset-top))`,
+                    paddingRight: `max(8px, env(safe-area-inset-right))`,
                     paddingBottom: `max(8px, env(safe-area-inset-bottom))`,
+                    paddingLeft: `max(8px, env(safe-area-inset-left))`,
                 }}
             >
                 {/* Desktop Grid Layout */}
@@ -218,10 +216,10 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     {/* Main Editor Area - Floating Panel */}
                     <div
                         style={{ gridArea: 'main' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] overflow-auto relative flex flex-col"
+                        className="rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] overflow-hidden relative flex flex-col"
                     >
                         <ZoneRenderer name="tabbar" className="shrink-0" />
-                        <div className="flex-1 overflow-auto">
+                        <div className="flex-1 bg-[var(--nh-bg-surface)] overflow-auto">
                             <Controller type="editor-main" />
                         </div>
                     </div>
@@ -229,7 +227,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     {/* Status Bar - Floating Panel */}
                     <div
                         style={{ gridArea: 'status' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] px-3 py-1.5 text-xs overflow-visible"
+                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] px-3 py-1.5 text-xs overflow-visible border border-[var(--nh-border-accent)]"
                     >
                         <ZoneRenderer name="status-bar" />
                         <Controller type="status-bar" props={{ status: 'ready' }} />
@@ -252,15 +250,15 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     </div>
 
                     {/* Mobile Content */}
-                    <div className="flex-1 bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm)] overflow-auto flex flex-col">
+                    <div className="flex-1 rounded-xl shadow-[var(--nh-shadow-sm)] overflow-hidden flex flex-col">
                         <ZoneRenderer name="tabbar" className="shrink-0" />
-                        <div className="flex-1 overflow-auto">
+                        <div className="flex-1 bg-[var(--nh-bg-surface)] overflow-auto">
                             <Controller type="editor-main" />
                         </div>
                     </div>
 
                     {/* Mobile Status */}
-                    <div className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] px-3 py-1.5 text-xs shrink-0 overflow-visible">
+                    <div className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] px-3 py-1.5 text-xs shrink-0 overflow-visible border border-[var(--nh-border-accent)]">
                         <ZoneRenderer name="status-bar" />
                         <Controller type="status-bar" props={{ status: 'ready' }} />
                     </div>
@@ -278,7 +276,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                 <div
                     ref={drawerRef}
                     className={`
-                    fixed inset-y-0 left-0 z-[350] flex h-full transition-transform duration-300 transform p-2
+                    absolute inset-y-0 left-0 z-[350] flex transition-transform duration-300 transform p-2
                     ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
                     md:hidden
                 `}

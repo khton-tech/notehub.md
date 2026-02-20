@@ -1,7 +1,6 @@
 import React, { useState, useEffect, type FC } from 'react';
 import type { NotehubCore } from '@notehub/core';
 import { Icon } from '@notehub/icon-manager';
-import { Package, RotateCw, FolderOpen } from 'lucide-react';
 
 interface PluginMetadata {
     id: string;
@@ -88,7 +87,8 @@ const Toggle: FC<ToggleProps> = ({
 
 export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
     const [plugins, setPlugins] = useState<PluginMetadata[]>([]);
-    const [loading, setLoading] = useState<string | null>(null); // Track specific plugin loading state
+    const [loading, setLoading] = useState<string | null>(null);
+    const [installing, setInstalling] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     useEffect(() => {
@@ -110,28 +110,56 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
 
         try {
             if (plugin.status === 'Active') {
-                // Deactivate
-                await app.api.invoke('synapse:unload-plugin', plugin.id);
+                await app.api.invoke('synapse:disable-plugin', plugin.id);
             } else {
-                // Activate
-                await app.api.invoke('synapse:load-plugin', plugin.path);
+                await app.api.invoke('synapse:enable-plugin', plugin.id);
             }
-
-            // Refresh list
             setRefreshTrigger(prev => prev + 1);
-
-            // Success log
-            if (plugin.status !== 'Active') {
-                app.api.invoke('logger:info', 'nh.system.synapse', `Activated plugin: ${plugin.id}`);
-            } else {
-                app.api.invoke('logger:info', 'nh.system.synapse', `Deactivated plugin: ${plugin.id}`);
-            }
-
         } catch (error) {
             console.error(`Failed to toggle plugin ${plugin.id}:`, error);
             app.api.invoke('logger:error', 'nh.system.synapse', `Failed to toggle ${plugin.id}`);
         } finally {
             setLoading(null);
+        }
+    };
+
+    const handleDelete = async (plugin: PluginMetadata) => {
+        if (loading) return;
+
+        try {
+            const confirmed = await app.api.invoke('dialog:confirm', `Delete "${plugin.name}"? This will permanently remove all plugin files from disk.`) as boolean;
+            if (!confirmed) return;
+        } catch {
+            // dialog:confirm not available, proceed without confirmation
+        }
+
+        setLoading(plugin.id);
+        try {
+            await app.api.invoke('synapse:delete-plugin', plugin.id);
+            setRefreshTrigger(prev => prev + 1);
+        } catch (error) {
+            console.error(`Failed to delete plugin ${plugin.id}:`, error);
+            app.api.invoke('logger:error', 'nh.system.synapse', `Failed to delete ${plugin.id}`);
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const handleInstall = async () => {
+        if (installing) return;
+        setInstalling(true);
+        try {
+            const result = await app.api.invoke('synapse:install-plugin') as { success: boolean; pluginId?: string; error?: string };
+            if (result.success) {
+                setRefreshTrigger(prev => prev + 1);
+            } else if (result.error && result.error !== 'No file selected') {
+                app.api.invoke('logger:error', 'nh.system.synapse', `Failed to install plugin: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to install plugin:', error);
+            app.api.invoke('logger:error', 'nh.system.synapse', `Install failed: ${error}`);
+        } finally {
+            setInstalling(false);
         }
     };
 
@@ -143,20 +171,31 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
                         <h2 className="text-xl font-semibold text-[var(--nh-text-primary)] mb-1">External Plugins</h2>
                         <p className="text-sm text-[var(--nh-text-muted)]">Managed by Synapse Engine</p>
                     </div>
-                    <button
-                        onClick={() => setRefreshTrigger(prev => prev + 1)}
-                        className="p-2 rounded-md hover:bg-[var(--nh-bg-surface)] text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)] transition-colors"
-                        title="Refresh List"
-                    >
-                        <RotateCw size={18} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleInstall}
+                            disabled={installing}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--nh-accent-primary,#6b5ce7)] text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            title="Add Plugin (.nhp)"
+                        >
+                            <Icon name="plus" size={16} />
+                            {installing ? 'Installing...' : 'Add Plugin'}
+                        </button>
+                        <button
+                            onClick={() => setRefreshTrigger(prev => prev + 1)}
+                            className="p-2 rounded-md hover:bg-[var(--nh-bg-surface)] text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)] transition-colors"
+                            title="Refresh List"
+                        >
+                            <Icon name="rotate-cw" size={18} />
+                        </button>
+                    </div>
                 </div>
 
                 {plugins.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-[var(--nh-text-muted)] bg-[var(--nh-bg-surface)] rounded-lg border border-[var(--nh-border-subtle)] border-dashed">
-                        <Package size={48} className="mb-4 opacity-50" />
+                        <Icon name="package" size={48} className="mb-4 opacity-50" />
                         <p className="text-lg font-medium">No external plugins loaded</p>
-                        <p className="text-sm mt-2">Place plugins in your vault's <code className="bg-[var(--nh-bg-main)] px-1 py-0.5 rounded text-xs">.notehub/plugins</code> directory</p>
+                        <p className="text-sm mt-2">Place plugins in your vault's <code className="bg-[var(--nh-bg-main)] px-1 py-0.5 rounded text-xs">.notehub/plugins</code> directory or use <strong>Add Plugin</strong></p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-4">
@@ -196,7 +235,7 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
                                             {plugin.status}
                                         </span>
                                         <span className="flex items-center gap-1 opacity-70 truncate max-w-[300px]" title={plugin.path}>
-                                            <FolderOpen size={12} />
+                                            <Icon name="folder-open" size={12} />
                                             {plugin.path}
                                         </span>
                                     </div>
@@ -207,10 +246,20 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
+                                    <button
+                                        onClick={() => handleDelete(plugin)}
+                                        disabled={loading !== null}
+                                        className="p-1.5 rounded-md text-[var(--nh-text-muted)] hover:text-red-500 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
+                                        title="Delete Plugin"
+                                        aria-label={`Delete ${plugin.name}`}
+                                    >
+                                        <Icon name="trash-2" size={16} />
+                                    </button>
                                     <Toggle
                                         checked={plugin.status === 'Active'}
                                         onChange={() => handleToggle(plugin)}
                                         disabled={loading !== null}
+                                        aria-label={`Toggle ${plugin.name}`}
                                     />
                                 </div>
                             </div>

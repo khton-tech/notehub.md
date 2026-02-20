@@ -7,12 +7,21 @@
 
 import { createPortal } from 'react-dom';
 import type { FC } from 'react';
+import type { DragType } from '../logic/DragController.js';
 
 interface DropOverlayProps {
     /** Whether the overlay should be visible */
     isDragging: boolean;
-    /** Icon component to render (from icon-manager) */
-    IconComponent: React.ElementType;
+    /** Type of files being dragged */
+    dragType: DragType;
+    /** Icon for plugins */
+    PluginIcon: React.ElementType;
+    /** Icon for markdown files */
+    MarkdownIcon: React.ElementType;
+    /** Icon for unsupported/unknown files */
+    UnsupportedIcon: React.ElementType;
+    /** Icon for mixed files */
+    LayersIcon: React.ElementType;
 }
 
 /**
@@ -111,7 +120,7 @@ function injectStyles(): void {
     stylesInjected = true;
 }
 
-export const DropOverlay: FC<DropOverlayProps> = ({ isDragging, IconComponent }) => {
+export const DropOverlay: FC<DropOverlayProps> = ({ isDragging, dragType, PluginIcon, MarkdownIcon, UnsupportedIcon, LayersIcon }) => {
     // Inject styles on first render
     injectStyles();
 
@@ -119,15 +128,43 @@ export const DropOverlay: FC<DropOverlayProps> = ({ isDragging, IconComponent })
         return null;
     }
 
+    let Icon = PluginIcon;
+    let title = 'Drop to Install Plugin';
+    let hint = '.nhp files only';
+
+    switch (dragType) {
+        case 'markdown':
+            Icon = MarkdownIcon;
+            title = 'Drop to Import Note';
+            hint = '.md files';
+            break;
+        case 'mixed':
+            Icon = LayersIcon;
+            title = 'Drop to Import Files';
+            hint = 'Supported: .nhp, .md';
+            break;
+        case 'unknown':
+            Icon = UnsupportedIcon;
+            title = 'File type not supported';
+            hint = 'Supported: .nhp, .md';
+            break;
+        case 'plugin':
+        default:
+            Icon = PluginIcon;
+            title = 'Drop to Install Plugin';
+            hint = '.nhp files only';
+            break;
+    }
+
     const overlay = (
         <div className="nh-drop-overlay">
             <div className="nh-drop-zone" />
             <div className="nh-drop-content">
                 <div className="nh-drop-icon">
-                    <IconComponent size={96} />
+                    <Icon size={96} />
                 </div>
-                <div className="nh-drop-text">Drop to Install Plugin</div>
-                <div className="nh-drop-hint">.nhp files only</div>
+                <div className="nh-drop-text">{title}</div>
+                <div className="nh-drop-hint">{hint}</div>
             </div>
         </div>
     );

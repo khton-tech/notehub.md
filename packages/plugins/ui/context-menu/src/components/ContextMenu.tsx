@@ -67,12 +67,12 @@ const menuStyles = `
     }
 
     .nh-context-menu-item:hover {
-        background: var(--nh-accent-primary, #6b5ce7);
-        color: #ffffff;
+        background: var(--nh-bg-hover, #1E1E1E);
+        color: var(--nh-text-primary, #e0e0e0);
     }
 
     .nh-context-menu-item:hover .nh-context-menu-icon {
-        color: #ffffff;
+        color: var(--nh-accent-primary, #6b5ce7);
     }
 
     .nh-context-menu-item.disabled {
@@ -104,7 +104,7 @@ const menuStyles = `
     }
 
     .nh-context-menu-item:hover .nh-context-menu-arrow {
-        color: #ffffff;
+        color: var(--nh-text-secondary, #a6adc8);
     }
 
     .nh-context-menu-separator {
@@ -132,15 +132,15 @@ function useClickOutside(
     useEffect(() => {
         if (!enabled) return;
 
-        const handleClick = (event: MouseEvent) => {
+        const handleClick = (event: PointerEvent) => {
             if (ref.current && !ref.current.contains(event.target as Node)) {
                 handler();
             }
         };
 
-        // Use capture phase to catch clicks before they bubble
-        document.addEventListener('mousedown', handleClick, true);
-        return () => document.removeEventListener('mousedown', handleClick, true);
+        // Use pointerdown (covers both mouse and touch) in capture phase
+        document.addEventListener('pointerdown', handleClick, true);
+        return () => document.removeEventListener('pointerdown', handleClick, true);
     }, [ref, handler, enabled]);
 }
 
@@ -242,6 +242,14 @@ const MenuItemSubmenu: FC<MenuItemSubmenuProps> = ({ item, payload, onClose, par
         }, 150);
     };
 
+    // On touch devices (no hover capability), toggle submenu on tap
+    const handleClick = (e: React.MouseEvent) => {
+        if (!window.matchMedia('(hover: hover)').matches) {
+            e.stopPropagation();
+            setIsOpen(prev => !prev);
+        }
+    };
+
     // Calculate submenu position when it opens
     useEffect(() => {
         if (isOpen && itemRef.current) {
@@ -281,6 +289,7 @@ const MenuItemSubmenu: FC<MenuItemSubmenuProps> = ({ item, payload, onClose, par
             className="nh-context-menu-item"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
+            onClick={handleClick}
         >
             {item.icon && (
                 <span className="nh-context-menu-icon">

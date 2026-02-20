@@ -1,0 +1,23 @@
+{
+    "id": "ext.vault-lock",
+    "name": "Vault Lock",
+    "version": "0.1.0",
+    "type": "feature",
+    "description": "Transparent AES-256-GCM encryption for vault notes. Password-protected on startup.",
+    "main": "dist/main.js",
+    "author": "Custom",
+    "license": "MIT",
+    "dependencies": [],
+    "permissions": [
+        "fs:read-text-file",
+        "fs:write-text-file",
+        "fs:read-dir",
+        "settings:register-tab",
+        "settings:register-custom-view",
+        "command:register",
+        "editor:open",
+        "editor:get-active-path",
+        "editor:set-content",
+        "config:get"
+    ]
+}

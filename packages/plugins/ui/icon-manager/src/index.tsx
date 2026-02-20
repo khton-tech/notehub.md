@@ -38,6 +38,8 @@ import {
     FlaskConical,
     Package,
     Bug,
+    Layers,
+    CircleSlash,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -112,6 +114,8 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     'flask-conical': FlaskConical,
     'package': Package,
     'bug': Bug,
+    'layers': Layers,
+    'circle-slash': CircleSlash,
 };
 
 /**

@@ -41,6 +41,7 @@ export class FsManagerPlugin extends SystemPlugin {
         this.registerApi('fs:remove-file', this.removeFile.bind(this));
         this.registerApi('fs:remove-dir', this.removeDir.bind(this));
         this.registerApi('fs:rename', this.rename.bind(this));
+        this.registerApi('fs:pick-file', this.pickFile.bind(this));
 
         this.log('info', 'Loaded - awaiting driver registration');
     }
@@ -169,6 +170,10 @@ export class FsManagerPlugin extends SystemPlugin {
     private async rename(oldPath: string, newPath: string): Promise<void> {
         await this.ensureDriver().rename(oldPath, newPath);
         this.app.events.emit('fs:renamed', { oldPath, newPath });
+    }
+
+    private async pickFile(options?: { extensions?: string[]; mimeTypes?: string[] }): Promise<string | null> {
+        return this.ensureDriver().pickFile(options);
     }
 }
 

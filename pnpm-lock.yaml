@@ -348,6 +348,31 @@ importers:
         specifier: ^5.6.0
         version: 5.9.3
 
+  custom/plugins/ext.vault-lock:
+    dependencies:
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.0
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@notehub.md/api':
+        specifier: workspace:*
+        version: link:../../../packages/api
+      '@notehub.md/cli':
+        specifier: workspace:*
+        version: link:../../../packages/cli
+      '@types/react':
+        specifier: ^18.3.0
+        version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.3.0
+        version: 18.3.7(@types/react@18.3.27)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
   packages/api:
     dependencies:
       react:

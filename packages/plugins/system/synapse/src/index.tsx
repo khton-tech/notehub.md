@@ -32,6 +32,7 @@ export class SynapsePlugin extends SystemPlugin {
     private watcherUnsubscribe: (() => void) | null = null;
     private pendingEvents: Map<string, { path: string; type: string }> = new Map();
     private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    private vaultPath: string | null = null;
 
     protected async onLoad(): Promise<void> {
         this.log('info', 'Loading Synapse Engine...');
@@ -49,6 +50,10 @@ export class SynapsePlugin extends SystemPlugin {
             this.registerApi('synapse:unload-plugin', this.unloadExternalPlugin.bind(this));
             this.registerApi('synapse:list-plugins', this.listLoadedPlugins.bind(this));
             this.registerApi('synapse:get-details', this.getPluginsDetails.bind(this));
+            this.registerApi('synapse:disable-plugin', this.disablePlugin.bind(this));
+            this.registerApi('synapse:enable-plugin', this.enablePlugin.bind(this));
+            this.registerApi('synapse:delete-plugin', this.deletePlugin.bind(this));
+            this.registerApi('synapse:install-plugin', this.installPlugin.bind(this));
 
             // Subscribe to vault-opened event to scan for external plugins
             this.registerEvent('app:vault-opened', this.handleVaultOpened);
@@ -74,6 +79,7 @@ export class SynapsePlugin extends SystemPlugin {
             return;
         }
 
+        this.vaultPath = vaultPath;
         this.log('info', `Vault opened: ${vaultPath}, scanning for external plugins...`);
         try {
             await this.loader?.scan(vaultPath);
@@ -293,6 +299,70 @@ export class SynapsePlugin extends SystemPlugin {
             return [];
         }
         return this.loader.getPluginsMetadata();
+    }
+
+    private async disablePlugin(pluginId: string): Promise<boolean> {
+        if (!this.loader) return false;
+        await this.app.api.invoke('config:set', `synapse.disabled.${pluginId}`, true);
+        return this.loader.unloadPlugin(pluginId);
+    }
+
+    private async enablePlugin(pluginId: string): Promise<boolean> {
+        if (!this.loader) return false;
+        await this.app.api.invoke('config:set', `synapse.disabled.${pluginId}`, false);
+        const metadata = this.loader.getPluginsMetadata();
+        const plugin = metadata.find((p: any) => p.id === pluginId);
+        if (!plugin) return false;
+        const result = await this.loader.loadPlugin(plugin.path);
+        return result.success;
+    }
+
+    private async deletePlugin(pluginId: string): Promise<boolean> {
+        if (!this.loader) return false;
+        // Unload first
+        await this.loader.unloadPlugin(pluginId);
+        // Get path from discovered metadata
+        const metadata = this.loader.getPluginsMetadata();
+        const plugin = metadata.find((p: any) => p.id === pluginId);
+        if (!plugin?.path) return false;
+        // Delete files
+        if (plugin.isNhp) {
+            await this.app.api.invoke('fs:remove-file', plugin.path);
+        } else {
+            await this.app.api.invoke('fs:remove-dir', plugin.path, { recursive: true });
+        }
+        // Clean up config
+        await this.app.api.invoke('config:set', `synapse.disabled.${pluginId}`, null);
+        // Re-scan
+        if (this.vaultPath) await this.loader.scan(this.vaultPath);
+        return true;
+    }
+
+    private async installPlugin(): Promise<{ success: boolean; pluginId?: string; error?: string }> {
+        if (!this.loader) return { success: false, error: 'Synapse not initialized' };
+        // Open file picker for .nhp
+        const filePath = await this.app.api.invoke('fs:pick-file', {
+            extensions: ['nhp'],
+            mimeTypes: ['application/octet-stream'],
+        }) as string | null;
+        if (!filePath) return { success: false, error: 'No file selected' };
+        // Get plugins directory
+        const vaultPath = this.vaultPath;
+        if (!vaultPath) return { success: false, error: 'No vault open' };
+        const pluginsDir = `${vaultPath}/.notehub/plugins`;
+        // Ensure plugins dir exists
+        await this.app.api.invoke('fs:create-dir', pluginsDir, { recursive: true });
+        // Copy file to plugins dir
+        const fileName = filePath.split(/[\\/]/).pop() || 'plugin.nhp';
+        const destPath = `${pluginsDir}/${fileName}`;
+        const buffer = await this.app.api.invoke('fs:read-file', filePath) as Uint8Array;
+        await this.app.api.invoke('fs:write-file', destPath, buffer);
+        // Load the plugin
+        const arrayBuffer = new Uint8Array(buffer).buffer;
+        const result = await this.loader.loadFromNhp(arrayBuffer, destPath);
+        // Re-scan to update discovered list
+        await this.loader.scan(vaultPath);
+        return result;
     }
 }
 

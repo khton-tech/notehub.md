@@ -1,0 +1,477 @@
+/**
+ * ext.vault-lock
+ *
+ * Transparent AES-256-GCM encryption plugin for Notehub.md.
+ *
+ * Strategy
+ * --------
+ * Two `around` hooks intercept every fs:read-text-file / fs:write-text-file
+ * call made by the application.  Only .md files outside .notehub/ are touched.
+ *
+ *   Write: plaintext → encrypt → store "NH_ENC_V1:<base64>" on disk
+ *   Read:  "NH_ENC_V1:<base64>" on disk → decrypt → return plaintext to app
+ *
+ * The session key lives only in memory and is cleared on lock/unload.
+ * Credentials (salt + verifier) are persisted via the per-plugin ctx.storage.
+ *
+ * Cross-platform: uses only the Web Crypto API (SubtleCrypto).
+ * No Node.js, Tauri, or Capacitor native APIs are touched.
+ */
+
+import type { NotehubPlugin, PluginContext } from '@notehub.md/api';
+import { VaultCrypto } from './crypto';
+import { PasswordModal } from './PasswordModal';
+import { VaultLockSettings } from './VaultLockSettings';
+
+const SETTINGS_TAB_ID = 'vault-lock';
+
+/**
+ * Decide whether a given file path should be encrypted.
+ * Rules:
+ *  - must be a .md file
+ *  - must NOT be inside a .notehub/ directory (config, plugin storage, etc.)
+ *
+ * BUG-17: also check for paths that start with .notehub/ (relative paths).
+ */
+function shouldEncrypt(path: string): boolean {
+    const p = path.replace(/\\/g, '/');
+    return p.endsWith('.md') && !p.includes('/.notehub/') && !p.startsWith('.notehub/');
+}
+
+export default class VaultLockPlugin implements NotehubPlugin {
+    private ctx: PluginContext | null = null;
+    private vaultCrypto = new VaultCrypto();
+    private hookRemovers: Array<() => void> = [];
+
+    /**
+     * Non-null only during the startup initialisation window (while the password
+     * modal is on screen).  Set to null as soon as initialize() resolves — whether
+     * the user unlocked, skipped, or exhausted all attempts.
+     *
+     * BUG-1 root cause: a resolved Promise is still truthy, so we must explicitly
+     * set this field to null; we can never rely on the Promise's settled state.
+     */
+    private initPromise: Promise<void> | null = null;
+
+    /**
+     * True once salt+verifier are known to exist in storage or were just created.
+     * Stays true even after a manual lock so that the write hook can block writes.
+     * Set to false only by disableEncryption().
+     *
+     * Separates "encryption is configured" from "vault is currently unlocked",
+     * allowing the hooks to behave correctly after a manual lock (BUG-5, BUG-7).
+     */
+    private encryptionConfigured = false;
+
+    /**
+     * Paths of .md files that were read while initPromise was set (i.e. while the
+     * password modal was showing).  After a successful unlock these files are
+     * refreshed so the editor shows real content instead of the lock placeholder.
+     */
+    private pendingFiles = new Set<string>();
+
+    async onload(ctx: PluginContext): Promise<void> {
+        this.ctx = ctx;
+        console.log('[VaultLock] Loading…');
+
+        // 1. Mount password modal overlay (singleton)
+        PasswordModal.mount();
+
+        // 2. Start initialization (async).
+        //    This sets up initPromise so hooks can detect the "locked during init"
+        //    state.  We do NOT await it here or we'd block the rest of onload.
+        this.initPromise = this.initialize();
+
+        // 3. Register FS hooks IMMEDIATELY — before any await — so the app cannot
+        //    start reading files (restoring tabs) before we intercept them.
+
+        // The ApiBus passes `next` as (argsArray: unknown[]) => Promise<unknown>.
+        // We MUST call it with a single array argument, never with spread.
+        type NextFn = (a: unknown[]) => Promise<unknown>;
+
+        // READ hook: decrypt after the file has been read from disk
+        const removeReadHook = ctx.unsafe.hook(
+            'fs:read-text-file',
+            'around',
+            async (args: unknown[], next: unknown): Promise<unknown> => {
+                const path = args[0] as string;
+
+                // BUG-4 fix: non-encrypted files always pass through immediately,
+                // never wait for vault initialization.
+                if (!shouldEncrypt(path)) {
+                    return (next as NextFn)(args);
+                }
+
+                // During startup initialization show a placeholder and queue the
+                // path for reload once the vault is unlocked.
+                if (this.initPromise) {
+                    this.pendingFiles.add(path);
+                    return '# 🔒 Vault Locked\n\nPlease enter your password to unlock.';
+                }
+
+                const raw = (await (next as NextFn)(args)) as string;
+
+                // File is not encrypted on disk — pass through as-is.
+                if (!this.vaultCrypto.isEncrypted(raw)) return raw;
+
+                // BUG-5 fix: vault was manually locked after startup — show a
+                // meaningful placeholder instead of raw ciphertext.
+                if (!this.vaultCrypto.isUnlocked()) {
+                    return '# 🔒 Vault Locked\n\nUse **Settings → Vault Lock** or press `Mod+Shift+L` to unlock.';
+                }
+
+                return this.vaultCrypto.decryptText(raw);
+            },
+        );
+
+        // WRITE hook: encrypt before the content hits the disk
+        const removeWriteHook = ctx.unsafe.hook(
+            'fs:write-text-file',
+            'around',
+            async (args: unknown[], next: unknown): Promise<unknown> => {
+                const path = args[0] as string;
+                const content = args[1] as string;
+
+                // BUG-4 fix: non-encrypted files (non-.md, .notehub/ paths) always
+                // pass through immediately without waiting for vault init.
+                if (!shouldEncrypt(path)) {
+                    return (next as NextFn)(args);
+                }
+
+                // BUG-7 fix: block writes when encryption is configured but the
+                // vault is not unlocked.  This covers three cases:
+                //   • startup window while the unlock modal is showing
+                //   • user skipped unlock (working offline) — they must not be able
+                //     to overwrite encrypted files with plaintext
+                //   • vault was manually locked after startup
+                if (this.encryptionConfigured && !this.vaultCrypto.isUnlocked()) {
+                    throw new Error('Vault is locked. Cannot save.');
+                }
+
+                // Encryption not configured (first run / disabled) or content is
+                // already encrypted (e.g. from changePassword / disableEncryption) —
+                // pass through unchanged.
+                if (!this.vaultCrypto.isUnlocked() || this.vaultCrypto.isEncrypted(content)) {
+                    return (next as NextFn)(args);
+                }
+
+                const encrypted = await this.vaultCrypto.encryptText(content);
+                return (next as NextFn)([path, encrypted]);
+            },
+        );
+
+        this.hookRemovers = [removeReadHook, removeWriteHook];
+
+        // 4. Register settings and commands (Async)
+        try {
+            await ctx.invokeApi('settings:register-tab', {
+                id: SETTINGS_TAB_ID,
+                label: 'Vault Lock',
+                icon: 'lock',
+                order: 50,
+            });
+
+            await ctx.invokeApi('settings:register-custom-view', {
+                tabId: SETTINGS_TAB_ID,
+                view: () => (
+                    <VaultLockSettings
+                        ctx={ctx}
+                        vaultCrypto={this.vaultCrypto}
+                        onCredentialsSaved={this.saveCredentials.bind(this)}
+                        onEncryptionDisabled={this.disableEncryption.bind(this)}
+                        onPasswordChanged={this.changePassword.bind(this)}
+                        // BUG-10: called by the settings panel after a successful
+                        // setup or manual unlock so that initPromise is cleared and
+                        // encryptionConfigured is set even when the user had skipped
+                        // the startup prompt.
+                        onUnlocked={() => {
+                            this.encryptionConfigured = true;
+                            this.initPromise = null;
+                        }}
+                    />
+                ),
+            });
+        } catch (e) {
+            console.warn('[VaultLock] Settings tab registration failed:', e);
+        }
+
+        try {
+            await ctx.invokeApi('command:register', {
+                id: 'vault-lock:lock',
+                name: 'Vault Lock: Lock Vault',
+                description: 'Clear the decryption key from memory. Encrypted files become unreadable until unlocked.',
+                handler: () => {
+                    this.vaultCrypto.lock();
+                    console.log('[VaultLock] Vault locked via command');
+                },
+                defaultHotkey: 'Mod+Shift+L',
+            });
+        } catch (e) {
+            console.warn('[VaultLock] Command registration failed:', e);
+        }
+
+        console.log('[VaultLock] Loaded');
+    }
+
+    async onunload(): Promise<void> {
+        console.log('[VaultLock] Unloading…');
+
+        // Remove FS hooks
+        for (const remove of this.hookRemovers) remove();
+        this.hookRemovers = [];
+
+        // Wipe session key
+        this.vaultCrypto.lock();
+
+        // BUG-13: cancel() resolves any pending prompt Promise with null so that
+        // the initialize() coroutine (which may be awaiting the modal) does not hang.
+        PasswordModal.unmount();
+
+        if (this.ctx) {
+            try {
+                await this.ctx.invokeApi('settings:unregister-tab', SETTINGS_TAB_ID);
+            } catch {
+                // settings plugin may have already unloaded
+            }
+            this.ctx = null;
+        }
+    }
+
+    // ── private ───────────────────────────────────────────────────────────────
+
+    /**
+     * Called once at plugin load.
+     * - No stored salt+verifier → first run → offer setup dialog
+     * - Stored salt+verifier    → ask for unlock password (up to 3 attempts)
+     *
+     * BUG-1 fix: every code path now ends with `this.initPromise = null`.
+     * BUG-2 fix: reloadPendingFiles() is also called after a first-run setup.
+     */
+    private async initialize(): Promise<void> {
+        if (!this.ctx) return;
+
+        const salt = await this.ctx.storage.get<string>('salt');
+        const verifier = await this.ctx.storage.get<string>('verifier');
+
+        if (!salt || !verifier) {
+            // First run: ask the user if they want to enable encryption
+            console.log('[VaultLock] No credentials found — showing setup prompt');
+            const password = await PasswordModal.prompt('setup');
+            if (!password) {
+                console.log('[VaultLock] Setup skipped by user');
+                // BUG-1 fix: clear so hooks stop showing placeholder
+                this.pendingFiles.clear();
+                this.initPromise = null;
+                return;
+            }
+            try {
+                const creds = await this.vaultCrypto.setup(password);
+                await this.saveCredentials(creds.salt, creds.verifier);
+                this.encryptionConfigured = true;
+                console.log('[VaultLock] Encryption configured');
+                // BUG-1 fix: clear before reloading so read hook can decrypt
+                // BUG-2 fix: reload files that got the placeholder during setup modal
+                this.initPromise = null;
+                await this.reloadPendingFiles();
+            } catch (e) {
+                console.error('[VaultLock] Setup error:', e);
+                this.pendingFiles.clear();
+                this.initPromise = null;
+            }
+            return;
+        }
+
+        // Subsequent launches: encryption is configured, unlock before reading files.
+        this.encryptionConfigured = true;
+        console.log('[VaultLock] Credentials found — showing unlock prompt');
+        let attempt = 0;
+        let hint: string | undefined;
+
+        while (attempt < 3) {
+            const password = await PasswordModal.prompt('unlock', hint);
+            if (!password) {
+                console.log('[VaultLock] Unlock skipped — working offline');
+                // Files in pendingFiles keep showing the placeholder; the read hook
+                // will also show the placeholder for any new read since the vault is
+                // locked (encryptionConfigured=true, isUnlocked()=false).
+                // BUG-1 fix: must clear so the initPromise check in hooks becomes false
+                this.pendingFiles.clear();
+                this.initPromise = null;
+                return;
+            }
+            const ok = await this.vaultCrypto.unlock(password, salt, verifier);
+            if (ok) {
+                console.log('[VaultLock] Vault unlocked');
+                // BUG-1 fix: clear before reloading
+                this.initPromise = null;
+                await this.reloadPendingFiles();
+                return;
+            }
+            hint = 'Incorrect password — try again';
+            attempt++;
+        }
+
+        console.warn('[VaultLock] Max unlock attempts reached. Vault remains locked.');
+        // BUG-1 fix: clear so hooks don't keep showing the startup placeholder;
+        // subsequent reads will show the "manually locked" placeholder (BUG-5 fix).
+        this.pendingFiles.clear();
+        this.initPromise = null;
+    }
+
+    private async reloadPendingFiles(): Promise<void> {
+        if (!this.ctx) return;
+
+        // Find out which file the editor currently has open (with placeholder content)
+        const activePath = await this.ctx.invokeApi('editor:get-active-path') as string | null;
+
+        for (const path of this.pendingFiles) {
+            console.log('[VaultLock] Reloading', path);
+            try {
+                if (path === activePath) {
+                    // The file is currently open but shows the lock placeholder.
+                    // editor:open would hit the "already open" guard and return the cached
+                    // placeholder, so we read the now-decrypted content and push it directly.
+                    let content = await this.ctx.invokeApi('fs:read-text-file', path) as string;
+                    // BUG-12 guard: if invokeApi bypasses hooks, decrypt manually.
+                    if (this.vaultCrypto.isEncrypted(content)) {
+                        content = await this.vaultCrypto.decryptText(content);
+                    }
+                    await this.ctx.invokeApi('editor:set-content', content);
+                } else {
+                    // Not the active file — a plain open is enough.
+                    await this.ctx.invokeApi('editor:open', path);
+                }
+            } catch (e) {
+                console.warn('[VaultLock] Failed to reload %s', path, e);
+            }
+        }
+        this.pendingFiles.clear();
+    }
+
+    /**
+     * Change the master password and re-encrypt every vault .md file.
+     *
+     * BUG-3 fix: the old implementation called vaultCrypto.setup(newPassword) which
+     * replaced the in-memory key without re-encrypting existing files, making them
+     * permanently unreadable.  This method:
+     *   1. Decrypts all files with the current (old) key
+     *   2. Derives a new key from newPassword
+     *   3. Re-encrypts every file with the new key and writes it back
+     */
+    async changePassword(newPassword: string): Promise<void> {
+        if (!this.ctx) return;
+        if (!this.vaultCrypto.isUnlocked()) throw new Error('Vault must be unlocked first.');
+
+        const vaultPath = await this.ctx.invokeApi('config:get', 'vault.last-opened') as string | null;
+        if (!vaultPath) throw new Error('No vault is currently open.');
+
+        const mdFiles = await this.collectMdFiles(vaultPath);
+
+        // Step 1: read + decrypt with the CURRENT (old) key.
+        // BUG-12 guard: if invokeApi bypasses hooks, the content still has the
+        // NH_ENC_V1: marker; decrypt manually with the old key before it changes.
+        const plaintexts = new Map<string, string>();
+        for (const filePath of mdFiles) {
+            let content = await this.ctx.invokeApi('fs:read-text-file', filePath) as string;
+            if (this.vaultCrypto.isEncrypted(content)) {
+                content = await this.vaultCrypto.decryptText(content);
+            }
+            plaintexts.set(filePath, content);
+        }
+
+        // Step 2: derive new key and persist new credentials.
+        const creds = await this.vaultCrypto.setup(newPassword);
+        await this.saveCredentials(creds.salt, creds.verifier);
+
+        // Step 3: re-encrypt every file with the NEW key.
+        // We write pre-encrypted content (NH_ENC_V1: prefix); the write hook sees
+        // isEncrypted(content) === true and passes it through without re-encrypting.
+        for (const [filePath, plaintext] of plaintexts) {
+            const encrypted = await this.vaultCrypto.encryptText(plaintext);
+            await this.ctx.invokeApi('fs:write-text-file', filePath, encrypted);
+        }
+
+        console.log('[VaultLock] Password changed, %d files re-encrypted', plaintexts.size);
+    }
+
+    /**
+     * Decrypt every .md file in the vault, write them back as plaintext, then
+     * wipe the stored credentials so the plugin becomes inactive on next launch.
+     */
+    async disableEncryption(): Promise<void> {
+        if (!this.ctx) return;
+        if (!this.vaultCrypto.isUnlocked()) throw new Error('Vault must be unlocked first.');
+
+        const vaultPath = await this.ctx.invokeApi('config:get', 'vault.last-opened') as string | null;
+        if (!vaultPath) throw new Error('No vault is currently open.');
+
+        const mdFiles = await this.collectMdFiles(vaultPath);
+
+        // Read + decrypt while the vault is still unlocked.
+        // BUG-12 guard: if invokeApi bypasses hooks, the file has the NH_ENC_V1:
+        // marker; decrypt manually before locking.
+        const decrypted = new Map<string, string>();
+        for (const filePath of mdFiles) {
+            let content = await this.ctx.invokeApi('fs:read-text-file', filePath) as string;
+            if (this.vaultCrypto.isEncrypted(content)) {
+                content = await this.vaultCrypto.decryptText(content);
+            }
+            decrypted.set(filePath, content);
+        }
+
+        // Disable encryption state before writing so the write hook passes through
+        // without throwing "Vault is locked" or trying to re-encrypt.
+        this.vaultCrypto.lock();
+        this.encryptionConfigured = false;
+
+        // Write plaintext back to disk.
+        // Write hook path: shouldEncrypt=true, encryptionConfigured=false → passes through.
+        for (const [filePath, content] of decrypted) {
+            await this.ctx.invokeApi('fs:write-text-file', filePath, content);
+        }
+
+        // Wipe credentials — empty string is falsy, so initialize() will show setup next time
+        await this.ctx.storage.set('salt', '');
+        await this.ctx.storage.set('verifier', '');
+
+        console.log('[VaultLock] Encryption disabled, %d files decrypted', decrypted.size);
+    }
+
+    /**
+     * Recursively collect .md file paths under `dirPath`, skipping .notehub/.
+     *
+     * BUG-16 fix: normalise all paths to forward slashes internally so the
+     * separator detection heuristic (`includes('/')`) is not needed and mixed
+     * separator paths cannot be constructed.
+     */
+    private async collectMdFiles(dirPath: string): Promise<string[]> {
+        if (!this.ctx) return [];
+        // Normalise to forward slashes for consistent path construction
+        const normalizedDir = dirPath.replace(/\\/g, '/');
+        const results: string[] = [];
+
+        let entries: Array<{ name: string; isDirectory: boolean; isFile: boolean }>;
+        try {
+            entries = await this.ctx.invokeApi('fs:read-dir', normalizedDir) as typeof entries;
+        } catch {
+            return [];
+        }
+
+        for (const entry of entries) {
+            if (entry.name === '.notehub') continue;
+            const fullPath = `${normalizedDir}/${entry.name}`;
+            if (entry.isDirectory) {
+                results.push(...await this.collectMdFiles(fullPath));
+            } else if (entry.isFile && entry.name.endsWith('.md')) {
+                results.push(fullPath);
+            }
+        }
+        return results;
+    }
+
+    private async saveCredentials(salt: string, verifier: string): Promise<void> {
+        if (!this.ctx) return;
+        await this.ctx.storage.set('salt', salt);
+        await this.ctx.storage.set('verifier', verifier);
+    }
+}

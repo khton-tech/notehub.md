@@ -40,7 +40,7 @@ const DynamicIcon: FC<DynamicIconProps> = ({ name, app, size = 18, className }) 
     const IconComponent = app.api.invoke('icon:get', name) as unknown as React.ElementType | undefined;
 
     if (!IconComponent) {
-        return <span className={className}>?</span>;
+        return <span className={className} style={{ display: 'inline-block', width: size, height: size }} />;
     }
 
     return <IconComponent size={size} className={className} />;

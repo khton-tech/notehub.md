@@ -50,10 +50,10 @@ const iconSizes: Record<string, number> = {
 const variantClasses: Record<string, string> = {
     primary: [
         'bg-[var(--nh-accent-primary,#7c3aed)]',
-        'text-[var(--nh-button-text,#ffffff)]',
+        // --nh-on-accent is computed by ThemeManager from accent luminance
+        'text-[var(--nh-on-accent,#ffffff)]',
         'shadow-[var(--nh-shadow-sm)]',
-        'hover:shadow-nh-glow-accent',
-        'hover:brightness-110',
+        'hover:bg-[var(--nh-accent-hover,#6d28d9)]',
     ].join(' '),
     secondary: [
         'bg-[var(--nh-bg-secondary,#1A1A1A)]',
@@ -69,10 +69,10 @@ const variantClasses: Record<string, string> = {
     ].join(' '),
     danger: [
         'bg-[var(--nh-danger,#ef4444)]',
-        'text-[var(--nh-button-text,#ffffff)]',
+        // --nh-on-danger is always #ffffff — danger red is always dark enough
+        'text-[var(--nh-on-danger,#ffffff)]',
         'shadow-[var(--nh-shadow-sm)]',
-        'hover:shadow-[0_0_20px_rgba(239,68,68,0.35)]',
-        'hover:brightness-110',
+        'hover:brightness-90',
     ].join(' '),
     glass: [
         'bg-[var(--nh-glass-bg,rgba(20,20,20,0.7))]',

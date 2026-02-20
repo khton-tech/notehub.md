@@ -142,7 +142,7 @@ const DialogOverlay: FC<DialogOverlayProps> = ({ dialog, onClose }) => {
         >
             <div
                 ref={dialogRef}
-                className="bg-[var(--nh-bg-surface,#2a2a2a)] rounded-xl border border-[var(--nh-border-secondary,#3a3a3a)] shadow-2xl p-6 min-w-[20rem] max-w-[30rem] animate-[dialogSlideIn_0.2s_ease-out] font-[var(--nh-font-family,system-ui)]"
+                className="bg-[var(--nh-bg-surface,#2a2a2a)] rounded-xl border border-[var(--nh-border-secondary,#3a3a3a)] shadow-2xl p-6 w-[min(90vw,30rem)] min-w-[min(90vw,20rem)] animate-[dialogSlideIn_0.2s_ease-out] font-[var(--nh-font-family,system-ui)]"
                 onClick={(e) => e.stopPropagation()}
             >
                 <h2

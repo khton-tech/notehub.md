@@ -237,19 +237,19 @@ async function createNhpArchive(
         // Add manifest.json
         archive.file(join(sourceDir, 'manifest.json'), { name: 'manifest.json' });
 
-        // Add dist/main.js as main.js (flatten structure)
-        archive.file(join(sourceDir, 'dist', 'main.js'), { name: 'main.js' });
-
-        // Add styles.css if exists
-        const stylesPath = join(sourceDir, 'styles.css');
-        if (existsSync(stylesPath)) {
-            archive.file(stylesPath, { name: 'styles.css' });
+        // Add all contents of dist directory to the root of the archive
+        // This includes main.js, styles.css, and any other assets (e.g. WASM, images)
+        if (existsSync(join(sourceDir, 'dist'))) {
+            archive.directory(join(sourceDir, 'dist'), false);
+        } else {
+            reject(new Error('dist directory not found'));
+            return;
         }
 
-        // Also check for dist/style.css (Vite's default CSS output)
-        const distStylesPath = join(sourceDir, 'dist', 'style.css');
-        if (existsSync(distStylesPath) && !existsSync(stylesPath)) {
-            archive.file(distStylesPath, { name: 'styles.css' });
+        // Check for root-level styles.css if not in dist (legacy/fallback)
+        const stylesPath = join(sourceDir, 'styles.css');
+        if (existsSync(stylesPath) && !existsSync(join(sourceDir, 'dist', 'style.css'))) {
+            archive.file(stylesPath, { name: 'styles.css' });
         }
 
         archive.finalize();

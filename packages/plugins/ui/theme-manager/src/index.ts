@@ -36,10 +36,18 @@ export interface ThemePalette {
     'text-muted': string;
     /** Error text color */
     'text-error'?: string;
-    /** Button text color (contrast for accent buttons) */
+    /** Button text color (contrast for accent buttons) — computed dynamically */
     'button-text'?: string;
+    /** Alias for button-text: readable text ON any accent-colored surface */
+    'on-accent'?: string;
+    /** Hover variant of accent-primary (lightened or darkened) */
+    'accent-hover'?: string;
+    /** RGB triplet of accent-primary for use in rgba() — e.g. "124, 58, 237" */
+    'accent-rgb'?: string;
     /** Danger/destructive action color */
     'danger'?: string;
+    /** Readable text ON danger-colored surfaces (always white — danger red is always dark) */
+    'on-danger'?: string;
     /** Default font family */
     'font-family': string;
     /** Monospace font family */
@@ -93,6 +101,7 @@ const DEEP_SPACE_THEME: ThemePalette = {
 
     // Danger
     'danger': '#ef4444', // Red-500
+    'on-danger': '#ffffff',
 
     // Callout semantic colors
     'callout-info': '#60a5fa',       // Blue-400
@@ -130,10 +139,10 @@ const LIGHT_THEME: ThemePalette = {
     'accent-primary': '#7c3aed',
     'accent-secondary': 'rgba(124, 58, 237, 0.08)',
 
-    // Borders - subtle for floating effect
+    // Borders
     'border-accent': '#7c3aed',
-    'border-secondary': 'rgba(0, 0, 0, 0.08)',
-    'border-subtle': 'rgba(0, 0, 0, 0.04)',
+    'border-secondary': 'rgba(0, 0, 0, 0.14)',
+    'border-subtle': 'rgba(0, 0, 0, 0.10)',
 
     // Shadows - enhanced for depth
     'shadow-sm': '0 2px 8px rgba(0, 0, 0, 0.08)',
@@ -142,15 +151,16 @@ const LIGHT_THEME: ThemePalette = {
 
     // Text
     'text-primary': '#1A1A1A',
-    'text-secondary': '#525252',
-    'text-muted': 'rgba(0, 0, 0, 0.55)',
+    'text-secondary': '#4A4A4A',
+    'text-muted': 'rgba(0, 0, 0, 0.60)',
     'text-error': '#dc2626',
 
-    // Button
+    // Button — will be overridden dynamically by applyTheme normalization
     'button-text': '#ffffff',
 
     // Danger
     'danger': '#dc2626',
+    'on-danger': '#ffffff',
 
     // Callout semantic colors (darker shades for light theme)
     'callout-info': '#3b82f6',       // Blue-500
@@ -162,7 +172,7 @@ const LIGHT_THEME: ThemePalette = {
     'callout-abstract': '#06b6d4',   // Cyan-500
 
     // Panel effects
-    'panel-glow': 'inset 0 0 0 1px rgba(0,0,0,0.03)',
+    'panel-glow': 'inset 0 0 0 1px rgba(0,0,0,0.08)',
 
     // Typography
     'font-family': '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
@@ -382,12 +392,36 @@ export class ThemeManagerPlugin extends SystemPlugin {
             accentPrimary = savedAccent;
         }
 
+        // ── Accent normalization ──────────────────────────────────────────────
+        // Determine readable text color ON the accent surface.
+        // WCAG contrast: white needs accent luminance < ~0.18, black needs > 0.18.
+        // colord.isDark() uses perceived brightness (r*0.299 + g*0.587 + b*0.114)
+        // which is a good proxy. We add a small bias toward white for mid-range colors.
+        const accentColord = colord(accentPrimary);
+        const onAccent = accentColord.isDark() ? '#ffffff' : '#111111';
+
+        // Accent hover variant: lighten dark accents, darken light ones
+        const accentHover = accentColord.isDark()
+            ? accentColord.lighten(0.07).toHex()
+            : accentColord.darken(0.07).toHex();
+
+        // RGB triplet for use in rgba() expressions in CSS
+        const { r, g, b } = accentColord.toRgb();
+        const accentRgb = `${r}, ${g}, ${b}`;
+
         // Generate dynamic palette from accent
         const dynamicPalette: Partial<ThemePalette> = {
             ...palette,
             'accent-primary': accentPrimary,
-            // Generate secondary accent (darker/desaturated)
-            'accent-secondary': colord(accentPrimary).alpha(0.1).toHex(),
+            // Hover variant of accent (for button hover states)
+            'accent-hover': accentHover,
+            // Text ON accent surfaces (buttons, badges, highlights)
+            'button-text': onAccent,
+            'on-accent': onAccent,
+            // RGB triplet — enables rgba(var(--nh-accent-rgb), 0.15) in CSS
+            'accent-rgb': accentRgb,
+            // Generate secondary accent (12% opacity)
+            'accent-secondary': colord(accentPrimary).alpha(0.12).toRgbString(),
             // Generate border accent
             'border-accent': accentPrimary,
             // Generate focus ring (transparent accent)

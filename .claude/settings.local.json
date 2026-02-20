@@ -13,7 +13,19 @@
       "Bash(pnpm run:*)",
       "Bash(pnpm predev:*)",
       "Bash(find:*)",
-      "Bash(npx nhp:*)"
+      "Bash(npx nhp:*)",
+      "Bash(echo:*)",
+      "Bash(pnpm --filter \"@notehub/fs-driver-tauri\" build:*)",
+      "Bash(pnpm --filter \"@notehub/synapse\" build:*)",
+      "Bash(pnpm --filter \"@notehub/fs-driver-capacitor\" build:*)",
+      "Bash(pnpm -r build:*)",
+      "Bash(pnpm --filter \"@notehub/settings\" build:*)",
+      "Bash(pnpm --filter \"*dialog*\" build:*)",
+      "Bash(pnpm:*)",
+      "Bash(git stash:*)",
+      "Bash(npx vite build:*)",
+      "Bash(tsc:*)",
+      "Bash(python -c \":*)"
     ]
   }
 }

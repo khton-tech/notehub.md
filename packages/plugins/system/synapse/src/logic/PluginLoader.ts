@@ -145,7 +145,16 @@ export class PluginLoader {
      */
     async loadAll(): Promise<void> {
         for (const [id, record] of this.discoveredPlugins) {
-            // In the future, check enabled state from settings here
+            // Check if plugin is disabled in config
+            try {
+                const disabled = await this.app.api.invoke('config:get', `synapse.disabled.${id}`);
+                if (disabled === true) {
+                    this.log('info', `Skipping disabled plugin: ${id}`);
+                    record.status = 'Inactive';
+                    continue;
+                }
+            } catch { /* config not available, load by default */ }
+
             if (record.isNhp) {
                 try {
                     const buffer = await this.app.api.invoke('fs:read-file', record.sourcePath) as Uint8Array;
@@ -294,16 +303,18 @@ export class PluginLoader {
             }
 
             try {
-                // Step 1: Clean up context
-                if (record.context) {
-                    await record.context.cleanup();
-                }
-
-                // Step 2: Call appropriate unload method
+                // Step 1: Call appropriate unload method first so the plugin can
+                // clean up its own external registrations (layout zones, controllers, etc.)
+                // via invokeApi before the context is disposed.
                 if (this.isNotehubPlugin(record.plugin)) {
                     await record.plugin.onunload();
                 } else {
                     await record.plugin.unload(this.app);
+                }
+
+                // Step 2: Clean up context (unregister APIs, subscriptions, dispose)
+                if (record.context) {
+                    await record.context.cleanup();
                 }
 
                 // Step 3: Clean up SystemJS registry

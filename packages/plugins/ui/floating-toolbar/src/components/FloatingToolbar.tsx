@@ -92,10 +92,10 @@ const styles: Record<string, React.CSSProperties> = {
         display: 'flex',
         gap: '2px',
         padding: '4px 6px',
-        backgroundColor: 'var(--nh-surface-elevated, #1e1e1e)',
-        border: '1px solid var(--nh-border-subtle, rgba(255,255,255,0.1))',
+        backgroundColor: 'var(--nh-bg-surface)',
+        border: '1px solid var(--nh-border-secondary)',
         borderRadius: '8px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)',
+        boxShadow: 'var(--nh-shadow-md)',
         zIndex: 300,
         transform: 'translateX(-50%)',
         animation: 'floatingToolbarFadeIn 0.15s ease-out',
@@ -109,18 +109,18 @@ const styles: Record<string, React.CSSProperties> = {
         border: 'none',
         borderRadius: '4px',
         backgroundColor: 'transparent',
-        color: 'var(--nh-text-primary, #e0e0e0)',
+        color: 'var(--nh-text-primary)',
         cursor: 'pointer',
         transition: 'background-color 0.1s, color 0.1s',
     },
     buttonHover: {
-        backgroundColor: 'var(--nh-surface-hover, rgba(255,255,255,0.1))',
-        color: 'var(--nh-accent, #60a5fa)',
+        backgroundColor: 'var(--nh-bg-hover)',
+        color: 'var(--nh-accent-primary)',
     },
     separator: {
         width: '1px',
         height: '20px',
-        backgroundColor: 'var(--nh-border-subtle, rgba(255,255,255,0.1))',
+        backgroundColor: 'var(--nh-border-subtle)',
         margin: '4px 4px',
     },
 };
@@ -136,14 +136,29 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
     onAction,
 }) => {
     const [hoveredButton, setHoveredButton] = React.useState<string | null>(null);
+    const toolbarRef = React.useRef<HTMLDivElement>(null);
+    const [halfWidth, setHalfWidth] = React.useState(140); // fallback estimate for ~260px toolbar
+
+    // Measure actual toolbar width after mount to fix off-screen clamping
+    React.useLayoutEffect(() => {
+        if (toolbarRef.current) {
+            setHalfWidth(toolbarRef.current.offsetWidth / 2);
+        }
+    }, [state.visible]);
 
     if (!state.visible) {
         return null;
     }
 
-    // Ensure toolbar stays within viewport
-    const adjustedY = Math.max(50, state.position.y); // At least 50px from top
-    const adjustedX = Math.max(100, Math.min(state.position.x, window.innerWidth - 100));
+    const margin = 8;
+    // Clamp X so toolbar never goes off-screen (accounts for translateX(-50%))
+    const adjustedX = Math.max(
+        halfWidth + margin,
+        Math.min(state.position.x, window.innerWidth - halfWidth - margin)
+    );
+    // Ensure toolbar has room above the selection; if not, flip below
+    const spaceAbove = state.position.y - 40;
+    const adjustedY = spaceAbove < margin ? state.position.y + 8 : spaceAbove;
 
     return (
         <>
@@ -161,10 +176,11 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
                 }
             `}</style>
             <div
+                ref={toolbarRef}
                 style={{
                     ...styles.container,
                     left: adjustedX,
-                    top: adjustedY - 40, // Position above selection
+                    top: adjustedY,
                 }}
                 onMouseDown={(e) => e.preventDefault()} // Prevent selection loss
             >

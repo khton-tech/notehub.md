@@ -114,5 +114,12 @@ export interface IFileSystem {
      * @param newPath - New path
      */
     rename(oldPath: string, newPath: string): Promise<void>;
+
+    /**
+     * Open a native file picker dialog
+     * @param options - Filter options (extensions, mime types)
+     * @returns Selected file path or null if cancelled
+     */
+    pickFile(options?: { extensions?: string[]; mimeTypes?: string[] }): Promise<string | null>;
 }
 

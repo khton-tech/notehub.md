@@ -103,10 +103,6 @@ export abstract class ReactBridgeWidget<P = any> extends WidgetType {
         // Eliminate 300ms tap delay on mobile and prevent double-tap zoom
         container.style.touchAction = 'manipulation';
 
-        // Ensure minimum touch target for mobile (44×44 CSS pixels per Apple HIG / WCAG 2.5.5)
-        container.style.minHeight = '44px';
-        container.style.minWidth = '44px';
-
         // CAPTURE PHASE: Stop propagation so CodeMirror (which listens on bubble) never sees events.
         // IMPORTANT: We only preventDefault on mousedown (desktop) to prevent CM text selection.
         // We must NOT preventDefault on touchstart — doing so kills the touchstart→touchend→click
