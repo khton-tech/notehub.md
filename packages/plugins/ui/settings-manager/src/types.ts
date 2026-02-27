@@ -51,6 +51,8 @@ export interface SettingsTab {
     icon: string;
     /** Sort order for tabs (lower = first) */
     order: number;
+    /** Category for grouping in UI */
+    category?: 'core' | 'custom';
 }
 
 // ============================================================================

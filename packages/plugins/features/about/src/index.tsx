@@ -24,7 +24,8 @@ export class AboutPlugin extends SystemPlugin {
             id: 'about',
             label: 'About',
             icon: 'info',
-            order: 999
+            order: 999,
+            category: 'core'
         });
 
         // Register Custom View

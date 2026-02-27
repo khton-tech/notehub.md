@@ -100,7 +100,8 @@ export class SynapsePlugin extends SystemPlugin {
                 id: 'plugins',
                 label: 'Plugins',
                 order: 100,
-                icon: 'package'
+                icon: 'package',
+                category: 'core'
             });
 
             // Register custom view for the plugins tab

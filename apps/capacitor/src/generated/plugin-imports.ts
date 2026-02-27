@@ -3,7 +3,7 @@
  * DO NOT EDIT MANUALLY
  *
  * Platform: capacitor
- * Generated: 2026-02-19T15:03:27.671Z
+ * Generated: 2026-02-27T08:23:47.032Z
  * Plugins: 28
  */
 import type { PluginModule } from '@notehub/app-bootstrap';
@@ -29,10 +29,10 @@ export async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/fs-manager');
         case '@notehub/keymap':
             return import('@notehub/keymap');
-        case '@notehub/logger':
-            return import('@notehub/logger');
         case '@notehub/state-manager':
             return import('@notehub/state-manager');
+        case '@notehub/logger':
+            return import('@notehub/logger');
         case '@notehub/synapse':
             return import('@notehub/synapse');
         case '@notehub/titlebar':
@@ -42,10 +42,10 @@ export async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/ck-standard');
         case '@notehub/context-menu':
             return import('@notehub/context-menu');
-        case '@notehub/dialog-manager':
-            return import('@notehub/dialog-manager');
         case '@notehub/controllers-manager':
             return import('@notehub/controllers-manager');
+        case '@notehub/dialog-manager':
+            return import('@notehub/dialog-manager');
         case '@notehub/icon-manager':
             return import('@notehub/icon-manager');
         case '@notehub/layout-manager':
@@ -57,10 +57,10 @@ export async function importPlugin(packageName: string): Promise<PluginModule> {
         // Feature plugins
         case '@notehub/about':
             return import('@notehub/about');
-        case '@notehub/command-palette':
-            return import('@notehub/command-palette');
         case '@notehub/backlinks':
             return import('@notehub/backlinks');
+        case '@notehub/command-palette':
+            return import('@notehub/command-palette');
         case '@notehub/editor':
             return import('@notehub/editor');
         case '@notehub/explorer':

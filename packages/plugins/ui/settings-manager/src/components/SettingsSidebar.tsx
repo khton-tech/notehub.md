@@ -96,6 +96,9 @@ export const SettingsSidebar: FC<SettingsSidebarProps> = ({
         onMobileClick?.();
     };
 
+    const coreTabs = tabs.filter(t => t.category === 'core');
+    const customTabs = tabs.filter(t => t.category !== 'core');
+
     return (
         <nav className="flex flex-col h-full">
             {/* Header with Close Button */}
@@ -132,30 +135,61 @@ export const SettingsSidebar: FC<SettingsSidebarProps> = ({
                         No settings registered
                     </div>
                 ) : (
-                    tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => handleTabClick(tab.id)}
-                            className={`
-                                w-full flex items-center gap-3 px-5 py-2.5 text-left
-                                transition-colors
-                                ${activeTab === tab.id
-                                    ? 'bg-[var(--nh-accent-primary)]/15 text-[var(--nh-accent-primary)] border-l-2 border-[var(--nh-accent-primary)]'
-                                    : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-main)] hover:text-[var(--nh-text-primary)] border-l-2 border-transparent'
-                                }
-                            `}
-                        >
-                            <DynamicIcon
-                                name={tab.icon}
-                                app={app}
-                                size={18}
-                                className="shrink-0"
-                            />
-                            <span className="text-sm font-medium truncate">
-                                {tab.label}
-                            </span>
-                        </button>
-                    ))
+                    <div className="flex flex-col gap-4">
+                        {coreTabs.length > 0 && (
+                            <div>
+                                <h3 className="px-5 pb-2 text-xs font-semibold text-[var(--nh-text-muted)] uppercase tracking-wider">
+                                    Встроенные
+                                </h3>
+                                <div>
+                                    {coreTabs.map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => handleTabClick(tab.id)}
+                                            className={`
+                                                w-full flex items-center gap-3 px-5 py-2.5 text-left
+                                                transition-colors
+                                                ${activeTab === tab.id
+                                                    ? 'bg-[var(--nh-accent-primary)]/15 text-[var(--nh-accent-primary)] border-l-2 border-[var(--nh-accent-primary)]'
+                                                    : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-hover)] hover:text-[var(--nh-text-primary)] border-l-2 border-transparent'
+                                                }
+                                            `}
+                                        >
+                                            <DynamicIcon name={tab.icon} app={app} size={18} className="shrink-0" />
+                                            <span className="text-sm font-medium truncate">{tab.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {customTabs.length > 0 && (
+                            <div>
+                                <h3 className="px-5 pb-2 pt-2 text-xs font-semibold text-[var(--nh-text-muted)] uppercase tracking-wider border-t border-[var(--nh-border-subtle)]">
+                                    Сторонние
+                                </h3>
+                                <div>
+                                    {customTabs.map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => handleTabClick(tab.id)}
+                                            className={`
+                                                w-full flex items-center gap-3 px-5 py-2.5 text-left
+                                                transition-colors
+                                                ${activeTab === tab.id
+                                                    ? 'bg-[var(--nh-accent-primary)]/15 text-[var(--nh-accent-primary)] border-l-2 border-[var(--nh-accent-primary)]'
+                                                    : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-hover)] hover:text-[var(--nh-text-primary)] border-l-2 border-transparent'
+                                                }
+                                            `}
+                                        >
+                                            <DynamicIcon name={tab.icon} app={app} size={18} className="shrink-0" />
+                                            <span className="text-sm font-medium truncate">{tab.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
         </nav>

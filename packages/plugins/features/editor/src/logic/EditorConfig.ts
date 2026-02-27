@@ -26,6 +26,18 @@ export const EDITOR_CONFIG_KEYS = {
     WORD_WRAP: 'editor.word-wrap',
     /** Font size in pixels */
     FONT_SIZE: 'editor.font-size',
+    /** Tab size in spaces */
+    TAB_SIZE: 'editor.tab-size',
+    /** Auto-close brackets and quotes */
+    AUTO_CLOSE_BRACKETS: 'editor.auto-close-brackets',
+    /** Custom font family */
+    FONT_FAMILY: 'editor.font-family',
+    /** Format on save */
+    FORMAT_ON_SAVE: 'editor.format-on-save',
+    /** Auto-save file when contents change */
+    AUTOSAVE: 'file.autosave',
+    /** Auto-save delay in milliseconds */
+    AUTOSAVE_DELAY: 'file.autosave-delay',
 } as const;
 
 /**
@@ -33,12 +45,15 @@ export const EDITOR_CONFIG_KEYS = {
  * Represents the current state of editor configuration.
  */
 export interface EditorSettings {
-    /** Whether line numbers are visible */
     showLineNumbers: boolean;
-    /** Whether word wrap is enabled */
     wordWrap: boolean;
-    /** Font size in pixels */
     fontSize: number;
+    tabSize: number;
+    autoCloseBrackets: boolean;
+    fontFamily: string;
+    formatOnSave: boolean;
+    autosave: boolean;
+    autosaveDelay: number;
 }
 
 /**
@@ -49,6 +64,12 @@ export const EDITOR_CONFIG_DEFAULTS: EditorSettings = {
     showLineNumbers: true,
     wordWrap: true,
     fontSize: 16,
+    tabSize: 4,
+    autoCloseBrackets: true,
+    fontFamily: "",
+    formatOnSave: false,
+    autosave: false,
+    autosaveDelay: 1000,
 };
 
 // ============================================================================
@@ -69,7 +90,8 @@ export function registerEditorSettings(app: NotehubCore): void {
         id: 'editor',
         label: 'Editor',
         icon: 'edit',
-        order: 10
+        order: 10,
+        category: 'core'
     });
 
     // Register Typography group
@@ -88,6 +110,22 @@ export function registerEditorSettings(app: NotehubCore): void {
         order: 20
     });
 
+    // Register Behavior group
+    app.api.invoke('settings:register-group', {
+        id: 'editor-behavior',
+        tabId: 'editor',
+        label: 'Behavior',
+        order: 30
+    });
+
+    // Register File Saving group
+    app.api.invoke('settings:register-group', {
+        id: 'editor-files',
+        tabId: 'editor',
+        label: 'Files & Saving',
+        order: 40
+    });
+
     // Register setting items
     app.api.invoke('settings:register-items', [
         {
@@ -100,6 +138,26 @@ export function registerEditorSettings(app: NotehubCore): void {
             min: 8,
             max: 32,
             defaultValue: EDITOR_CONFIG_DEFAULTS.fontSize
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.FONT_FAMILY,
+            type: 'select',
+            label: 'Font Family',
+            description: 'Choose your preferred programming font',
+            groupId: 'editor-typography',
+            order: 20,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.fontFamily,
+            options: [
+                { label: 'Default', value: '' },
+                { label: 'JetBrains Mono', value: '"JetBrains Mono", monospace' },
+                { label: 'Fira Code', value: '"Fira Code", monospace' },
+                { label: 'Cascadia Code', value: '"Cascadia Code", "Cascadia Mono", monospace' },
+                { label: 'Consolas', value: 'Consolas, monospace' },
+                { label: 'Source Code Pro', value: '"Source Code Pro", monospace' },
+                { label: 'Roboto Mono', value: '"Roboto Mono", monospace' },
+                { label: 'SF Mono', value: '"SF Mono", "Apple Color Emoji", monospace' },
+                { label: 'Courier New', value: '"Courier New", Courier, monospace' }
+            ]
         },
         {
             key: EDITOR_CONFIG_KEYS.SHOW_LINE_NUMBERS,
@@ -118,6 +176,57 @@ export function registerEditorSettings(app: NotehubCore): void {
             groupId: 'editor-display',
             order: 20,
             defaultValue: EDITOR_CONFIG_DEFAULTS.wordWrap
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.TAB_SIZE,
+            type: 'number',
+            label: 'Tab Size',
+            description: 'Number of spaces per indentation level',
+            groupId: 'editor-behavior',
+            order: 10,
+            min: 2,
+            max: 8,
+            step: 2,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.tabSize
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.AUTO_CLOSE_BRACKETS,
+            type: 'toggle',
+            label: 'Auto-Close Brackets',
+            description: 'Automatically close brackets and quotes',
+            groupId: 'editor-behavior',
+            order: 20,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.autoCloseBrackets
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.FORMAT_ON_SAVE,
+            type: 'toggle',
+            label: 'Format on Save',
+            description: 'Automatically format document when saving',
+            groupId: 'editor-behavior',
+            order: 30,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.formatOnSave
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.AUTOSAVE,
+            type: 'toggle',
+            label: 'Auto-Save',
+            description: 'Automatically save files after changes',
+            groupId: 'editor-files',
+            order: 10,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.autosave
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.AUTOSAVE_DELAY,
+            type: 'number',
+            label: 'Auto-Save Delay (ms)',
+            description: 'Delay before auto-saving after a change',
+            groupId: 'editor-files',
+            order: 20,
+            min: 100,
+            max: 10000,
+            step: 100,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.autosaveDelay
         }
     ]);
 }

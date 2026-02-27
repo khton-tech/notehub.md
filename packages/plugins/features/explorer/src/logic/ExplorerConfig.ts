@@ -25,6 +25,10 @@ export const EXPLORER_CONFIG_KEYS = {
     SHOW_HIDDEN: 'explorer.show-hidden',
     /** Show folders before files in the tree */
     FOLDERS_FIRST: 'explorer.folders-first',
+    /** Confirm before deleting a file */
+    CONFIRM_DELETE: 'explorer.confirm-delete',
+    /** Open files with a single click */
+    SINGLE_CLICK_OPEN: 'explorer.single-click-open',
 } as const;
 
 /**
@@ -32,10 +36,10 @@ export const EXPLORER_CONFIG_KEYS = {
  * Represents the current state of explorer configuration.
  */
 export interface ExplorerSettings {
-    /** Whether hidden files are visible */
     showHidden: boolean;
-    /** Whether folders are shown before files */
     foldersFirst: boolean;
+    confirmDelete: boolean;
+    singleClickOpen: boolean;
 }
 
 /**
@@ -45,6 +49,8 @@ export interface ExplorerSettings {
 export const EXPLORER_CONFIG_DEFAULTS: ExplorerSettings = {
     showHidden: false,
     foldersFirst: true,
+    confirmDelete: true,
+    singleClickOpen: true,
 };
 
 // ============================================================================
@@ -63,7 +69,8 @@ export function registerExplorerSettings(app: NotehubCore): void {
         id: 'files',
         label: 'Files',
         icon: 'folder',
-        order: 20
+        order: 20,
+        category: 'core'
     });
 
     // Register File Explorer group
@@ -72,6 +79,14 @@ export function registerExplorerSettings(app: NotehubCore): void {
         tabId: 'files',
         label: 'File Explorer',
         order: 10
+    });
+
+    // Register Behavior group
+    app.api.invoke('settings:register-group', {
+        id: 'explorer-behavior',
+        tabId: 'files',
+        label: 'Behavior',
+        order: 20
     });
 
     // Register setting items
@@ -93,6 +108,24 @@ export function registerExplorerSettings(app: NotehubCore): void {
             groupId: 'explorer-display',
             order: 20,
             defaultValue: EXPLORER_CONFIG_DEFAULTS.foldersFirst
+        },
+        {
+            key: EXPLORER_CONFIG_KEYS.SINGLE_CLICK_OPEN,
+            type: 'toggle',
+            label: 'Single Click to Open',
+            description: 'Open files with a single click instead of double click',
+            groupId: 'explorer-behavior',
+            order: 10,
+            defaultValue: EXPLORER_CONFIG_DEFAULTS.singleClickOpen
+        },
+        {
+            key: EXPLORER_CONFIG_KEYS.CONFIRM_DELETE,
+            type: 'toggle',
+            label: 'Confirm File Deletion',
+            description: 'Ask for confirmation before moving files to trash',
+            groupId: 'explorer-behavior',
+            order: 20,
+            defaultValue: EXPLORER_CONFIG_DEFAULTS.confirmDelete
         }
     ]);
 }

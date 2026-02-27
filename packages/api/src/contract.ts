@@ -243,6 +243,8 @@ export interface SettingsTabDef {
     icon: string;
     /** Sort order (lower = first) */
     order: number;
+    /** Category for grouping in UI */
+    category?: 'core' | 'custom';
 }
 
 /**

@@ -11,6 +11,7 @@ export const registerThemeSettings = (app: NotehubCore): void => {
         label: 'Appearance',
         icon: 'palette',
         order: 2,
+        category: 'core',
     });
 
     // Register Groups
@@ -73,6 +74,34 @@ export const registerThemeSettings = (app: NotehubCore): void => {
         description: 'Pick a custom accent color',
         type: 'color',
         defaultValue: '#6b5ce7',
+        order: 2,
+    });
+
+    // Register User Interface Group
+    app.api.invoke('settings:register-group', {
+        id: 'theme-ui',
+        tabId: 'theme',
+        label: 'User Interface',
+        order: 3,
+    });
+
+    app.api.invoke('settings:register-item', {
+        key: 'ui.animations',
+        groupId: 'theme-ui',
+        label: 'Enable Animations',
+        description: 'Toggle UI animations and transitions',
+        type: 'toggle',
+        defaultValue: true,
+        order: 1,
+    });
+
+    app.api.invoke('settings:register-item', {
+        key: 'ui.sidebar-width',
+        groupId: 'theme-ui',
+        label: 'Default Sidebar Width',
+        description: 'Width of the sidebar in pixels',
+        type: 'number',
+        defaultValue: 250,
         order: 2,
     });
 };

@@ -1,0 +1,19 @@
+{
+    "id": "ext.p2p-sync",
+    "name": "P2P Sync",
+    "version": "0.1.0",
+    "type": "feature",
+    "description": "Seamless P2P file synchronization using WebRTC.",
+    "main": "dist/main.js",
+    "author": "Custom",
+    "license": "MIT",
+    "dependencies": [
+        "peerjs"
+    ],
+    "permissions": [
+        "fs:read-text-file",
+        "fs:write-text-file",
+        "settings:register-tab",
+        "settings:register-custom-view"
+    ]
+}

@@ -10,6 +10,24 @@ export default defineConfig({
         port: 1420,
         strictPort: true,
         host: process.env.TAURI_DEV_HOST || false,
+        hmr: process.env.TAURI_DEV_HOST
+            ? {
+                protocol: 'ws',
+                host: process.env.TAURI_DEV_HOST,
+                port: 1421,
+            }
+            : undefined,
+        watch: {
+            ignored: ['**/src-tauri/**'],
+        },
+        cors: {
+            origin: true,
+            credentials: true
+        },
+        headers: {
+            // Need allows all origins to fix "missing Origin header"
+            'Access-Control-Allow-Origin': '*',
+        }
     },
 
     // Env prefix for Tauri

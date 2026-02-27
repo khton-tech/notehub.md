@@ -7,11 +7,16 @@
   },
   "vault.history": [
     {
+      "path": "C:\\Users\\khton\\Desktop\\Пример\\Тест ваулт",
+      "name": "Тест ваулт",
+      "lastOpened": 1772180504826
+    },
+    {
       "path": "C:\\Users\\khton\\Documents\\Vault",
       "name": "Vault",
-      "lastOpened": 1771513426302
+      "lastOpened": 1772178505382
     }
   ],
   "theme.current": "deep-space",
-  "vault.last-opened": "C:\\Users\\khton\\Documents\\Vault"
+  "vault.last-opened": "C:\\Users\\khton\\Desktop\\Пример\\Тест ваулт"
 }

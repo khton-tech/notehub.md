@@ -72,6 +72,9 @@ export class TitleBarController {
             this.state.isMaximized = await this.tauriWindow.isMaximized();
 
             // ⚡ FIX E1: Poll dirty state from editor
+            if (this.dirtyCheckInterval) {
+                clearInterval(this.dirtyCheckInterval);
+            }
             this.dirtyCheckInterval = setInterval(async () => {
                 try {
                     const isDirty = await this.app.api.invoke<boolean>('editor:is-dirty');

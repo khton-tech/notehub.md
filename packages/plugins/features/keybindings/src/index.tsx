@@ -23,7 +23,8 @@ export class KeybindingsPlugin extends SystemPlugin {
             id: 'keybindings',
             label: 'Hotkeys',
             icon: 'keyboard',
-            order: 20
+            order: 20,
+            category: 'core'
         });
 
         // Register custom view

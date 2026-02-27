@@ -330,6 +330,14 @@ export class ThemeManagerPlugin extends SystemPlugin {
                 box-shadow: 0 0 0 2px var(--nh-bg-main), 0 0 0 4px var(--nh-accent-primary);
             }
 
+            /* Animations toggle */
+            body.nh-disable-animations *,
+            body.nh-disable-animations *::before,
+            body.nh-disable-animations *::after {
+                animation: none !important;
+                transition: none !important;
+            }
+
             /* Reduced motion preference - DISABLED as it causes "on speed" effect */
             /*
             @media (prefers-reduced-motion: reduce) {
@@ -585,6 +593,12 @@ export class ThemeManagerPlugin extends SystemPlugin {
             if (fallbackPalette) await this.applyTheme(fallbackPalette);
         }
 
+        // Apply UI Settings (Animations)
+        const uiAnimations = await this.app.api.invoke<boolean>('config:get', 'ui.animations');
+        if (uiAnimations === false) {
+            document.body.classList.add('nh-disable-animations');
+        }
+
         // Subscribe to accent color changes for live preview
         this.registerEvent('config:updated', async (payload: any) => {
             if (payload.key === 'theme.accent-primary') {
@@ -604,6 +618,12 @@ export class ThemeManagerPlugin extends SystemPlugin {
                 // Handle external theme changes (e.g. from settings sync)
                 if (payload.value !== this.currentTheme) {
                     await this.handleSet(payload.value as string);
+                }
+            } else if (payload.key === 'ui.animations') {
+                if (payload.value) {
+                    document.body.classList.remove('nh-disable-animations');
+                } else {
+                    document.body.classList.add('nh-disable-animations');
                 }
             }
         });

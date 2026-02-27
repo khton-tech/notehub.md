@@ -52,6 +52,17 @@ export class ExplorerController {
     // ========== Settings ==========
 
     private showHidden: boolean = false;
+    private confirmDelete: boolean = true;
+    private singleClickOpen: boolean = true;
+
+    // Getters for settings
+    getSettings() {
+        return {
+            showHidden: this.showHidden,
+            confirmDelete: this.confirmDelete,
+            singleClickOpen: this.singleClickOpen
+        };
+    }
 
     private handleShowHiddenChange(value: unknown): void {
         if (typeof value === 'boolean' && value !== this.showHidden) {
@@ -89,6 +100,20 @@ export class ExplorerController {
             );
             this.showHidden = showHidden ?? false;
 
+            const confirmDelete = await this.app.api.invoke<boolean>(
+                'config:get',
+                'explorer.confirm-delete',
+                true
+            );
+            this.confirmDelete = confirmDelete ?? true;
+
+            const singleClickOpen = await this.app.api.invoke<boolean>(
+                'config:get',
+                'explorer.single-click-open',
+                true
+            );
+            this.singleClickOpen = singleClickOpen ?? true;
+
             // Restore expanded paths
             const expanded = await this.app.api.invoke<string[] | undefined>(
                 'config:get',
@@ -101,12 +126,20 @@ export class ExplorerController {
             }
         } catch {
             this.showHidden = false;
+            this.confirmDelete = true;
+            this.singleClickOpen = true;
         }
 
         const configHandler = (payload: any) => {
             const { key, value } = payload as { key: string; value: unknown };
             if (key === EXPLORER_CONFIG_KEY_SHOW_HIDDEN) {
                 this.handleShowHiddenChange(value);
+            } else if (key === 'explorer.confirm-delete' && typeof value === 'boolean') {
+                this.confirmDelete = value;
+                this.notify();
+            } else if (key === 'explorer.single-click-open' && typeof value === 'boolean') {
+                this.singleClickOpen = value;
+                this.notify();
             }
         };
         this.app.events.on('config:updated', configHandler);
@@ -571,13 +604,15 @@ export class ExplorerController {
         const itemName = node?.name || getFileName(path);
         const isDirectory = node?.isDir;
 
-        const confirmed = await this.app.api.invoke<boolean>(
-            'dialog:confirm',
-            'Confirm Delete',
-            `Are you sure you want to delete "${itemName}"?`
-        );
+        if (this.confirmDelete) {
+            const confirmed = await this.app.api.invoke<boolean>(
+                'dialog:confirm',
+                'Confirm Delete',
+                `Are you sure you want to delete "${itemName}"?`
+            );
 
-        if (!confirmed) return false;
+            if (!confirmed) return false;
+        }
 
         const parentPath = getParentPath(path);
         const parentNode = this.nodes.get(parentPath);
