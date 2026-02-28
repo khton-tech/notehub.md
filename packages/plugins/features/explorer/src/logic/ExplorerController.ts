@@ -156,9 +156,19 @@ export class ExplorerController {
         this.app.events.on('editor:file-opened', fileOpenedHandler);
         this.app.events.on('editor:open', fileOpenedHandler);
 
+        // When the editor closes (e.g. last tab removed), clear active path so
+        // that re-clicking the same file in the tree triggers a fresh open.
+        const fileClosedHandler = () => {
+            this._activeFilePath = null;
+            this._selectedPath = null;
+            this.notify();
+        };
+        this.app.events.on('editor:file-closed', fileClosedHandler);
+
         this.eventCleanups.push(() => {
             this.app.events.off('editor:file-opened', fileOpenedHandler);
             this.app.events.off('editor:open', fileOpenedHandler);
+            this.app.events.off('editor:file-closed', fileClosedHandler);
         });
 
         // Subscribe to fs-manager events so the tree updates on ALL platforms
@@ -168,40 +178,33 @@ export class ExplorerController {
             const { path, isNew } = payload as { path: string; isNew: boolean };
             if (!path || !this.rootPath || !isNew) return; // Only care about new files
             if (this.ignoredPaths.has(path)) return;
-            const parentPath = getParentPath(path);
-            if (this.nodes.has(parentPath)) {
-                this.loadDir(parentPath);
-            }
+            this.reloadForPath(getParentPath(path));
         };
 
         const fsDirCreatedHandler = (payload: any) => {
             const { path } = payload as { path: string };
             if (!path || !this.rootPath) return;
             if (this.ignoredPaths.has(path)) return;
-            const parentPath = getParentPath(path);
-            if (this.nodes.has(parentPath)) {
-                this.loadDir(parentPath);
-            }
+            this.reloadForPath(getParentPath(path));
         };
 
         const fsDeletedHandler = (payload: any) => {
             const { path } = payload as { path: string; isDirectory: boolean };
             if (!path || !this.rootPath) return;
             if (this.ignoredPaths.has(path)) return;
-            const parentPath = getParentPath(path);
-            if (this.nodes.has(parentPath)) {
-                this.loadDir(parentPath);
-            }
+            this.reloadForPath(getParentPath(path));
         };
 
         const fsRenamedHandler = (payload: any) => {
             const { oldPath, newPath } = payload as { oldPath: string; newPath: string };
             if (!oldPath || !newPath || !this.rootPath) return;
             if (this.ignoredPaths.has(oldPath) || this.ignoredPaths.has(newPath)) return;
+            this.reloadForPath(getParentPath(oldPath));
             const oldParent = getParentPath(oldPath);
             const newParent = getParentPath(newPath);
-            if (this.nodes.has(oldParent)) this.loadDir(oldParent);
-            if (newParent !== oldParent && this.nodes.has(newParent)) this.loadDir(newParent);
+            if (normalizePath(newParent) !== normalizePath(oldParent)) {
+                this.reloadForPath(newParent);
+            }
         };
 
         this.app.events.on('fs:written', fsWrittenHandler as any);
@@ -293,23 +296,54 @@ export class ExplorerController {
         this.watcherTimers.set(key, timer);
     }
 
+    /**
+     * Reloads the nearest loaded ancestor directory for the given path.
+     * Walks up the tree until it finds a node we know about, then reloads it.
+     * Returns true if a reload was triggered.
+     */
+    private reloadForPath(path: string): boolean {
+        if (!this.rootPath) return false;
+
+        const rootNorm = normalizePath(this.rootPath);
+        const pathNorm = normalizePath(path);
+
+        // Only handle paths within the vault
+        if (!pathNorm.startsWith(rootNorm)) return false;
+
+        let current = path;
+        while (true) {
+            if (this.nodes.has(current)) {
+                const node = this.nodes.get(current);
+                if (node?.isDir) {
+                    this.loadDir(current);
+                    return true;
+                }
+            }
+
+            // Stop after checking the root itself
+            if (normalizePath(current) === rootNorm) break;
+
+            const parent = getParentPath(current);
+            if (parent === current) break; // reached filesystem root
+            current = parent;
+        }
+
+        // Fallback: reload vault root
+        if (this.nodes.has(this.rootPath)) {
+            this.loadDir(this.rootPath);
+            return true;
+        }
+
+        return false;
+    }
+
     private handleFsEvent(eventPath: string, parentPath: string) {
         if (this.isDestroyed) return;
 
-        const normalizedRootPath = this.rootPath ? normalizePath(this.rootPath) : '';
-
-        // Case 1: Parent is known and loaded -> Reload Parent
-        if (this.nodes.has(parentPath)) {
-            const parentNode = this.nodes.get(parentPath);
-            if (parentNode && (parentNode.isLoaded || this.expandedPaths.has(parentPath))) {
-                this.loadDir(parentPath);
-                return;
-            }
-        }
-
-        // Case 2: Parent is root (edge case for some OS watchers)
-        if (parentPath === normalizedRootPath || eventPath === normalizedRootPath) {
-            this.loadDir(this.rootPath!);
+        // Try to reload nearest loaded ancestor of the parent directory.
+        // If parentPath is outside the vault (e.g. eventPath IS the root), fall back to eventPath.
+        if (!this.reloadForPath(parentPath)) {
+            this.reloadForPath(eventPath);
         }
     }
 
@@ -633,12 +667,16 @@ export class ExplorerController {
 
         // --- FS ---
         try {
-            await this.withWatcherIgnored(path, async () => {
-                if (isDirectory) {
-                    await this.app.api.invoke('fs:remove-dir' as any, path, { recursive: true });
-                } else {
-                    await this.app.api.invoke('fs:remove-file' as any, path);
-                }
+            // Suppress both the deleted path AND its parent directory to prevent
+            // the OS watcher from triggering a stale reload before deletion completes.
+            await this.withWatcherIgnored(parentPath, async () => {
+                await this.withWatcherIgnored(path, async () => {
+                    if (isDirectory) {
+                        await this.app.api.invoke('fs:remove-dir' as any, path, { recursive: true });
+                    } else {
+                        await this.app.api.invoke('fs:remove-file' as any, path);
+                    }
+                });
             });
         } catch (error: any) {
             console.error('Failed to delete:', error);

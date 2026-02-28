@@ -362,6 +362,13 @@ export class EditorPlugin extends SystemPlugin {
         // Listen for file selection events from the explorer plugin
         this.registerEvent('explorer:file-selected', this.handleFileSelected);
 
+        // When the tab bar closes all tabs it emits editor:file-closed directly
+        // (without going through EditorController.closeFile). Reset internal state
+        // so that openFile() doesn't skip reopening the same path next time.
+        this.registerEvent('editor:file-closed', () => {
+            this.controller?.resetCurrentFile();
+        });
+
         // Register API for Portals (replacing dynamic widgets)
         this.registerApi('editor:register-portal', (spec: PortalSpec) => {
             // Validate incoming spec

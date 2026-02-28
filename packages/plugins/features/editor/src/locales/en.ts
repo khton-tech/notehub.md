@@ -6,7 +6,6 @@ export default {
                 typography: 'Typography',
                 display: 'Display',
                 behavior: 'Behavior',
-                files: 'Files & Saving'
             },
             items: {
                 fontSize: {
@@ -40,14 +39,6 @@ export default {
                     label: 'Format on Save',
                     description: 'Automatically format document when saving'
                 },
-                autosave: {
-                    label: 'Auto-Save',
-                    description: 'Automatically save files after changes'
-                },
-                autosaveDelay: {
-                    label: 'Auto-Save Delay (ms)',
-                    description: 'Delay before auto-saving after a change'
-                }
             }
         }
     }

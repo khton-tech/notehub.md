@@ -298,18 +298,6 @@ export class EditorController {
                     changed = true;
                 }
                 break;
-            case EDITOR_CONFIG_KEYS.AUTOSAVE:
-                if (typeof value === 'boolean') {
-                    this.currentSettings.autosave = value;
-                    changed = true;
-                }
-                break;
-            case EDITOR_CONFIG_KEYS.AUTOSAVE_DELAY:
-                if (typeof value === 'number') {
-                    this.currentSettings.autosaveDelay = value;
-                    changed = true;
-                }
-                break;
         }
 
         if (changed) {
@@ -429,17 +417,6 @@ export class EditorController {
                 EDITOR_CONFIG_KEYS.FORMAT_ON_SAVE,
                 EDITOR_CONFIG_DEFAULTS.formatOnSave
             );
-            const autosave = await this.app.api.invoke<boolean>(
-                'config:get',
-                EDITOR_CONFIG_KEYS.AUTOSAVE,
-                EDITOR_CONFIG_DEFAULTS.autosave
-            );
-            const autosaveDelay = await this.app.api.invoke<number>(
-                'config:get',
-                EDITOR_CONFIG_KEYS.AUTOSAVE_DELAY,
-                EDITOR_CONFIG_DEFAULTS.autosaveDelay
-            );
-
             this.currentSettings = {
                 showLineNumbers: showLineNumbers ?? EDITOR_CONFIG_DEFAULTS.showLineNumbers,
                 wordWrap: wordWrap ?? EDITOR_CONFIG_DEFAULTS.wordWrap,
@@ -448,8 +425,6 @@ export class EditorController {
                 autoCloseBrackets: autoCloseBrackets ?? EDITOR_CONFIG_DEFAULTS.autoCloseBrackets,
                 fontFamily: fontFamily ?? EDITOR_CONFIG_DEFAULTS.fontFamily,
                 formatOnSave: formatOnSave ?? EDITOR_CONFIG_DEFAULTS.formatOnSave,
-                autosave: autosave ?? EDITOR_CONFIG_DEFAULTS.autosave,
-                autosaveDelay: autosaveDelay ?? EDITOR_CONFIG_DEFAULTS.autosaveDelay,
             };
 
             this.log('info', `Settings loaded: ${JSON.stringify(this.currentSettings)}`);
@@ -624,10 +599,7 @@ export class EditorController {
             this.emitStatusReport('ready', 'Unsaved changes');
         }
 
-        // Trigger debounced save only if autosave is enabled
-        if (this.currentSettings.autosave) {
-            this.debouncedSave();
-        }
+        this.debouncedSave();
     }
 
     /**
@@ -643,10 +615,9 @@ export class EditorController {
             clearTimeout(this.saveTimeoutId);
         }
 
-        // Set new timer using the configured delay
         this.saveTimeoutId = setTimeout(() => {
             this.saveFile();
-        }, this.currentSettings.autosaveDelay);
+        }, 1000);
     }
 
     /**
@@ -745,6 +716,23 @@ export class EditorController {
      * 
      * Called when the active file is deleted externally.
      */
+    /**
+     * Resets internal file state without emitting any events.
+     * Called when an external source (e.g. tab bar) has already emitted
+     * `editor:file-closed` and we only need to clear the controller state
+     * so that `openFile()` doesn't treat the path as "already open".
+     */
+    resetCurrentFile(): void {
+        if (this.saveTimeoutId !== null) {
+            clearTimeout(this.saveTimeoutId);
+            this.saveTimeoutId = null;
+        }
+        this.currentPath = null;
+        this.lastKnownContent = '';
+        this.isDirty = false;
+        this.status = 'idle';
+    }
+
     closeFile(): void {
         // Clear pending save timer
         if (this.saveTimeoutId !== null) {

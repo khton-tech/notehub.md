@@ -34,10 +34,6 @@ export const EDITOR_CONFIG_KEYS = {
     FONT_FAMILY: 'editor.font-family',
     /** Format on save */
     FORMAT_ON_SAVE: 'editor.format-on-save',
-    /** Auto-save file when contents change */
-    AUTOSAVE: 'file.autosave',
-    /** Auto-save delay in milliseconds */
-    AUTOSAVE_DELAY: 'file.autosave-delay',
 } as const;
 
 /**
@@ -52,8 +48,6 @@ export interface EditorSettings {
     autoCloseBrackets: boolean;
     fontFamily: string;
     formatOnSave: boolean;
-    autosave: boolean;
-    autosaveDelay: number;
 }
 
 /**
@@ -68,8 +62,6 @@ export const EDITOR_CONFIG_DEFAULTS: EditorSettings = {
     autoCloseBrackets: true,
     fontFamily: "",
     formatOnSave: false,
-    autosave: false,
-    autosaveDelay: 1000,
 };
 
 // ============================================================================
@@ -91,7 +83,6 @@ export async function registerEditorSettings(app: NotehubCore): Promise<void> {
     const groupTypography = await t('editor.settings.groups.typography') || 'Typography';
     const groupDisplay = await t('editor.settings.groups.display') || 'Display';
     const groupBehavior = await t('editor.settings.groups.behavior') || 'Behavior';
-    const groupFiles = await t('editor.settings.groups.files') || 'Files & Saving';
 
     // Register Editor tab
     app.api.invoke('settings:register-tab', {
@@ -126,14 +117,6 @@ export async function registerEditorSettings(app: NotehubCore): Promise<void> {
         order: 30
     });
 
-    // Register File Saving group
-    app.api.invoke('settings:register-group', {
-        id: 'editor-files',
-        tabId: 'editor',
-        label: groupFiles,
-        order: 40
-    });
-
     // Fetch localized items
     const fsLabel = await t('editor.settings.items.fontSize.label') || 'Font Size';
     const fsDesc = await t('editor.settings.items.fontSize.description') || 'Editor font size in pixels';
@@ -156,12 +139,6 @@ export async function registerEditorSettings(app: NotehubCore): Promise<void> {
 
     const fosLabel = await t('editor.settings.items.formatOnSave.label') || 'Format on Save';
     const fosDesc = await t('editor.settings.items.formatOnSave.description') || 'Automatically format document when saving';
-
-    const asLabel = await t('editor.settings.items.autosave.label') || 'Auto-Save';
-    const asDesc = await t('editor.settings.items.autosave.description') || 'Automatically save files after changes';
-
-    const asdLabel = await t('editor.settings.items.autosaveDelay.label') || 'Auto-Save Delay (ms)';
-    const asdDesc = await t('editor.settings.items.autosaveDelay.description') || 'Delay before auto-saving after a change';
 
     // Register setting items
     app.api.invoke('settings:register-items', [
@@ -243,27 +220,6 @@ export async function registerEditorSettings(app: NotehubCore): Promise<void> {
             groupId: 'editor-behavior',
             order: 30,
             defaultValue: EDITOR_CONFIG_DEFAULTS.formatOnSave
-        },
-        {
-            key: EDITOR_CONFIG_KEYS.AUTOSAVE,
-            type: 'toggle',
-            label: asLabel,
-            description: asDesc,
-            groupId: 'editor-files',
-            order: 10,
-            defaultValue: EDITOR_CONFIG_DEFAULTS.autosave
-        },
-        {
-            key: EDITOR_CONFIG_KEYS.AUTOSAVE_DELAY,
-            type: 'number',
-            label: asdLabel,
-            description: asdDesc,
-            groupId: 'editor-files',
-            order: 20,
-            min: 100,
-            max: 10000,
-            step: 100,
-            defaultValue: EDITOR_CONFIG_DEFAULTS.autosaveDelay
         }
     ]);
 }

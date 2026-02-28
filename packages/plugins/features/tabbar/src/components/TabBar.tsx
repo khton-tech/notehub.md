@@ -82,6 +82,8 @@ export function TabBar({ app, tabs, activeTabId, onActivate, onClose, onReorder 
     // pointer leaves the originating element.
 
     const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, idx: number) => {
+        // Don't intercept close-button clicks — pointer capture would swallow them
+        if ((e.target as HTMLElement).closest('.nh-tabbar__close')) return;
         // Only primary button on mouse; any pointer type (touch, pen) is fine
         if (e.pointerType === 'mouse' && e.button !== 0) return;
 
