@@ -132,9 +132,6 @@ export class EditorController {
      */
     private activeOpens: Map<string, Promise<string>> = new Map();
 
-    /** Debounce delay in milliseconds (1 second) */
-    private readonly SAVE_DEBOUNCE_MS = 1000;
-
     // ========== Settings State ==========
 
     /** Current editor settings from config-manager */
@@ -277,6 +274,42 @@ export class EditorController {
                     changed = true;
                 }
                 break;
+            case EDITOR_CONFIG_KEYS.TAB_SIZE:
+                if (typeof value === 'number') {
+                    this.currentSettings.tabSize = value;
+                    changed = true;
+                }
+                break;
+            case EDITOR_CONFIG_KEYS.AUTO_CLOSE_BRACKETS:
+                if (typeof value === 'boolean') {
+                    this.currentSettings.autoCloseBrackets = value;
+                    changed = true;
+                }
+                break;
+            case EDITOR_CONFIG_KEYS.FONT_FAMILY:
+                if (typeof value === 'string') {
+                    this.currentSettings.fontFamily = value;
+                    changed = true;
+                }
+                break;
+            case EDITOR_CONFIG_KEYS.FORMAT_ON_SAVE:
+                if (typeof value === 'boolean') {
+                    this.currentSettings.formatOnSave = value;
+                    changed = true;
+                }
+                break;
+            case EDITOR_CONFIG_KEYS.AUTOSAVE:
+                if (typeof value === 'boolean') {
+                    this.currentSettings.autosave = value;
+                    changed = true;
+                }
+                break;
+            case EDITOR_CONFIG_KEYS.AUTOSAVE_DELAY:
+                if (typeof value === 'number') {
+                    this.currentSettings.autosaveDelay = value;
+                    changed = true;
+                }
+                break;
         }
 
         if (changed) {
@@ -296,11 +329,6 @@ export class EditorController {
 
     // ========== Public API: State Access ==========
 
-    /**
-     * Set the CodeMirror EditorView reference.
-     * Called by the UI component when the editor mounts/unmounts.
-     * @param view - The EditorView instance, or null on unmount
-     */
     /**
      * Set the CodeMirror EditorView reference.
      * Called by the UI component when the editor mounts/unmounts.
@@ -381,11 +409,47 @@ export class EditorController {
                 EDITOR_CONFIG_KEYS.FONT_SIZE,
                 EDITOR_CONFIG_DEFAULTS.fontSize
             );
+            const tabSize = await this.app.api.invoke<number>(
+                'config:get',
+                EDITOR_CONFIG_KEYS.TAB_SIZE,
+                EDITOR_CONFIG_DEFAULTS.tabSize
+            );
+            const autoCloseBrackets = await this.app.api.invoke<boolean>(
+                'config:get',
+                EDITOR_CONFIG_KEYS.AUTO_CLOSE_BRACKETS,
+                EDITOR_CONFIG_DEFAULTS.autoCloseBrackets
+            );
+            const fontFamily = await this.app.api.invoke<string>(
+                'config:get',
+                EDITOR_CONFIG_KEYS.FONT_FAMILY,
+                EDITOR_CONFIG_DEFAULTS.fontFamily
+            );
+            const formatOnSave = await this.app.api.invoke<boolean>(
+                'config:get',
+                EDITOR_CONFIG_KEYS.FORMAT_ON_SAVE,
+                EDITOR_CONFIG_DEFAULTS.formatOnSave
+            );
+            const autosave = await this.app.api.invoke<boolean>(
+                'config:get',
+                EDITOR_CONFIG_KEYS.AUTOSAVE,
+                EDITOR_CONFIG_DEFAULTS.autosave
+            );
+            const autosaveDelay = await this.app.api.invoke<number>(
+                'config:get',
+                EDITOR_CONFIG_KEYS.AUTOSAVE_DELAY,
+                EDITOR_CONFIG_DEFAULTS.autosaveDelay
+            );
 
             this.currentSettings = {
                 showLineNumbers: showLineNumbers ?? EDITOR_CONFIG_DEFAULTS.showLineNumbers,
                 wordWrap: wordWrap ?? EDITOR_CONFIG_DEFAULTS.wordWrap,
                 fontSize: fontSize ?? EDITOR_CONFIG_DEFAULTS.fontSize,
+                tabSize: tabSize ?? EDITOR_CONFIG_DEFAULTS.tabSize,
+                autoCloseBrackets: autoCloseBrackets ?? EDITOR_CONFIG_DEFAULTS.autoCloseBrackets,
+                fontFamily: fontFamily ?? EDITOR_CONFIG_DEFAULTS.fontFamily,
+                formatOnSave: formatOnSave ?? EDITOR_CONFIG_DEFAULTS.formatOnSave,
+                autosave: autosave ?? EDITOR_CONFIG_DEFAULTS.autosave,
+                autosaveDelay: autosaveDelay ?? EDITOR_CONFIG_DEFAULTS.autosaveDelay,
             };
 
             this.log('info', `Settings loaded: ${JSON.stringify(this.currentSettings)}`);
@@ -560,15 +624,17 @@ export class EditorController {
             this.emitStatusReport('ready', 'Unsaved changes');
         }
 
-        // Trigger debounced save
-        this.debouncedSave();
+        // Trigger debounced save only if autosave is enabled
+        if (this.currentSettings.autosave) {
+            this.debouncedSave();
+        }
     }
 
     /**
      * Debounced save - waits for user to stop typing before saving.
      * 
      * Clears any existing timer and sets a new one. The actual save
-     * will occur after SAVE_DEBOUNCE_MS milliseconds of inactivity.
+     * will occur after autosaveDelay milliseconds of inactivity.
      * @private
      */
     private debouncedSave(): void {
@@ -577,10 +643,10 @@ export class EditorController {
             clearTimeout(this.saveTimeoutId);
         }
 
-        // Set new timer
+        // Set new timer using the configured delay
         this.saveTimeoutId = setTimeout(() => {
             this.saveFile();
-        }, this.SAVE_DEBOUNCE_MS);
+        }, this.currentSettings.autosaveDelay);
     }
 
     /**

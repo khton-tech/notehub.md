@@ -25,7 +25,8 @@ export default class AlertButtonPlugin implements NotehubPlugin {
                 id: 'api-inspector',
                 label: 'API List',
                 icon: 'list',
-                order: 100
+                order: 100,
+                category: 'core'
             });
 
             await ctx.invokeApi('settings:register-custom-view', {

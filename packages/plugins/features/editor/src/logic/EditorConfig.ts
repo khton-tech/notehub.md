@@ -26,6 +26,18 @@ export const EDITOR_CONFIG_KEYS = {
     WORD_WRAP: 'editor.word-wrap',
     /** Font size in pixels */
     FONT_SIZE: 'editor.font-size',
+    /** Tab size in spaces */
+    TAB_SIZE: 'editor.tab-size',
+    /** Auto-close brackets and quotes */
+    AUTO_CLOSE_BRACKETS: 'editor.auto-close-brackets',
+    /** Custom font family */
+    FONT_FAMILY: 'editor.font-family',
+    /** Format on save */
+    FORMAT_ON_SAVE: 'editor.format-on-save',
+    /** Auto-save file when contents change */
+    AUTOSAVE: 'file.autosave',
+    /** Auto-save delay in milliseconds */
+    AUTOSAVE_DELAY: 'file.autosave-delay',
 } as const;
 
 /**
@@ -33,12 +45,15 @@ export const EDITOR_CONFIG_KEYS = {
  * Represents the current state of editor configuration.
  */
 export interface EditorSettings {
-    /** Whether line numbers are visible */
     showLineNumbers: boolean;
-    /** Whether word wrap is enabled */
     wordWrap: boolean;
-    /** Font size in pixels */
     fontSize: number;
+    tabSize: number;
+    autoCloseBrackets: boolean;
+    fontFamily: string;
+    formatOnSave: boolean;
+    autosave: boolean;
+    autosaveDelay: number;
 }
 
 /**
@@ -49,6 +64,12 @@ export const EDITOR_CONFIG_DEFAULTS: EditorSettings = {
     showLineNumbers: true,
     wordWrap: true,
     fontSize: 16,
+    tabSize: 4,
+    autoCloseBrackets: true,
+    fontFamily: "",
+    formatOnSave: false,
+    autosave: false,
+    autosaveDelay: 1000,
 };
 
 // ============================================================================
@@ -63,20 +84,29 @@ import type { NotehubCore } from '@notehub/core';
  * 
  * @param app - NotehubCore instance
  */
-export function registerEditorSettings(app: NotehubCore): void {
+export async function registerEditorSettings(app: NotehubCore): Promise<void> {
+    const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+
+    const tabLabel = await t('editor.settings.tab') || 'Editor';
+    const groupTypography = await t('editor.settings.groups.typography') || 'Typography';
+    const groupDisplay = await t('editor.settings.groups.display') || 'Display';
+    const groupBehavior = await t('editor.settings.groups.behavior') || 'Behavior';
+    const groupFiles = await t('editor.settings.groups.files') || 'Files & Saving';
+
     // Register Editor tab
     app.api.invoke('settings:register-tab', {
         id: 'editor',
-        label: 'Editor',
+        label: tabLabel,
         icon: 'edit',
-        order: 10
+        order: 10,
+        category: 'core'
     });
 
     // Register Typography group
     app.api.invoke('settings:register-group', {
         id: 'editor-typography',
         tabId: 'editor',
-        label: 'Typography',
+        label: groupTypography,
         order: 10
     });
 
@@ -84,17 +114,62 @@ export function registerEditorSettings(app: NotehubCore): void {
     app.api.invoke('settings:register-group', {
         id: 'editor-display',
         tabId: 'editor',
-        label: 'Display',
+        label: groupDisplay,
         order: 20
     });
+
+    // Register Behavior group
+    app.api.invoke('settings:register-group', {
+        id: 'editor-behavior',
+        tabId: 'editor',
+        label: groupBehavior,
+        order: 30
+    });
+
+    // Register File Saving group
+    app.api.invoke('settings:register-group', {
+        id: 'editor-files',
+        tabId: 'editor',
+        label: groupFiles,
+        order: 40
+    });
+
+    // Fetch localized items
+    const fsLabel = await t('editor.settings.items.fontSize.label') || 'Font Size';
+    const fsDesc = await t('editor.settings.items.fontSize.description') || 'Editor font size in pixels';
+
+    const fFamLabel = await t('editor.settings.items.fontFamily.label') || 'Font Family';
+    const fFamDesc = await t('editor.settings.items.fontFamily.description') || 'Choose your preferred programming font';
+    const fFamDefOpt = await t('editor.settings.items.fontFamily.options.default') || 'Default';
+
+    const slnLabel = await t('editor.settings.items.showLineNumbers.label') || 'Show Line Numbers';
+    const slnDesc = await t('editor.settings.items.showLineNumbers.description') || 'Display line numbers in the gutter';
+
+    const wwLabel = await t('editor.settings.items.wordWrap.label') || 'Word Wrap';
+    const wwDesc = await t('editor.settings.items.wordWrap.description') || 'Wrap long lines to fit the editor width';
+
+    const tsLabel = await t('editor.settings.items.tabSize.label') || 'Tab Size';
+    const tsDesc = await t('editor.settings.items.tabSize.description') || 'Number of spaces per indentation level';
+
+    const acbLabel = await t('editor.settings.items.autoCloseBrackets.label') || 'Auto-Close Brackets';
+    const acbDesc = await t('editor.settings.items.autoCloseBrackets.description') || 'Automatically close brackets and quotes';
+
+    const fosLabel = await t('editor.settings.items.formatOnSave.label') || 'Format on Save';
+    const fosDesc = await t('editor.settings.items.formatOnSave.description') || 'Automatically format document when saving';
+
+    const asLabel = await t('editor.settings.items.autosave.label') || 'Auto-Save';
+    const asDesc = await t('editor.settings.items.autosave.description') || 'Automatically save files after changes';
+
+    const asdLabel = await t('editor.settings.items.autosaveDelay.label') || 'Auto-Save Delay (ms)';
+    const asdDesc = await t('editor.settings.items.autosaveDelay.description') || 'Delay before auto-saving after a change';
 
     // Register setting items
     app.api.invoke('settings:register-items', [
         {
             key: EDITOR_CONFIG_KEYS.FONT_SIZE,
             type: 'number',
-            label: 'Font Size',
-            description: 'Editor font size in pixels',
+            label: fsLabel,
+            description: fsDesc,
             groupId: 'editor-typography',
             order: 10,
             min: 8,
@@ -102,10 +177,30 @@ export function registerEditorSettings(app: NotehubCore): void {
             defaultValue: EDITOR_CONFIG_DEFAULTS.fontSize
         },
         {
+            key: EDITOR_CONFIG_KEYS.FONT_FAMILY,
+            type: 'select',
+            label: fFamLabel,
+            description: fFamDesc,
+            groupId: 'editor-typography',
+            order: 20,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.fontFamily,
+            options: [
+                { label: fFamDefOpt, value: '' },
+                { label: 'JetBrains Mono', value: '"JetBrains Mono", monospace' },
+                { label: 'Fira Code', value: '"Fira Code", monospace' },
+                { label: 'Cascadia Code', value: '"Cascadia Code", "Cascadia Mono", monospace' },
+                { label: 'Consolas', value: 'Consolas, monospace' },
+                { label: 'Source Code Pro', value: '"Source Code Pro", monospace' },
+                { label: 'Roboto Mono', value: '"Roboto Mono", monospace' },
+                { label: 'SF Mono', value: '"SF Mono", "Apple Color Emoji", monospace' },
+                { label: 'Courier New', value: '"Courier New", Courier, monospace' }
+            ]
+        },
+        {
             key: EDITOR_CONFIG_KEYS.SHOW_LINE_NUMBERS,
             type: 'toggle',
-            label: 'Show Line Numbers',
-            description: 'Display line numbers in the gutter',
+            label: slnLabel,
+            description: slnDesc,
             groupId: 'editor-display',
             order: 10,
             defaultValue: EDITOR_CONFIG_DEFAULTS.showLineNumbers
@@ -113,11 +208,62 @@ export function registerEditorSettings(app: NotehubCore): void {
         {
             key: EDITOR_CONFIG_KEYS.WORD_WRAP,
             type: 'toggle',
-            label: 'Word Wrap',
-            description: 'Wrap long lines to fit the editor width',
+            label: wwLabel,
+            description: wwDesc,
             groupId: 'editor-display',
             order: 20,
             defaultValue: EDITOR_CONFIG_DEFAULTS.wordWrap
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.TAB_SIZE,
+            type: 'number',
+            label: tsLabel,
+            description: tsDesc,
+            groupId: 'editor-behavior',
+            order: 10,
+            min: 2,
+            max: 8,
+            step: 2,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.tabSize
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.AUTO_CLOSE_BRACKETS,
+            type: 'toggle',
+            label: acbLabel,
+            description: acbDesc,
+            groupId: 'editor-behavior',
+            order: 20,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.autoCloseBrackets
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.FORMAT_ON_SAVE,
+            type: 'toggle',
+            label: fosLabel,
+            description: fosDesc,
+            groupId: 'editor-behavior',
+            order: 30,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.formatOnSave
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.AUTOSAVE,
+            type: 'toggle',
+            label: asLabel,
+            description: asDesc,
+            groupId: 'editor-files',
+            order: 10,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.autosave
+        },
+        {
+            key: EDITOR_CONFIG_KEYS.AUTOSAVE_DELAY,
+            type: 'number',
+            label: asdLabel,
+            description: asdDesc,
+            groupId: 'editor-files',
+            order: 20,
+            min: 100,
+            max: 10000,
+            step: 100,
+            defaultValue: EDITOR_CONFIG_DEFAULTS.autosaveDelay
         }
     ]);
 }

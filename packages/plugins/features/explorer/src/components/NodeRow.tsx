@@ -8,7 +8,7 @@
  * - Inline rename support
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { NodeRendererProps } from 'react-arborist';
 import { Icon } from '@notehub/icon-manager';
 import { useNotehub } from '@notehub/core';
@@ -43,9 +43,25 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
         if (node.isEditing) wasEditing.current = true;
     }, [node.isEditing]);
 
-    // Auto-open files when focused via keyboard navigation
+    const [singleClickOpen, setSingleClickOpen] = useState(true);
+
     useEffect(() => {
-        if (node.isFocused && !data.isDir && !node.isEditing) {
+        app.api.invoke('config:get', 'explorer.single-click-open', true).then((val: any) => {
+            setSingleClickOpen(val ?? true);
+        });
+
+        const onConfig = (payload: any) => {
+            if (payload.key === 'explorer.single-click-open') {
+                setSingleClickOpen(payload.value);
+            }
+        };
+        app.events.on('config:updated', onConfig);
+        return () => app.events.off('config:updated', onConfig);
+    }, [app]);
+
+    // Auto-open files when focused via keyboard navigation (if single click is enabled)
+    useEffect(() => {
+        if (singleClickOpen && node.isFocused && !data.isDir && !node.isEditing) {
             // If we just finished editing, skip this trigger
             if (wasEditing.current) {
                 wasEditing.current = false;
@@ -53,7 +69,7 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
             }
             app.events.emit('explorer:file-selected', { path: data.id });
         }
-    }, [node.isFocused, data.isDir, data.id, node.isEditing, app.events]);
+    }, [node.isFocused, data.isDir, data.id, node.isEditing, app.events, singleClickOpen]);
 
     // Context menu handler
     const handleContextMenu = (e: React.MouseEvent) => {
@@ -71,12 +87,21 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (node.isEditing) return;
-        // Toggle folders when clicking on the row
+        // Toggle folders when clicking on the row (single click toggle)
         if (data.isDir) {
             node.toggle();
         }
         // Always select the node
         node.select();
+    };
+
+    // Double click handler
+    const handleDoubleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (node.isEditing) return;
+        if (!data.isDir && !singleClickOpen) {
+            app.events.emit('explorer:file-selected', { path: data.id });
+        }
     };
 
     // Chevron click - only toggle, don't select
@@ -125,6 +150,7 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
             style={style}
             className={baseClasses.join(' ')}
             onClick={handleClick}
+            onDoubleClick={handleDoubleClick}
             onContextMenu={handleContextMenu}
             role="treeitem"
             aria-selected={node.isSelected}

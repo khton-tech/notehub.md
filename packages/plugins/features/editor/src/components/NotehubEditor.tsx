@@ -69,6 +69,29 @@ const fontSizeCompartment = new Compartment();
 /** Compartment for dynamic path/regex widgets */
 const portalsCompartment = new Compartment();
 
+/** Compartment for dynamic tab size */
+const tabSizeCompartment = new Compartment();
+
+/** Compartment for auto close brackets */
+const autoCloseBracketsCompartment = new Compartment();
+
+/** Compartment for dynamic font family */
+const fontFamilyCompartment = new Compartment();
+
+/**
+ * Create a theme extension with dynamic font family.
+ * @param fontFamily - Custom font family string
+ * @returns CodeMirror theme extension
+ */
+function createFontFamilyTheme(fontFamily: string) {
+    if (!fontFamily || fontFamily.trim() === "") return [];
+    return EditorView.theme({
+        '&': { fontFamily: `${fontFamily}, monospace` },
+        '.cm-scroller': { fontFamily: 'inherit' },
+        '.cm-content': { fontFamily: 'inherit' },
+    });
+}
+
 /**
  * Create a theme extension with dynamic font size.
  * @param fontSize - Font size in pixels
@@ -434,6 +457,9 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 lineNumbersCompartment.of(settings.showLineNumbers ? lineNumbers() : []),
                 lineWrappingCompartment.of(settings.wordWrap ? EditorView.lineWrapping : []),
                 fontSizeCompartment.of(createFontSizeTheme(settings.fontSize)),
+                fontFamilyCompartment.of(createFontFamilyTheme(settings.fontFamily)),
+                tabSizeCompartment.of(EditorState.tabSize.of(settings.tabSize)),
+                autoCloseBracketsCompartment.of(settings.autoCloseBrackets ? closeBrackets() : []),
                 portalsCompartment.of(portalPlugin),
                 cursorAnimationPlugin, // Restored for smooth cursor typing snap
 
@@ -442,7 +468,6 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
                 highlightActiveLine(),
                 drawSelection(),
                 history(),
-                closeBrackets(),
 
                 // Keymaps for editing
                 keymap.of([
@@ -626,11 +651,27 @@ export const NotehubEditor: React.FC<NotehubEditorProps> = ({
             fontSizeCompartment.reconfigure(
                 createFontSizeTheme(settings.fontSize)
             ),
+            fontFamilyCompartment.reconfigure(
+                createFontFamilyTheme(settings.fontFamily)
+            ),
+            tabSizeCompartment.reconfigure(
+                EditorState.tabSize.of(settings.tabSize)
+            ),
+            autoCloseBracketsCompartment.reconfigure(
+                settings.autoCloseBrackets ? closeBrackets() : []
+            ),
         ];
 
         // Dispatch all effects in a single transaction
         view.dispatch({ effects });
-    }, [settings.showLineNumbers, settings.wordWrap, settings.fontSize]);
+    }, [
+        settings.showLineNumbers,
+        settings.wordWrap,
+        settings.fontSize,
+        settings.fontFamily,
+        settings.tabSize,
+        settings.autoCloseBrackets
+    ]);
 
     /**
      * Subscribe to portal registry changes.

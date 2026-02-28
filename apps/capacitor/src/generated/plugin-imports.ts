@@ -3,7 +3,7 @@
  * DO NOT EDIT MANUALLY
  *
  * Platform: capacitor
- * Generated: 2026-02-19T15:03:27.671Z
+ * Generated: 2026-02-28T19:48:41.383Z
  * Plugins: 28
  */
 import type { PluginModule } from '@notehub/app-bootstrap';
@@ -42,10 +42,10 @@ export async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/ck-standard');
         case '@notehub/context-menu':
             return import('@notehub/context-menu');
-        case '@notehub/dialog-manager':
-            return import('@notehub/dialog-manager');
         case '@notehub/controllers-manager':
             return import('@notehub/controllers-manager');
+        case '@notehub/dialog-manager':
+            return import('@notehub/dialog-manager');
         case '@notehub/icon-manager':
             return import('@notehub/icon-manager');
         case '@notehub/layout-manager':

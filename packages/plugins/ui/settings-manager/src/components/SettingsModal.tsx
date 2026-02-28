@@ -59,10 +59,54 @@ const DynamicIcon: FC<DynamicIconProps> = ({ name, app, size = 18, className }) 
  * - Subscribes to registry changes
  * - Keyboard navigation (Escape to close)
  */
+const MODAL_DEFAULTS = {
+    title: 'Settings',
+    closeSettings: 'Close Settings',
+    noSettings: 'No settings registered',
+    builtin: 'Built-in',
+    thirdParty: 'Third-party',
+    selectCategory: 'Select a category from the sidebar',
+    noSettingsInCategory: 'No settings in this category',
+    noSettingsInGroup: 'No settings in this group',
+};
+
 export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
     const [structure, setStructure] = useState<SettingsStructure>({ tabs: [] });
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    const [strings, setStrings] = useState(MODAL_DEFAULTS);
+
+    const loadStrings = useCallback(async () => {
+        try {
+            const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+            const results = await Promise.all([
+                t('settings-manager.title'),
+                t('settings-manager.close'),
+                t('settings-manager.empty.noSettings'),
+                t('settings-manager.categories.builtin'),
+                t('settings-manager.categories.thirdParty'),
+                t('settings-manager.empty.selectCategory'),
+                t('settings-manager.empty.noSettingsInCategory'),
+                t('settings-manager.empty.noSettingsInGroup'),
+            ]);
+            setStrings({
+                title: results[0] ?? MODAL_DEFAULTS.title,
+                closeSettings: results[1] ?? MODAL_DEFAULTS.closeSettings,
+                noSettings: results[2] ?? MODAL_DEFAULTS.noSettings,
+                builtin: results[3] ?? MODAL_DEFAULTS.builtin,
+                thirdParty: results[4] ?? MODAL_DEFAULTS.thirdParty,
+                selectCategory: results[5] ?? MODAL_DEFAULTS.selectCategory,
+                noSettingsInCategory: results[6] ?? MODAL_DEFAULTS.noSettingsInCategory,
+                noSettingsInGroup: results[7] ?? MODAL_DEFAULTS.noSettingsInGroup,
+            });
+        } catch { /* use defaults */ }
+    }, [app]);
+
+    useEffect(() => {
+        loadStrings();
+        app.events.on('i18n:language-changed', loadStrings);
+        return () => app.events.off('i18n:language-changed', loadStrings);
+    }, [app, loadStrings]);
 
     // ========================================================================
     // Load structure from registry
@@ -124,6 +168,9 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
 
     const activeTab = structure.tabs.find(tab => tab.id === activeTabId);
 
+    const coreTabs = structure.tabs.filter(t => t.category === 'core');
+    const customTabs = structure.tabs.filter(t => t.category !== 'core');
+
     // ========================================================================
     // Render
     // ========================================================================
@@ -152,7 +199,7 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                     shrink-0 z-10
                 ">
                     <h1 className="text-lg font-semibold text-[var(--nh-text-primary)]">
-                        Settings
+                        {strings.title}
                     </h1>
                     <button
                         onClick={onClose}
@@ -195,39 +242,70 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                                 aria-label="Close settings"
                             >
                                 <X size={20} strokeWidth={2.5} />
-                                <span className="text-sm font-medium">Close Settings</span>
+                                <span className="text-sm font-medium">{strings.closeSettings}</span>
                             </button>
                         </div>
 
                         {structure.tabs.length === 0 ? (
                             <div className="px-4 py-8 text-center text-sm text-[var(--nh-text-muted)]">
-                                No settings registered
+                                {strings.noSettings}
                             </div>
                         ) : (
-                            structure.tabs.map(tab => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => handleTabClick(tab.id)}
-                                    className={`
-                                        w-full flex items-center gap-3 px-4 py-2.5 text-left
-                                        transition-colors
-                                        ${activeTabId === tab.id
-                                            ? 'bg-[var(--nh-accent-primary)]/15 text-[var(--nh-accent-primary)] border-l-2 border-[var(--nh-accent-primary)]'
-                                            : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-main)] hover:text-[var(--nh-text-primary)] border-l-2 border-transparent'
-                                        }
-                                    `}
-                                >
-                                    <DynamicIcon
-                                        name={tab.icon}
-                                        app={app}
-                                        size={18}
-                                        className="shrink-0"
-                                    />
-                                    <span className="text-sm font-medium truncate">
-                                        {tab.label}
-                                    </span>
-                                </button>
-                            ))
+                            <div className="flex flex-col gap-4">
+                                {coreTabs.length > 0 && (
+                                    <div>
+                                        <h3 className="px-4 pb-2 text-xs font-semibold text-[var(--nh-text-muted)] uppercase tracking-wider">
+                                            {strings.builtin}
+                                        </h3>
+                                        <div>
+                                            {coreTabs.map(tab => (
+                                                <button
+                                                    key={tab.id}
+                                                    onClick={() => handleTabClick(tab.id)}
+                                                    className={`
+                                                        w-full flex items-center gap-3 px-4 py-2.5 text-left
+                                                        transition-colors
+                                                        ${activeTabId === tab.id
+                                                            ? 'bg-[var(--nh-accent-primary)]/15 text-[var(--nh-accent-primary)] border-l-2 border-[var(--nh-accent-primary)]'
+                                                            : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-main)] hover:text-[var(--nh-text-primary)] border-l-2 border-transparent'
+                                                        }
+                                                    `}
+                                                >
+                                                    <DynamicIcon name={tab.icon} app={app} size={18} className="shrink-0" />
+                                                    <span className="text-sm font-medium truncate">{tab.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {customTabs.length > 0 && (
+                                    <div>
+                                        <h3 className="px-4 pb-2 pt-2 text-xs font-semibold text-[var(--nh-text-muted)] uppercase tracking-wider border-t border-[var(--nh-border-subtle)]">
+                                            {strings.thirdParty}
+                                        </h3>
+                                        <div>
+                                            {customTabs.map(tab => (
+                                                <button
+                                                    key={tab.id}
+                                                    onClick={() => handleTabClick(tab.id)}
+                                                    className={`
+                                                        w-full flex items-center gap-3 px-4 py-2.5 text-left
+                                                        transition-colors
+                                                        ${activeTabId === tab.id
+                                                            ? 'bg-[var(--nh-accent-primary)]/15 text-[var(--nh-accent-primary)] border-l-2 border-[var(--nh-accent-primary)]'
+                                                            : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-main)] hover:text-[var(--nh-text-primary)] border-l-2 border-transparent'
+                                                        }
+                                                    `}
+                                                >
+                                                    <DynamicIcon name={tab.icon} app={app} size={18} className="shrink-0" />
+                                                    <span className="text-sm font-medium truncate">{tab.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </nav>
 
@@ -245,7 +323,7 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                     >
                         {!activeTab ? (
                             <div className="flex items-center justify-center h-full text-[var(--nh-text-muted)]">
-                                Select a category from the sidebar
+                                {strings.selectCategory}
                             </div>
                         ) : activeTab.customView ? (
                             <div className="h-full">
@@ -253,7 +331,7 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                             </div>
                         ) : activeTab.groups.length === 0 ? (
                             <div className="flex items-center justify-center h-full text-[var(--nh-text-muted)]">
-                                No settings in this category
+                                {strings.noSettingsInCategory}
                             </div>
                         ) : (
                             <div className="space-y-8">
@@ -272,7 +350,7 @@ export const SettingsModal: FC<SettingsModalProps> = ({ app, onClose }) => {
                                         <div className="bg-[var(--nh-bg-surface)] rounded-lg px-4">
                                             {group.items.length === 0 ? (
                                                 <div className="py-4 text-sm text-[var(--nh-text-muted)]">
-                                                    No settings in this group
+                                                    {strings.noSettingsInGroup}
                                                 </div>
                                             ) : (
                                                 group.items.map(item => (

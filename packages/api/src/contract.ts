@@ -243,6 +243,8 @@ export interface SettingsTabDef {
     icon: string;
     /** Sort order (lower = first) */
     order: number;
+    /** Category for grouping in UI */
+    category?: 'core' | 'custom';
 }
 
 /**
@@ -826,6 +828,22 @@ export interface NotehubApiMap {
 
     /** Register a custom view for a tab */
     'settings:register-custom-view': (args: { tabId: string; view: FC<Record<string, unknown>> }) => void;
+
+    // =========================================================================
+    // I18n Manager Plugin (nh.system.i18n)
+    // =========================================================================
+
+    /** Register a translation namespace */
+    'i18n:register-namespace': (namespace: string, translations: Record<string, any>) => void;
+
+    /** Get a translated string */
+    'i18n:t': (key: string, variables?: Record<string, any>) => string;
+
+    /** Set the active language */
+    'i18n:set-language': (lang: string) => Promise<void>;
+
+    /** Get the current language */
+    'i18n:get-language': () => string;
 
     // =========================================================================
     // Editor Plugin (nh.features.editor)

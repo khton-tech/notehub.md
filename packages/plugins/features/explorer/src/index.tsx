@@ -5,6 +5,8 @@ import { ExplorerController } from './logic/ExplorerController';
 import { FileTree } from './components/FileTree';
 import { registerExplorerSettings } from './logic/ExplorerConfig';
 import { registerExplorerMenus } from './menus';
+import en from './locales/en';
+import ru from './locales/ru';
 
 export class ExplorerPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
@@ -17,7 +19,8 @@ export class ExplorerPlugin extends SystemPlugin {
             'nh.ui.icon-manager',
             'nh.ui.theme-manager',
             'nh.ui.context-menu',
-            'nh.ui.dialog-manager'
+            'nh.ui.dialog-manager',
+            'nh.system.i18n'
         ]
     };
 
@@ -29,13 +32,21 @@ export class ExplorerPlugin extends SystemPlugin {
     protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
+        // Register translations
+        this.app.api.invoke('i18n:register-namespace', 'explorer', { en: en.explorer, ru: ru.explorer });
+
         // Register settings with settings-manager for UI
-        registerExplorerSettings(this.app);
+        await registerExplorerSettings(this.app);
 
         this.controller = new ExplorerController(this.app);
 
         // Initialize controller
         await this.controller.init();
+
+        // Subscribe to language changes to re-translate Settings UI
+        this.registerEvent('i18n:language-changed', async () => {
+            await registerExplorerSettings(this.app);
+        });
 
         // Register context menu providers
         this.menuCleanup = registerExplorerMenus(this.app, this.controller);

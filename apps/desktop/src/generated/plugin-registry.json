@@ -163,6 +163,15 @@
     ]
   },
   {
+    "id": "nh.ui.controllers-manager",
+    "name": "ControllersManager",
+    "version": "0.1.5",
+    "type": "ui",
+    "dependencies": [
+      "nh.system.logger"
+    ]
+  },
+  {
     "id": "nh.ui.dialog-manager",
     "name": "DialogManager",
     "version": "0.1.5",
@@ -170,15 +179,6 @@
     "dependencies": [
       "nh.system.logger",
       "nh.ui.ck-standard"
-    ]
-  },
-  {
-    "id": "nh.ui.controllers-manager",
-    "name": "ControllersManager",
-    "version": "0.1.5",
-    "type": "ui",
-    "dependencies": [
-      "nh.system.logger"
     ]
   },
   {
@@ -302,6 +302,16 @@
     "type": "system",
     "dependencies": [
       "nh.system.logger"
+    ]
+  },
+  {
+    "id": "nh.system.i18n",
+    "name": "Translation Service",
+    "version": "0.1.0",
+    "type": "system",
+    "description": "Centralized i18n translation management and language settings",
+    "dependencies": [
+      "nh.system.config-manager"
     ]
   },
   {

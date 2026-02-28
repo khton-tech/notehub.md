@@ -303,6 +303,7 @@ export class PluginContextImpl implements PluginContext {
             return;
         }
 
+        this.disposed = true;
         this.log('info', 'Starting cleanup...');
 
         // Phase 1: Synchronous cleanup (unregister APIs, events, hooks)
@@ -377,7 +378,6 @@ export class PluginContextImpl implements PluginContext {
 
         await Promise.allSettled(asyncOps);
 
-        this.disposed = true;
         this.log('info', 'Cleanup complete');
     }
 

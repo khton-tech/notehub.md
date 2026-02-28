@@ -3,6 +3,8 @@ import type { PluginManifest } from '@notehub/core';
 import { RibbonPlaceholder, EditorPlaceholder } from './components/Placeholders';
 import { VaultSwitchButton } from './components/VaultSwitchButton';
 import { SettingsButton } from './components/SettingsButton';
+import en from './locales/en';
+import ru from './locales/ru';
 
 export class WorkbenchPlugin extends SystemPlugin {
     readonly manifest: PluginManifest = {
@@ -10,6 +12,7 @@ export class WorkbenchPlugin extends SystemPlugin {
         name: 'Workbench',
         version: '0.0.0',
         type: 'feature',
+        dependencies: ['nh.system.i18n'],
     };
 
     private handleVaultOpened = (): void => {
@@ -46,6 +49,11 @@ export class WorkbenchPlugin extends SystemPlugin {
     protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
+        this.app.api.invoke('i18n:register-namespace', 'workbench', {
+            en: en.workbench,
+            ru: ru.workbench,
+        });
+
         // Subscribe to vault opened event
         this.registerEvent('app:vault-opened', this.handleVaultOpened);
 
@@ -53,9 +61,10 @@ export class WorkbenchPlugin extends SystemPlugin {
         this.registerEvent('editor:file-opened', this.handleFileOpened);
 
         // Register placeholders
+        const app = this.app;
         this.app.api.invoke('controller:register', 'ribbon-placeholder', RibbonPlaceholder);
         // this.app.api.invoke('controller:register', 'explorer-placeholder', ExplorerPlaceholder);
-        this.app.api.invoke('controller:register', 'editor-placeholder', EditorPlaceholder);
+        this.app.api.invoke('controller:register', 'editor-placeholder', () => <EditorPlaceholder app={app} />);
 
         // Register ribbon-bottom controller (Close Vault button)
         this.app.api.invoke('controller:register', 'ribbon-bottom', VaultSwitchButton);

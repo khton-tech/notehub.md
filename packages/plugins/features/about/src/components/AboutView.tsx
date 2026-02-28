@@ -1,15 +1,45 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
 import { open } from '@tauri-apps/plugin-shell';
 import { Icon } from '@notehub/icon-manager';
 import { Card, Label, Button } from '@notehub/ck-standard';
+import type { NotehubCore } from '@notehub/core';
 
-export const AboutView: React.FC = () => {
+interface AboutViewProps {
+    app?: NotehubCore;
+}
+
+const ABOUT_DEFAULTS = { createdBy: 'Created by', copyright: 'All rights reserved.' };
+
+export const AboutView: React.FC<AboutViewProps> = ({ app }) => {
     const [version, setVersion] = useState<string>('Loading...');
+    const [strings, setStrings] = useState(ABOUT_DEFAULTS);
 
     useEffect(() => {
         getVersion().then(setVersion).catch(() => setVersion('Unknown'));
     }, []);
+
+    const loadStrings = useCallback(async () => {
+        if (!app) return;
+        try {
+            const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+            const results = await Promise.all([
+                t('about.createdBy'),
+                t('about.copyright'),
+            ]);
+            setStrings({
+                createdBy: results[0] ?? ABOUT_DEFAULTS.createdBy,
+                copyright: results[1] ?? ABOUT_DEFAULTS.copyright,
+            });
+        } catch { /* use defaults */ }
+    }, [app]);
+
+    useEffect(() => {
+        if (!app) return;
+        loadStrings();
+        app.events.on('i18n:language-changed', loadStrings);
+        return () => app.events.off('i18n:language-changed', loadStrings);
+    }, [app, loadStrings]);
 
     const openLink = (url: string) => {
         open(url);
@@ -39,7 +69,7 @@ export const AboutView: React.FC = () => {
                 </div>
 
                 <p className="flex items-center text-sm font-medium text-[var(--nh-text-muted,#888)]">
-                    Created by <span className="ml-1 font-bold text-[var(--nh-text-primary,#e0e0e0)]">khton</span>
+                    {strings.createdBy} <span className="ml-1 font-bold text-[var(--nh-text-primary,#e0e0e0)]">khton</span>
                 </p>
             </div>
 
@@ -83,7 +113,7 @@ export const AboutView: React.FC = () => {
             </div>
 
             <div className="mt-12 text-xs text-[var(--nh-text-muted,#666)]">
-                &copy; {new Date().getFullYear()} Notehub.md. All rights reserved.
+                &copy; {new Date().getFullYear()} Notehub.md. {strings.copyright}
             </div>
         </div>
     );

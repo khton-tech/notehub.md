@@ -6,7 +6,7 @@
  * @module @notehub/settings-manager/components/SettingsSidebar
  */
 
-import { useState, useEffect, type FC } from 'react';
+import { useState, useEffect, useCallback, type FC } from 'react';
 import type { NotehubCore } from '@notehub/core';
 import { X } from 'lucide-react';
 import { SettingsRegistry } from '../logic/SettingsRegistry';
@@ -67,6 +67,13 @@ interface SettingsSidebarProps {
  * - Subscribes to registry changes
  * - Close button for mobile
  */
+const SIDEBAR_DEFAULTS = {
+    title: 'Settings',
+    noSettings: 'No settings registered',
+    builtin: 'Built-in',
+    thirdParty: 'Third-party',
+};
+
 export const SettingsSidebar: FC<SettingsSidebarProps> = ({
     activeTab,
     onTabChange,
@@ -75,6 +82,31 @@ export const SettingsSidebar: FC<SettingsSidebarProps> = ({
     onClose
 }) => {
     const [tabs, setTabs] = useState<SettingsTab[]>([]);
+    const [strings, setStrings] = useState(SIDEBAR_DEFAULTS);
+
+    const loadStrings = useCallback(async () => {
+        try {
+            const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+            const results = await Promise.all([
+                t('settings-manager.title'),
+                t('settings-manager.empty.noSettings'),
+                t('settings-manager.categories.builtin'),
+                t('settings-manager.categories.thirdParty'),
+            ]);
+            setStrings({
+                title: results[0] ?? SIDEBAR_DEFAULTS.title,
+                noSettings: results[1] ?? SIDEBAR_DEFAULTS.noSettings,
+                builtin: results[2] ?? SIDEBAR_DEFAULTS.builtin,
+                thirdParty: results[3] ?? SIDEBAR_DEFAULTS.thirdParty,
+            });
+        } catch { /* use defaults */ }
+    }, [app]);
+
+    useEffect(() => {
+        loadStrings();
+        app.events.on('i18n:language-changed', loadStrings);
+        return () => app.events.off('i18n:language-changed', loadStrings);
+    }, [app, loadStrings]);
 
     // Load tabs from registry and subscribe to changes
     useEffect(() => {
@@ -96,12 +128,15 @@ export const SettingsSidebar: FC<SettingsSidebarProps> = ({
         onMobileClick?.();
     };
 
+    const coreTabs = tabs.filter(t => t.category === 'core');
+    const customTabs = tabs.filter(t => t.category !== 'core');
+
     return (
         <nav className="flex flex-col h-full">
             {/* Header with Close Button */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nh-border-subtle)]">
                 <h1 className="text-lg font-semibold text-[var(--nh-text-primary)]">
-                    Settings
+                    {strings.title}
                 </h1>
                 {onClose && (
                     <button
@@ -129,33 +164,64 @@ export const SettingsSidebar: FC<SettingsSidebarProps> = ({
             ">
                 {tabs.length === 0 ? (
                     <div className="px-4 py-8 text-center text-sm text-[var(--nh-text-muted)]">
-                        No settings registered
+                        {strings.noSettings}
                     </div>
                 ) : (
-                    tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => handleTabClick(tab.id)}
-                            className={`
-                                w-full flex items-center gap-3 px-5 py-2.5 text-left
-                                transition-colors
-                                ${activeTab === tab.id
-                                    ? 'bg-[var(--nh-accent-primary)]/15 text-[var(--nh-accent-primary)] border-l-2 border-[var(--nh-accent-primary)]'
-                                    : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-main)] hover:text-[var(--nh-text-primary)] border-l-2 border-transparent'
-                                }
-                            `}
-                        >
-                            <DynamicIcon
-                                name={tab.icon}
-                                app={app}
-                                size={18}
-                                className="shrink-0"
-                            />
-                            <span className="text-sm font-medium truncate">
-                                {tab.label}
-                            </span>
-                        </button>
-                    ))
+                    <div className="flex flex-col gap-4">
+                        {coreTabs.length > 0 && (
+                            <div>
+                                <h3 className="px-5 pb-2 text-xs font-semibold text-[var(--nh-text-muted)] uppercase tracking-wider">
+                                    {strings.builtin}
+                                </h3>
+                                <div>
+                                    {coreTabs.map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => handleTabClick(tab.id)}
+                                            className={`
+                                                w-full flex items-center gap-3 px-5 py-2.5 text-left
+                                                transition-colors
+                                                ${activeTab === tab.id
+                                                    ? 'bg-[var(--nh-accent-primary)]/15 text-[var(--nh-accent-primary)] border-l-2 border-[var(--nh-accent-primary)]'
+                                                    : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-hover)] hover:text-[var(--nh-text-primary)] border-l-2 border-transparent'
+                                                }
+                                            `}
+                                        >
+                                            <DynamicIcon name={tab.icon} app={app} size={18} className="shrink-0" />
+                                            <span className="text-sm font-medium truncate">{tab.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {customTabs.length > 0 && (
+                            <div>
+                                <h3 className="px-5 pb-2 pt-2 text-xs font-semibold text-[var(--nh-text-muted)] uppercase tracking-wider border-t border-[var(--nh-border-subtle)]">
+                                    {strings.thirdParty}
+                                </h3>
+                                <div>
+                                    {customTabs.map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => handleTabClick(tab.id)}
+                                            className={`
+                                                w-full flex items-center gap-3 px-5 py-2.5 text-left
+                                                transition-colors
+                                                ${activeTab === tab.id
+                                                    ? 'bg-[var(--nh-accent-primary)]/15 text-[var(--nh-accent-primary)] border-l-2 border-[var(--nh-accent-primary)]'
+                                                    : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-hover)] hover:text-[var(--nh-text-primary)] border-l-2 border-transparent'
+                                                }
+                                            `}
+                                        >
+                                            <DynamicIcon name={tab.icon} app={app} size={18} className="shrink-0" />
+                                            <span className="text-sm font-medium truncate">{tab.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
         </nav>

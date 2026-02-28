@@ -2,6 +2,8 @@ import { SystemPlugin } from '@notehub/core';
 import type { PluginManifest } from '@notehub/core';
 import { colord } from 'colord';
 import { registerThemeSettings } from './logic/ThemeConfig';
+import en from './locales/en';
+import ru from './locales/ru';
 
 /**
  * Theme palette definition
@@ -210,6 +212,7 @@ export class ThemeManagerPlugin extends SystemPlugin {
         name: 'ThemeManager',
         version: '0.0.0',
         type: 'ui',
+        dependencies: ['nh.system.i18n'],
     };
 
     /** Registry of available themes */
@@ -328,6 +331,14 @@ export class ThemeManagerPlugin extends SystemPlugin {
             .nh-focus-ring:focus-visible {
                 outline: none;
                 box-shadow: 0 0 0 2px var(--nh-bg-main), 0 0 0 4px var(--nh-accent-primary);
+            }
+
+            /* Animations toggle */
+            body.nh-disable-animations *,
+            body.nh-disable-animations *::before,
+            body.nh-disable-animations *::after {
+                animation: none !important;
+                transition: none !important;
             }
 
             /* Reduced motion preference - DISABLED as it causes "on speed" effect */
@@ -585,6 +596,12 @@ export class ThemeManagerPlugin extends SystemPlugin {
             if (fallbackPalette) await this.applyTheme(fallbackPalette);
         }
 
+        // Apply UI Settings (Animations)
+        const uiAnimations = await this.app.api.invoke<boolean>('config:get', 'ui.animations');
+        if (uiAnimations === false) {
+            document.body.classList.add('nh-disable-animations');
+        }
+
         // Subscribe to accent color changes for live preview
         this.registerEvent('config:updated', async (payload: any) => {
             if (payload.key === 'theme.accent-primary') {
@@ -605,6 +622,12 @@ export class ThemeManagerPlugin extends SystemPlugin {
                 if (payload.value !== this.currentTheme) {
                     await this.handleSet(payload.value as string);
                 }
+            } else if (payload.key === 'ui.animations') {
+                if (payload.value) {
+                    document.body.classList.remove('nh-disable-animations');
+                } else {
+                    document.body.classList.add('nh-disable-animations');
+                }
             }
         });
 
@@ -615,8 +638,16 @@ export class ThemeManagerPlugin extends SystemPlugin {
      * Called when all plugins are loaded
      */
     protected async onPluginReady(): Promise<void> {
+        // Register translations
+        this.app.api.invoke('i18n:register-namespace', 'theme', { en: en.theme, ru: ru.theme });
+
         // Register Settings (safe to do here as settings-manager is guaranteed to be loaded)
-        registerThemeSettings(this.app);
+        await registerThemeSettings(this.app);
+
+        // Listen for language changes to update translation in settings
+        this.registerEvent('i18n:language-changed', async () => {
+            await registerThemeSettings(this.app);
+        });
 
         // Listen for bulk config reloads (e.g. vault switch)
         this.registerEvent('config:reloaded', async () => {

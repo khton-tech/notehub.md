@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react';
+import { useState, useEffect, useCallback, type FC } from 'react';
 import type { NotehubCore } from '@notehub/core';
 import { Icon } from '@notehub/icon-manager';
 import { Button, Label } from '@notehub/ck-standard';
@@ -21,9 +21,40 @@ interface VaultActionsProps {
  * - Add Vault button (purple)
  * - Open Vault button (secondary)
  */
+const VA_DEFAULTS = {
+    tagline: 'Gather your data together',
+    openVault: 'Open Vault', opening: 'Opening...', openVaultDesc: 'Select an existing folder',
+    createVault: 'Create Vault', creating: 'Creating...', createVaultDesc: 'Create a new storage location',
+};
+
 export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
     const [isOpening, setIsOpening] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [strings, setStrings] = useState(VA_DEFAULTS);
+
+    const loadStrings = useCallback(async () => {
+        try {
+            const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+            const results = await Promise.all([
+                t('vault-picker.tagline'), t('vault-picker.openVault'), t('vault-picker.opening'),
+                t('vault-picker.openVaultDesc'), t('vault-picker.createVault'),
+                t('vault-picker.creating'), t('vault-picker.createVaultDesc'),
+            ]);
+            setStrings({
+                tagline: results[0] ?? VA_DEFAULTS.tagline,
+                openVault: results[1] ?? VA_DEFAULTS.openVault, opening: results[2] ?? VA_DEFAULTS.opening,
+                openVaultDesc: results[3] ?? VA_DEFAULTS.openVaultDesc,
+                createVault: results[4] ?? VA_DEFAULTS.createVault, creating: results[5] ?? VA_DEFAULTS.creating,
+                createVaultDesc: results[6] ?? VA_DEFAULTS.createVaultDesc,
+            });
+        } catch { /* use defaults */ }
+    }, [app]);
+
+    useEffect(() => {
+        loadStrings();
+        app.events.on('i18n:language-changed', loadStrings);
+        return () => app.events.off('i18n:language-changed', loadStrings);
+    }, [app, loadStrings]);
 
     /**
      * Handle adding a new vault (select folder to use as vault)
@@ -72,7 +103,7 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
             <div className="flex flex-col items-center text-[var(--nh-text-primary)]">
                 <Icon name="app-logo" size={64} className="text-[var(--nh-accent-primary)] mb-4" />
                 <Label variant="logo">notehub.md</Label>
-                <Label variant="caption" className="mt-2 text-center px-4">Gather your data together</Label>
+                <Label variant="caption" className="mt-2 text-center px-4">{strings.tagline}</Label>
             </div>
 
             {/* Spacer */}
@@ -90,10 +121,10 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
                         isLoading={isOpening}
                         className="w-full"
                     >
-                        {isOpening ? 'Opening...' : 'Open Vault'}
+                        {isOpening ? strings.opening : strings.openVault}
                     </Button>
                     <Label variant="muted" className="mt-2 text-center">
-                        Select an existing folder
+                        {strings.openVaultDesc}
                     </Label>
                 </div>
 
@@ -107,10 +138,10 @@ export const VaultActions: FC<VaultActionsProps> = ({ app, service }) => {
                         isLoading={isCreating}
                         className="w-full"
                     >
-                        {isCreating ? 'Creating...' : 'Create Vault'}
+                        {isCreating ? strings.creating : strings.createVault}
                     </Button>
                     <Label variant="muted" className="mt-2 text-center">
-                        Create a new storage location
+                        {strings.createVaultDesc}
                     </Label>
                 </div>
             </div>

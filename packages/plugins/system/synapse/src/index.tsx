@@ -10,6 +10,8 @@ import type { PluginManifest } from '@notehub/core';
 import { initSharedScope } from './logic/ScopeInitializer.js';
 import { PluginLoader } from './logic/PluginLoader.js';
 import { PluginManagerView } from './components/PluginManagerView.js';
+import en from './locales/en';
+import ru from './locales/ru';
 
 // Re-export types for consumers
 export * from './types.js';
@@ -26,6 +28,7 @@ export class SynapsePlugin extends SystemPlugin {
         name: 'Synapse',
         version: '0.0.0',
         type: 'system',
+        dependencies: ['nh.system.i18n'],
     };
 
     private loader: PluginLoader | null = null;
@@ -95,13 +98,29 @@ export class SynapsePlugin extends SystemPlugin {
         this.log('info', 'Synapse onReady: scanning for external plugins...');
 
         try {
-            // Register Settings UI
-            this.app.api.invoke('settings:register-tab', {
-                id: 'plugins',
-                label: 'Plugins',
-                order: 100,
-                icon: 'package'
+            // Register translations
+            this.app.api.invoke('i18n:register-namespace', 'synapse', {
+                en: en.synapse,
+                ru: ru.synapse,
             });
+
+            const t = (key: string) => this.app.api.invoke<string>('i18n:t', key);
+
+            const registerTab = async () => {
+                const tabLabel = await t('synapse.tab');
+                this.app.api.invoke('settings:register-tab', {
+                    id: 'plugins',
+                    label: tabLabel ?? 'Plugins',
+                    order: 100,
+                    icon: 'package',
+                    category: 'core'
+                });
+            };
+
+            await registerTab();
+
+            // Re-register tab on language change so label updates
+            this.registerEvent('i18n:language-changed', registerTab);
 
             // Register custom view for the plugins tab
             this.app.api.invoke('settings:register-custom-view', {

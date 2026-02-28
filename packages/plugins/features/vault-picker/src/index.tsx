@@ -3,6 +3,8 @@ import type { PluginManifest } from '@notehub/core';
 import { VaultService } from './logic/VaultService.js';
 import { VaultList } from './components/VaultList.js';
 import { VaultActions } from './components/VaultActions.js';
+import en from './locales/en';
+import ru from './locales/ru';
 
 /**
  * VaultPickerPlugin - Vault selection and creation
@@ -22,6 +24,7 @@ export class VaultPickerPlugin extends SystemPlugin {
         name: 'VaultPicker',
         version: '0.0.0',
         type: 'feature',
+        dependencies: ['nh.system.i18n'],
     };
 
     private service: VaultService | null = null;
@@ -32,6 +35,11 @@ export class VaultPickerPlugin extends SystemPlugin {
     protected async onLoad(): Promise<void> {
         this.service = new VaultService(this.app);
         this.log('info', 'Loading...');
+
+        this.app.api.invoke('i18n:register-namespace', 'vault-picker', {
+            en: en['vault-picker'],
+            ru: ru['vault-picker'],
+        });
 
         // Register vault:close API
         this.registerApi('vault:close', () => this.service?.closeVault());
@@ -86,7 +94,7 @@ export class VaultPickerPlugin extends SystemPlugin {
 
         // Create wrapper components that have access to service
         const VaultListWrapper = () => {
-            return <VaultList service={service} />;
+            return <VaultList app={app} service={service} />;
         };
 
         const VaultActionsWrapper = () => {

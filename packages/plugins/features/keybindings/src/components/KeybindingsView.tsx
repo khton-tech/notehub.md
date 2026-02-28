@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { NotehubCore } from '@notehub/core';
 import { HotkeyRecorder, Input, ListItem } from '@notehub/ck-standard';
 
@@ -13,10 +13,42 @@ interface CommandDef {
     defaultHotkey?: string;
 }
 
+const KB_DEFAULTS = {
+    searchPlaceholder: 'Search commands...',
+    commandsHeader: 'Commands',
+    reset: 'Reset',
+    noResults: 'No commands found matching',
+};
+
 export const KeybindingsView: React.FC<KeybindingsViewProps> = ({ app }) => {
     const [commands, setCommands] = useState<CommandDef[]>([]);
     const [query, setQuery] = useState('');
     const [bindings, setBindings] = useState<Record<string, string[]>>({});
+    const [strings, setStrings] = useState(KB_DEFAULTS);
+
+    const loadStrings = useCallback(async () => {
+        try {
+            const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+            const results = await Promise.all([
+                t('keybindings.searchPlaceholder'),
+                t('keybindings.commandsHeader'),
+                t('keybindings.reset'),
+                t('keybindings.noResults'),
+            ]);
+            setStrings({
+                searchPlaceholder: results[0] ?? KB_DEFAULTS.searchPlaceholder,
+                commandsHeader: results[1] ?? KB_DEFAULTS.commandsHeader,
+                reset: results[2] ?? KB_DEFAULTS.reset,
+                noResults: results[3] ?? KB_DEFAULTS.noResults,
+            });
+        } catch { /* use defaults */ }
+    }, [app]);
+
+    useEffect(() => {
+        loadStrings();
+        app.events.on('i18n:language-changed', loadStrings);
+        return () => app.events.off('i18n:language-changed', loadStrings);
+    }, [app, loadStrings]);
 
     // Fetch initial data
     useEffect(() => {
@@ -82,7 +114,7 @@ export const KeybindingsView: React.FC<KeybindingsViewProps> = ({ app }) => {
         <div className="flex flex-col h-full gap-6 p-4 md:p-8">
             <div className="flex-shrink-0">
                 <Input
-                    placeholder="Search commands..."
+                    placeholder={strings.searchPlaceholder}
                     value={query}
                     onChange={(e: any) => setQuery(e.target.value)}
                     autoFocus
@@ -98,7 +130,7 @@ export const KeybindingsView: React.FC<KeybindingsViewProps> = ({ app }) => {
                             text-[var(--nh-text-muted)] mb-3 pb-2
                             border-b border-[var(--nh-border-subtle)]
                         ">
-                            Commands
+                            {strings.commandsHeader}
                         </h3>
                         <div className="bg-[var(--nh-bg-surface)] rounded-lg overflow-hidden border border-[var(--nh-border-subtle)]">
                             {filteredCommands.map(cmd => (
@@ -139,7 +171,7 @@ export const KeybindingsView: React.FC<KeybindingsViewProps> = ({ app }) => {
                                                             onClick={() => handleReset(cmd.id)}
                                                             className="text-[10px] text-[var(--nh-accent-primary)] hover:underline whitespace-nowrap"
                                                         >
-                                                            Reset
+                                                            {strings.reset}
                                                         </button>
                                                     )}
                                                 </div>
@@ -155,7 +187,7 @@ export const KeybindingsView: React.FC<KeybindingsViewProps> = ({ app }) => {
                     </div>
                 ) : (
                     <div className="text-center py-12 text-[var(--nh-text-muted)] text-sm border-2 border-dashed border-[var(--nh-border-subtle)] rounded-lg bg-[var(--nh-bg-surface)]/50">
-                        No commands found matching "{query}"
+                        {strings.noResults} "{query}"
                     </div>
                 )}
             </div>

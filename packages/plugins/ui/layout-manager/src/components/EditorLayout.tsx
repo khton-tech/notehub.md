@@ -20,22 +20,34 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
     const [vaultName] = useState('Notehub');
     const drawerRef = useRef<HTMLDivElement>(null);
 
-    // Load width and vault name from state/api
+    // Load width and vault name from config/api
     useEffect(() => {
-        if (app) {
-            const loadState = async () => {
-                // Load Sidebar Width
-                try {
-                    const savedWidth = await app.api.invoke('state:get', 'layout.sidebar.width');
-                    if (typeof savedWidth === 'number') {
-                        setSidebarWidth(savedWidth);
-                    }
-                } catch (e) {
-                    // Ignore error if state API fails
+        if (!app) return;
+
+        const loadState = async () => {
+            // Load Sidebar Width
+            try {
+                const savedWidth = await app.api.invoke('config:get', 'ui.sidebar-width');
+                if (typeof savedWidth === 'number') {
+                    setSidebarWidth(savedWidth);
                 }
-            };
-            loadState();
-        }
+            } catch (e) {
+                // Ignore error if config API fails
+            }
+        };
+        loadState();
+
+        // Listen for config changes
+        const handleConfigUpdate = (payload: any) => {
+            if (payload.key === 'ui.sidebar-width' && typeof payload.value === 'number') {
+                setSidebarWidth(payload.value);
+            }
+        };
+        app.events.on('config:updated', handleConfigUpdate);
+
+        return () => {
+            app.events.off('config:updated', handleConfigUpdate);
+        };
     }, [app]);
 
     // Handle resizing
@@ -45,9 +57,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
 
     const stopResizing = useCallback(() => {
         setIsResizing(false);
-        // Save width to state manager
+        // Save width to config manager
         if (app) {
-            app.api.invoke('state:set', 'layout.sidebar.width', sidebarWidth);
+            app.api.invoke('config:set', 'ui.sidebar-width', sidebarWidth);
         }
     }, [app, sidebarWidth]);
 
