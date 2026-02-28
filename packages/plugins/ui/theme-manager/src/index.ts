@@ -2,6 +2,8 @@ import { SystemPlugin } from '@notehub/core';
 import type { PluginManifest } from '@notehub/core';
 import { colord } from 'colord';
 import { registerThemeSettings } from './logic/ThemeConfig';
+import en from './locales/en';
+import ru from './locales/ru';
 
 /**
  * Theme palette definition
@@ -210,6 +212,7 @@ export class ThemeManagerPlugin extends SystemPlugin {
         name: 'ThemeManager',
         version: '0.0.0',
         type: 'ui',
+        dependencies: ['nh.system.i18n'],
     };
 
     /** Registry of available themes */
@@ -635,8 +638,16 @@ export class ThemeManagerPlugin extends SystemPlugin {
      * Called when all plugins are loaded
      */
     protected async onPluginReady(): Promise<void> {
+        // Register translations
+        this.app.api.invoke('i18n:register-namespace', 'theme', { en: en.theme, ru: ru.theme });
+
         // Register Settings (safe to do here as settings-manager is guaranteed to be loaded)
-        registerThemeSettings(this.app);
+        await registerThemeSettings(this.app);
+
+        // Listen for language changes to update translation in settings
+        this.registerEvent('i18n:language-changed', async () => {
+            await registerThemeSettings(this.app);
+        });
 
         // Listen for bulk config reloads (e.g. vault switch)
         this.registerEvent('config:reloaded', async () => {

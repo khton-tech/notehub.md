@@ -1,13 +1,17 @@
-import { useState, useEffect, type FC } from 'react';
+import { useState, useEffect, useCallback, type FC } from 'react';
 import { Icon } from '@notehub/icon-manager';
 import { Label } from '@notehub/ck-standard';
+import type { NotehubCore } from '@notehub/core';
 import type { VaultService, VaultHistoryEntry } from '../logic/VaultService.js';
+
+const VAULT_LIST_DEFAULTS = { recentVaults: 'Recent Vaults', noRecentVaults: 'No recent vaults' };
 
 /**
  * Props for VaultList component
  */
 interface VaultListProps {
     service: VaultService;
+    app: NotehubCore;
 }
 
 /**
@@ -18,12 +22,33 @@ interface VaultListProps {
  * - Styled cards with hover effects
  * - Delete button visible on hover (desktop)
  */
-export const VaultList: FC<VaultListProps> = ({ service }) => {
+export const VaultList: FC<VaultListProps> = ({ service, app }) => {
     const [vaults, setVaults] = useState<VaultHistoryEntry[]>([]);
+    const [strings, setStrings] = useState(VAULT_LIST_DEFAULTS);
 
     useEffect(() => {
         service.getRecentVaults().then(setVaults);
     }, [service]);
+
+    const loadStrings = useCallback(async () => {
+        try {
+            const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+            const results = await Promise.all([
+                t('vault-picker.recentVaults'),
+                t('vault-picker.noRecentVaults'),
+            ]);
+            setStrings({
+                recentVaults: results[0] ?? VAULT_LIST_DEFAULTS.recentVaults,
+                noRecentVaults: results[1] ?? VAULT_LIST_DEFAULTS.noRecentVaults,
+            });
+        } catch { /* use defaults */ }
+    }, [app]);
+
+    useEffect(() => {
+        loadStrings();
+        app.events.on('i18n:language-changed', loadStrings);
+        return () => app.events.off('i18n:language-changed', loadStrings);
+    }, [app, loadStrings]);
 
     const handleVaultClick = async (path: string) => {
         try {
@@ -44,7 +69,7 @@ export const VaultList: FC<VaultListProps> = ({ service }) => {
             {/* Header */}
             <div className="px-4 pt-4 pb-2 shrink-0">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--nh-text-muted)]">
-                    Recent Vaults
+                    {strings.recentVaults}
                 </h3>
             </div>
 
@@ -52,7 +77,7 @@ export const VaultList: FC<VaultListProps> = ({ service }) => {
             <div className="flex-1 overflow-y-auto px-2 pb-2">
                 {vaults.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-32 text-[var(--nh-text-muted)] text-center">
-                        <Label variant="caption">No recent vaults</Label>
+                        <Label variant="caption">{strings.noRecentVaults}</Label>
                     </div>
                 ) : (
                     <div className="flex flex-col gap-1">

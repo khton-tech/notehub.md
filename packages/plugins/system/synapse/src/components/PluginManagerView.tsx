@@ -1,4 +1,4 @@
-import React, { useState, useEffect, type FC } from 'react';
+import React, { useState, useEffect, useCallback, type FC } from 'react';
 import type { NotehubCore } from '@notehub/core';
 import { Icon } from '@notehub/icon-manager';
 
@@ -85,11 +85,61 @@ const Toggle: FC<ToggleProps> = ({
     );
 };
 
+const PM_DEFAULTS = {
+    title: 'External Plugins',
+    subtitle: 'Managed by Synapse Engine',
+    addPlugin: 'Add Plugin',
+    installing: 'Installing...',
+    addPluginTitle: 'Add Plugin (.nhp)',
+    refreshTitle: 'Refresh List',
+    noPlugins: 'No external plugins loaded',
+    emptyDescription: "Place plugins in your vault's .notehub/plugins directory or use",
+    emptyAddPlugin: 'Add Plugin',
+    noDescription: 'No description provided.',
+    deleteTitle: 'Delete Plugin',
+    deleteConfirm: 'This will permanently remove all plugin files from disk.',
+};
+
 export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
     const [plugins, setPlugins] = useState<PluginMetadata[]>([]);
     const [loading, setLoading] = useState<string | null>(null);
     const [installing, setInstalling] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [strings, setStrings] = useState(PM_DEFAULTS);
+
+    const loadStrings = useCallback(async () => {
+        try {
+            const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+            const results = await Promise.all([
+                t('synapse.title'), t('synapse.subtitle'),
+                t('synapse.addPlugin'), t('synapse.installing'),
+                t('synapse.addPluginTitle'), t('synapse.refreshTitle'),
+                t('synapse.empty.noPlugins'), t('synapse.empty.description'),
+                t('synapse.empty.addPlugin'), t('synapse.noDescription'),
+                t('synapse.deleteTitle'), t('synapse.deleteConfirm'),
+            ]);
+            setStrings({
+                title: results[0] ?? PM_DEFAULTS.title,
+                subtitle: results[1] ?? PM_DEFAULTS.subtitle,
+                addPlugin: results[2] ?? PM_DEFAULTS.addPlugin,
+                installing: results[3] ?? PM_DEFAULTS.installing,
+                addPluginTitle: results[4] ?? PM_DEFAULTS.addPluginTitle,
+                refreshTitle: results[5] ?? PM_DEFAULTS.refreshTitle,
+                noPlugins: results[6] ?? PM_DEFAULTS.noPlugins,
+                emptyDescription: results[7] ?? PM_DEFAULTS.emptyDescription,
+                emptyAddPlugin: results[8] ?? PM_DEFAULTS.emptyAddPlugin,
+                noDescription: results[9] ?? PM_DEFAULTS.noDescription,
+                deleteTitle: results[10] ?? PM_DEFAULTS.deleteTitle,
+                deleteConfirm: results[11] ?? PM_DEFAULTS.deleteConfirm,
+            });
+        } catch { /* use defaults */ }
+    }, [app]);
+
+    useEffect(() => {
+        loadStrings();
+        app.events.on('i18n:language-changed', loadStrings);
+        return () => app.events.off('i18n:language-changed', loadStrings);
+    }, [app, loadStrings]);
 
     useEffect(() => {
         const fetchPlugins = async () => {
@@ -127,7 +177,7 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
         if (loading) return;
 
         try {
-            const confirmed = await app.api.invoke('dialog:confirm', `Delete "${plugin.name}"? This will permanently remove all plugin files from disk.`) as boolean;
+            const confirmed = await app.api.invoke('dialog:confirm', `Delete "${plugin.name}"? ${strings.deleteConfirm}`) as boolean;
             if (!confirmed) return;
         } catch {
             // dialog:confirm not available, proceed without confirmation
@@ -168,25 +218,25 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
             <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h2 className="text-xl font-semibold text-[var(--nh-text-primary)] mb-1">External Plugins</h2>
-                        <p className="text-sm text-[var(--nh-text-muted)]">Managed by Synapse Engine</p>
+                        <h2 className="text-xl font-semibold text-[var(--nh-text-primary)] mb-1">{strings.title}</h2>
+                        <p className="text-sm text-[var(--nh-text-muted)]">{strings.subtitle}</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleInstall}
                             disabled={installing}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--nh-accent-primary,#6b5ce7)] text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                            title="Add Plugin (.nhp)"
+                            title={strings.addPluginTitle}
                         >
                             <Icon name="plus" size={16} />
-                            {installing ? 'Installing...' : 'Add Plugin'}
+                            {installing ? strings.installing : strings.addPlugin}
                         </button>
                         <button
                             onClick={() => setRefreshTrigger(prev => prev + 1)}
                             className="p-2 rounded-md hover:bg-[var(--nh-bg-surface)] text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)] transition-colors"
-                            title="Refresh List"
+                            title={strings.refreshTitle}
                         >
-                            <Icon name="rotate-cw" size={18} />
+                            <Icon name="refresh-ccw" size={18} />
                         </button>
                     </div>
                 </div>
@@ -194,8 +244,8 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
                 {plugins.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-[var(--nh-text-muted)] bg-[var(--nh-bg-surface)] rounded-lg border border-[var(--nh-border-subtle)] border-dashed">
                         <Icon name="package" size={48} className="mb-4 opacity-50" />
-                        <p className="text-lg font-medium">No external plugins loaded</p>
-                        <p className="text-sm mt-2">Place plugins in your vault's <code className="bg-[var(--nh-bg-main)] px-1 py-0.5 rounded text-xs">.notehub/plugins</code> directory or use <strong>Add Plugin</strong></p>
+                        <p className="text-lg font-medium">{strings.noPlugins}</p>
+                        <p className="text-sm mt-2">{strings.emptyDescription} <code className="bg-[var(--nh-bg-main)] px-1 py-0.5 rounded text-xs">.notehub/plugins</code> or use <strong>{strings.emptyAddPlugin}</strong></p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-4">
@@ -227,7 +277,7 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
                                         )}
                                     </div>
                                     <p className="text-sm text-[var(--nh-text-secondary)] mb-3 line-clamp-2">
-                                        {plugin.description || 'No description provided.'}
+                                        {plugin.description || strings.noDescription}
                                     </p>
                                     <div className="flex items-center gap-4 text-xs text-[var(--nh-text-muted)]">
                                         <span className={`flex items-center gap-1.5 ${plugin.status === 'Active' ? 'text-emerald-500' : 'text-[var(--nh-text-muted)]'}`}>
@@ -250,8 +300,8 @@ export const PluginManagerView: FC<PluginManagerViewProps> = ({ app }) => {
                                         onClick={() => handleDelete(plugin)}
                                         disabled={loading !== null}
                                         className="p-1.5 rounded-md text-[var(--nh-text-muted)] hover:text-red-500 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
-                                        title="Delete Plugin"
-                                        aria-label={`Delete ${plugin.name}`}
+                                        title={strings.deleteTitle}
+                                        aria-label={`${strings.deleteTitle} ${plugin.name}`}
                                     >
                                         <Icon name="trash-2" size={16} />
                                     </button>

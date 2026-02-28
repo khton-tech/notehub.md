@@ -1,7 +1,7 @@
 {
   "window.bounds": {
-    "x": 120,
-    "y": 104,
+    "x": 465,
+    "y": 75,
     "width": 1200,
     "height": 800
   },
@@ -9,7 +9,7 @@
     {
       "path": "C:\\Users\\khton\\Desktop\\Пример\\Тест ваулт",
       "name": "Тест ваулт",
-      "lastOpened": 1772180504826
+      "lastOpened": 1772308137734
     },
     {
       "path": "C:\\Users\\khton\\Documents\\Vault",
@@ -18,5 +18,6 @@
     }
   ],
   "theme.current": "deep-space",
-  "vault.last-opened": "C:\\Users\\khton\\Desktop\\Пример\\Тест ваулт"
+  "vault.last-opened": "C:\\Users\\khton\\Desktop\\Пример\\Тест ваулт",
+  "window.language": "ru"
 }

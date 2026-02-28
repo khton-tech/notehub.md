@@ -42,7 +42,16 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
     const [value, setValue] = useState<unknown>(item.defaultValue);
     const [isLoading, setIsLoading] = useState(true);
     const [showSaved, setShowSaved] = useState(false);
+    const [savedLabel, setSavedLabel] = useState('Saved');
     const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        const load = () => app.api.invoke('i18n:t', 'settings-manager.saved')
+            .then(v => setSavedLabel(v as string)).catch(() => {});
+        load();
+        app.events.on('i18n:language-changed', load);
+        return () => app.events.off('i18n:language-changed', load);
+    }, [app]);
 
     // ========================================================================
     // Load value on mount and subscribe to updates
@@ -247,7 +256,7 @@ export const SettingField: FC<SettingFieldProps> = ({ item, app }) => {
                     {showSaved && (
                         <span className="flex items-center gap-1 text-xs text-green-500 animate-fade-in">
                             <Check size={12} />
-                            Saved
+                            {savedLabel}
                         </span>
                     )}
                 </div>

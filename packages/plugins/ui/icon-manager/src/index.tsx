@@ -23,6 +23,7 @@ import {
     // New icons for StatusBar and extended functionality
     CheckCircle2,
     RefreshCw,
+    RefreshCcw,
     AlertCircle,
     Search,
     Edit,
@@ -40,6 +41,9 @@ import {
     Bug,
     Layers,
     CircleSlash,
+    Settings2,
+    Keyboard,
+    ChartNoAxesGantt,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -99,6 +103,7 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     // New icons for StatusBar and extended functionality
     'check-circle': CheckCircle2,
     'refresh-cw': RefreshCw,
+    'refresh-ccw': RefreshCcw,
     'alert-circle': AlertCircle,
     'search': Search,
     'edit': Edit,
@@ -116,6 +121,9 @@ const CORE_ICONS: Record<string, LucideIcon> = {
     'bug': Bug,
     'layers': Layers,
     'circle-slash': CircleSlash,
+    'settings-2': Settings2,
+    'keyboard': Keyboard,
+    'chart-no-axes-gantt': ChartNoAxesGantt,
 };
 
 /**

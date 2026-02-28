@@ -45,6 +45,15 @@ export function TabBar({ app, tabs, activeTabId, onActivate, onClose, onReorder 
     // Visual-only state (drives re-renders for opacity/highlight)
     const [visualDraggedIdx, setVisualDraggedIdx] = useState<number | null>(null);
     const [visualDropIdx, setVisualDropIdx] = useState<number | null>(null);
+    const [noOpenFilesLabel, setNoOpenFilesLabel] = useState('No open files');
+
+    useEffect(() => {
+        const load = () => app.api.invoke<string>('i18n:t', 'tabbar.noOpenFiles')
+            .then(v => setNoOpenFilesLabel(v ?? 'No open files')).catch(() => {});
+        load();
+        app.events.on('i18n:language-changed', load);
+        return () => app.events.off('i18n:language-changed', load);
+    }, [app]);
 
     // Refs for the actual drag state — avoids stale-closure issues in pointer handlers
     const draggedIdxRef = useRef<number | null>(null);
@@ -229,7 +238,7 @@ export function TabBar({ app, tabs, activeTabId, onActivate, onClose, onReorder 
     if (tabs.length === 0) {
         return (
             <div className="nh-tabbar nh-tabbar--empty" role="tablist">
-                <span className="nh-tabbar__empty-hint">No open files</span>
+                <span className="nh-tabbar__empty-hint">{noOpenFilesLabel}</span>
             </div>
         );
     }

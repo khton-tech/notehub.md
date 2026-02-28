@@ -63,11 +63,15 @@ export const EXPLORER_CONFIG_DEFAULTS: ExplorerSettings = {
  * 
  * @param app - NotehubCore instance
  */
-export function registerExplorerSettings(app: NotehubCore): void {
+export async function registerExplorerSettings(app: NotehubCore): Promise<void> {
+    const tabLabel = await app.api.invoke<string>('i18n:t', 'explorer.settings.tab') || 'Files';
+    const groupDisplay = await app.api.invoke<string>('i18n:t', 'explorer.settings.groups.display') || 'File Explorer';
+    const groupBehavior = await app.api.invoke<string>('i18n:t', 'explorer.settings.groups.behavior') || 'Behavior';
+
     // Register Files tab
     app.api.invoke('settings:register-tab', {
         id: 'files',
-        label: 'Files',
+        label: tabLabel,
         icon: 'folder',
         order: 20,
         category: 'core'
@@ -77,7 +81,7 @@ export function registerExplorerSettings(app: NotehubCore): void {
     app.api.invoke('settings:register-group', {
         id: 'explorer-display',
         tabId: 'files',
-        label: 'File Explorer',
+        label: groupDisplay,
         order: 10
     });
 
@@ -85,17 +89,26 @@ export function registerExplorerSettings(app: NotehubCore): void {
     app.api.invoke('settings:register-group', {
         id: 'explorer-behavior',
         tabId: 'files',
-        label: 'Behavior',
+        label: groupBehavior,
         order: 20
     });
+
+    const shLabel = await app.api.invoke<string>('i18n:t', 'explorer.settings.items.showHidden.label') || 'Show Hidden Files';
+    const shDesc = await app.api.invoke<string>('i18n:t', 'explorer.settings.items.showHidden.description') || 'Display files and folders starting with a dot';
+    const ffLabel = await app.api.invoke<string>('i18n:t', 'explorer.settings.items.foldersFirst.label') || 'Folders First';
+    const ffDesc = await app.api.invoke<string>('i18n:t', 'explorer.settings.items.foldersFirst.description') || 'Show folders before files in the tree';
+    const scLabel = await app.api.invoke<string>('i18n:t', 'explorer.settings.items.singleClick.label') || 'Single Click to Open';
+    const scDesc = await app.api.invoke<string>('i18n:t', 'explorer.settings.items.singleClick.description') || 'Open files with a single click instead of double click';
+    const cdLabel = await app.api.invoke<string>('i18n:t', 'explorer.settings.items.confirmDelete.label') || 'Confirm File Deletion';
+    const cdDesc = await app.api.invoke<string>('i18n:t', 'explorer.settings.items.confirmDelete.description') || 'Ask for confirmation before moving files to trash';
 
     // Register setting items
     app.api.invoke('settings:register-items', [
         {
             key: EXPLORER_CONFIG_KEYS.SHOW_HIDDEN,
             type: 'toggle',
-            label: 'Show Hidden Files',
-            description: 'Display files and folders starting with a dot',
+            label: shLabel,
+            description: shDesc,
             groupId: 'explorer-display',
             order: 10,
             defaultValue: EXPLORER_CONFIG_DEFAULTS.showHidden
@@ -103,8 +116,8 @@ export function registerExplorerSettings(app: NotehubCore): void {
         {
             key: EXPLORER_CONFIG_KEYS.FOLDERS_FIRST,
             type: 'toggle',
-            label: 'Folders First',
-            description: 'Show folders before files in the tree',
+            label: ffLabel,
+            description: ffDesc,
             groupId: 'explorer-display',
             order: 20,
             defaultValue: EXPLORER_CONFIG_DEFAULTS.foldersFirst
@@ -112,8 +125,8 @@ export function registerExplorerSettings(app: NotehubCore): void {
         {
             key: EXPLORER_CONFIG_KEYS.SINGLE_CLICK_OPEN,
             type: 'toggle',
-            label: 'Single Click to Open',
-            description: 'Open files with a single click instead of double click',
+            label: scLabel,
+            description: scDesc,
             groupId: 'explorer-behavior',
             order: 10,
             defaultValue: EXPLORER_CONFIG_DEFAULTS.singleClickOpen
@@ -121,8 +134,8 @@ export function registerExplorerSettings(app: NotehubCore): void {
         {
             key: EXPLORER_CONFIG_KEYS.CONFIRM_DELETE,
             type: 'toggle',
-            label: 'Confirm File Deletion',
-            description: 'Ask for confirmation before moving files to trash',
+            label: cdLabel,
+            description: cdDesc,
             groupId: 'explorer-behavior',
             order: 20,
             defaultValue: EXPLORER_CONFIG_DEFAULTS.confirmDelete

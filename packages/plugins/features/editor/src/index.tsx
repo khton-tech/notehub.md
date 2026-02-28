@@ -43,6 +43,8 @@ import { registerEditorSettings, type EditorSettings } from './logic/EditorConfi
 import { PortalRegistry } from './cm/portals/PortalRegistry';
 import type { PortalSpec } from './cm/portals/types';
 import { EditorPortalRenderer } from './bridge';
+import en from './locales/en';
+import ru from './locales/ru';
 
 
 /**
@@ -200,7 +202,8 @@ export class EditorPlugin extends SystemPlugin {
             'nh.ui.controllers-manager',
             'nh.ui.dialog-manager',
             'nh.ui.icon-manager',
-            'nh.ui.theme-manager'
+            'nh.ui.theme-manager',
+            'nh.system.i18n'
         ]
     };
 
@@ -321,8 +324,16 @@ export class EditorPlugin extends SystemPlugin {
             return this.canOpenFile(filePath);
         });
 
+        // Update settings string translations on language change
+        this.registerEvent('i18n:language-changed', async () => {
+            await registerEditorSettings(this.app);
+        });
+
+        // Register translations
+        this.app.api.invoke('i18n:register-namespace', 'editor', { en: en.editor, ru: ru.editor });
+
         // Register settings with settings-manager for UI
-        registerEditorSettings(this.app);
+        await registerEditorSettings(this.app);
 
         // Create the controller for managing file state and operations
         this.controller = new EditorController(this.app);

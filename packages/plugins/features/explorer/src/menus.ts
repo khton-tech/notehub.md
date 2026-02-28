@@ -36,9 +36,17 @@ export function registerExplorerMenus(
 ): () => void {
     const cleanups: Array<() => void> = [];
 
+    const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+
     // ========== explorer-item context ==========
     // Right-click on a file or folder item (but NOT directories - those only get rename/delete)
-    const itemProvider = (payload: ExplorerItemPayload): MenuItem[] => {
+    const itemProvider = async (payload: ExplorerItemPayload): Promise<MenuItem[]> => {
+        const [renameLabel, deleteLabel, newNoteLabel, newFolderLabel] = await Promise.all([
+            t('explorer.menu.rename'),
+            t('explorer.menu.delete'),
+            t('explorer.menu.newNote'),
+            t('explorer.menu.newFolder'),
+        ]);
         const items: MenuItem[] = [];
 
         // File-specific items first
@@ -48,7 +56,7 @@ export function registerExplorerMenus(
                 {
                     type: 'action',
                     id: 'rename',
-                    label: 'Rename',
+                    label: renameLabel ?? 'Rename',
                     icon: 'edit',
                     onClick: () => {
                         controller.setRenaming(payload.path);
@@ -57,7 +65,7 @@ export function registerExplorerMenus(
                 {
                     type: 'action',
                     id: 'delete',
-                    label: 'Delete',
+                    label: deleteLabel ?? 'Delete',
                     icon: 'trash-2',
                     color: 'var(--nh-danger, #ef4444)',
                     onClick: () => {
@@ -71,7 +79,7 @@ export function registerExplorerMenus(
                 {
                     type: 'action',
                     id: 'new-note',
-                    label: 'New Note',
+                    label: newNoteLabel ?? 'New Note',
                     icon: 'file',
                     onClick: () => {
                         controller.createNote(payload.path);
@@ -80,7 +88,7 @@ export function registerExplorerMenus(
                 {
                     type: 'action',
                     id: 'new-folder',
-                    label: 'New Folder',
+                    label: newFolderLabel ?? 'New Folder',
                     icon: 'folder',
                     onClick: () => {
                         controller.createFolder(payload.path);
@@ -90,7 +98,7 @@ export function registerExplorerMenus(
                 {
                     type: 'action',
                     id: 'rename',
-                    label: 'Rename',
+                    label: renameLabel ?? 'Rename',
                     icon: 'edit',
                     onClick: () => {
                         controller.setRenaming(payload.path);
@@ -99,7 +107,7 @@ export function registerExplorerMenus(
                 {
                     type: 'action',
                     id: 'delete',
-                    label: 'Delete',
+                    label: deleteLabel ?? 'Delete',
                     icon: 'trash-2',
                     color: 'var(--nh-danger, #ef4444)',
                     onClick: () => {
@@ -126,12 +134,16 @@ export function registerExplorerMenus(
 
     // ========== explorer-root context ==========
     // Right-click on root header or empty area
-    const rootProvider = (payload: ExplorerFolderPayload): MenuItem[] => {
+    const rootProvider = async (payload: ExplorerFolderPayload): Promise<MenuItem[]> => {
+        const [newNoteLabel, newFolderLabel] = await Promise.all([
+            t('explorer.menu.newNote'),
+            t('explorer.menu.newFolder'),
+        ]);
         return [
             {
                 type: 'action',
                 id: 'new-note',
-                label: 'New Note',
+                label: newNoteLabel ?? 'New Note',
                 icon: 'file',
                 onClick: () => {
                     controller.createNote(payload.path);
@@ -140,7 +152,7 @@ export function registerExplorerMenus(
             {
                 type: 'action',
                 id: 'new-folder',
-                label: 'New Folder',
+                label: newFolderLabel ?? 'New Folder',
                 icon: 'folder',
                 onClick: () => {
                     controller.createFolder(payload.path);

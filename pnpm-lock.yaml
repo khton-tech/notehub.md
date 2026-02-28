@@ -231,6 +231,9 @@ importers:
       '@notehub/fs-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/system/fs-manager
+      '@notehub/i18n':
+        specifier: workspace:*
+        version: link:../../packages/plugins/system/i18n
       '@notehub/icon-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/ui/icon-manager
@@ -999,6 +1002,19 @@ importers:
         version: 5.9.3
 
   packages/plugins/system/fs-manager:
+    dependencies:
+      '@notehub/core':
+        specifier: workspace:*
+        version: link:../../../core
+    devDependencies:
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/plugins/system/i18n:
     dependencies:
       '@notehub/core':
         specifier: workspace:*

@@ -19,6 +19,8 @@ import { SettingsRegistry } from './logic/SettingsRegistry';
 import { SettingsModal } from './components/SettingsModal';
 import { SettingsLayout } from './components/SettingsLayout';
 import type { SettingsStructure } from './types';
+import en from './locales/en';
+import ru from './locales/ru';
 
 // Re-export types for consumers
 export * from './types';
@@ -50,6 +52,14 @@ export class SettingsManagerPlugin extends SystemPlugin {
 
     protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
+
+        // Register i18n namespace if i18n plugin is available
+        try {
+            this.app.api.invoke('i18n:register-namespace', 'settings-manager', {
+                en: en['settings-manager'],
+                ru: ru['settings-manager'],
+            });
+        } catch { /* i18n not available, components will use English defaults */ }
 
         // Create modal container
         this.modalContainer = document.createElement('div');

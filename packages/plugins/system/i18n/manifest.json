@@ -1,0 +1,10 @@
+{
+    "id": "nh.system.i18n",
+    "name": "Translation Service",
+    "version": "0.1.0",
+    "type": "system",
+    "description": "Centralized i18n translation management and language settings",
+    "dependencies": [
+        "nh.system.config-manager"
+    ]
+}

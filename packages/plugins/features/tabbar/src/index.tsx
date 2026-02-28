@@ -9,10 +9,12 @@
  */
 
 import { SystemPlugin } from '@notehub/core';
-import type { PluginManifest } from '@notehub/core';
+import type { PluginManifest, NotehubCore } from '@notehub/core';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TabBar } from './components/TabBar.js';
 import type { TabItem } from './components/TabBar.js';
+import en from './locales/en';
+import ru from './locales/ru';
 
 // ─── Filename helper ────────────────────────────────────────────────────────
 
@@ -53,7 +55,7 @@ function addTab(path: string): void {
     notify();
 }
 
-function removeTab(tabId: string, app: { api: { invoke: (name: string, ...args: unknown[]) => Promise<unknown> } }): void {
+function removeTab(tabId: string, app: NotehubCore): void {
     const idx = state.tabs.findIndex(t => t.id === tabId);
     if (idx === -1) return;
 
@@ -70,6 +72,8 @@ function removeTab(tabId: string, app: { api: { invoke: (name: string, ...args: 
             }
         } else {
             state.activeTabId = null;
+            // Notify the editor to clear its view when no tabs remain
+            app.events.emit('editor:file-closed');
         }
     }
     notify();
@@ -93,7 +97,7 @@ function updateTabPath(oldPath: string, newPath: string): void {
     }
 }
 
-function removeTabByPath(path: string, app: { api: { invoke: (name: string, ...args: unknown[]) => Promise<unknown> } }): void {
+function removeTabByPath(path: string, app: NotehubCore): void {
     if (state.tabs.find(t => t.id === path)) {
         removeTab(path, app);
     }
@@ -182,10 +186,16 @@ export class TabBarPlugin extends SystemPlugin {
         name: 'Tab Bar',
         version: '0.1.0',
         type: 'feature',
+        dependencies: ['nh.system.i18n'],
     };
 
     protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
+
+        this.app.api.invoke('i18n:register-namespace', 'tabbar', {
+            en: en.tabbar,
+            ru: ru.tabbar,
+        });
 
         // Load persisted tab state
         await loadTabs(this.app);
@@ -252,22 +262,28 @@ export class TabBarPlugin extends SystemPlugin {
         // ── Context menu ──
 
         try {
-            await this.app.api.invoke('context-menu:register', 'tabbar-tab', (payload: unknown) => {
+            const t = (key: string) => this.app.api.invoke<string>('i18n:t', key);
+            await this.app.api.invoke('context-menu:register', 'tabbar-tab', async (payload: unknown) => {
                 const data = payload as { tabId: string } | undefined;
                 if (!data) return [];
+                const [closeLabel, closeOthersLabel, closeAllLabel] = await Promise.all([
+                    t('tabbar.contextMenu.close'),
+                    t('tabbar.contextMenu.closeOthers'),
+                    t('tabbar.contextMenu.closeAll'),
+                ]);
                 return [
                     {
                         type: 'action',
                         id: 'tab:close',
-                        label: 'Close',
+                        label: closeLabel ?? 'Close',
                         icon: 'x',
                         onClick: () => removeTab(data.tabId, this.app),
                     },
                     {
                         type: 'action',
                         id: 'tab:close-others',
-                        label: 'Close Others',
-                        icon: 'x-circle',
+                        label: closeOthersLabel ?? 'Close Others',
+                        icon: 'chart-no-axes-gantt',
                         onClick: () => {
                             const keep = state.tabs.find(t => t.id === data.tabId);
                             if (keep) {
@@ -281,10 +297,13 @@ export class TabBarPlugin extends SystemPlugin {
                     {
                         type: 'action',
                         id: 'tab:close-all',
-                        label: 'Close All',
+                        label: closeAllLabel ?? 'Close All',
                         icon: 'trash-2',
                         color: 'var(--nh-danger)',
-                        onClick: () => clearAllTabs(),
+                        onClick: () => {
+                            clearAllTabs();
+                            this.app.events.emit('editor:file-closed');
+                        },
                     },
                 ];
             });
@@ -299,7 +318,10 @@ export class TabBarPlugin extends SystemPlugin {
         this.registerApi('tabbar:close-tab', (tabId: unknown) => {
             if (typeof tabId === 'string') removeTab(tabId, this.app);
         });
-        this.registerApi('tabbar:close-all', () => clearAllTabs());
+        this.registerApi('tabbar:close-all', () => {
+            clearAllTabs();
+            this.app.events.emit('editor:file-closed');
+        });
 
         // Detect already-open file (plugin loads after editor)
         try {

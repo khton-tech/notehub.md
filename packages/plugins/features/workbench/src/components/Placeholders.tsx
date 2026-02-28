@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Files, Search, Box, FileText } from 'lucide-react';
 import { RibbonButton, Label } from '@notehub/ck-standard';
 import type { NotehubCore } from '@notehub/core';
@@ -10,12 +10,32 @@ interface RibbonPlaceholderProps {
 }
 
 export const RibbonPlaceholder: React.FC<RibbonPlaceholderProps> = ({ app }) => {
+    const [explorerLabel, setExplorerLabel] = useState('Explorer');
+    const [searchLabel, setSearchLabel] = useState('Search');
+
+    const loadStrings = useCallback(async () => {
+        if (!app) return;
+        try {
+            const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+            const [e, s] = await Promise.all([t('workbench.explorer'), t('workbench.search')]);
+            setExplorerLabel(e ?? 'Explorer');
+            setSearchLabel(s ?? 'Search');
+        } catch { /* use defaults */ }
+    }, [app]);
+
+    useEffect(() => {
+        if (!app) return;
+        loadStrings();
+        app.events.on('i18n:language-changed', loadStrings);
+        return () => app.events.off('i18n:language-changed', loadStrings);
+    }, [app, loadStrings]);
+
     return (
         <div className="flex flex-col items-center gap-2 w-full py-2">
-            <RibbonButton isActive={true} label="Explorer">
+            <RibbonButton isActive={true} label={explorerLabel}>
                 <Files size={20} />
             </RibbonButton>
-            <RibbonButton label="Search">
+            <RibbonButton label={searchLabel}>
                 <Search size={20} />
             </RibbonButton>
 
@@ -51,12 +71,33 @@ export const ExplorerPlaceholder: React.FC = () => {
 };
 
 // Editor Placeholder
-export const EditorPlaceholder: React.FC = () => {
+interface EditorPlaceholderProps {
+    app?: NotehubCore;
+}
+
+export const EditorPlaceholder: React.FC<EditorPlaceholderProps> = ({ app }) => {
+    const [noFileLabel, setNoFileLabel] = useState('No file is open');
+
+    const loadStrings = useCallback(async () => {
+        if (!app) return;
+        try {
+            const v = await app.api.invoke<string>('i18n:t', 'workbench.noFileOpen');
+            setNoFileLabel(v ?? 'No file is open');
+        } catch { /* use defaults */ }
+    }, [app]);
+
+    useEffect(() => {
+        if (!app) return;
+        loadStrings();
+        app.events.on('i18n:language-changed', loadStrings);
+        return () => app.events.off('i18n:language-changed', loadStrings);
+    }, [app, loadStrings]);
+
     return (
         <div className="flex flex-col items-center justify-center h-full text-[var(--nh-text-muted)] select-none">
             <FileText size={64} className="mb-4 opacity-20" />
             <Label variant="h2" className="mb-1">Notehub.md</Label>
-            <Label variant="caption" className="opacity-60">No file is open</Label>
+            <Label variant="caption" className="opacity-60">{noFileLabel}</Label>
         </div>
     );
 };

@@ -15,11 +15,13 @@
 import { useState, useEffect, useRef, useCallback, type FC, type KeyboardEvent } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { SystemPlugin } from '@notehub/core';
-import type { PluginManifest } from '@notehub/core';
+import type { PluginManifest, NotehubCore } from '@notehub/core';
 import type { VisibleCommand } from '@notehub.md/api';
 import { Card, ListItem } from '@notehub/ck-standard';
 import { Icon } from '@notehub/icon-manager';
 import { getSearchCandidates } from './utils/layoutEngine';
+import en from './locales/en';
+import ru from './locales/ru';
 
 // ============================================================================
 // PaletteModal Component
@@ -29,12 +31,47 @@ interface PaletteModalProps {
     commands: VisibleCommand[];
     onExecute: (id: string) => void;
     onClose: () => void;
+    app: NotehubCore;
 }
 
-const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose }) => {
+const PALETTE_DEFAULTS = {
+    placeholder: 'Type a command...',
+    noResults: 'No commands found',
+    navigate: 'navigate',
+    select: 'select',
+    close: 'close',
+};
+
+const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose, app }) => {
     const [query, setQuery] = useState('');
     const [filteredCommands, setFilteredCommands] = useState<VisibleCommand[]>(commands);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [strings, setStrings] = useState(PALETTE_DEFAULTS);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const t = (key: string) => app.api.invoke<string>('i18n:t', key);
+                const results = await Promise.all([
+                    t('command-palette.placeholder'),
+                    t('command-palette.noResults'),
+                    t('command-palette.hints.navigate'),
+                    t('command-palette.hints.select'),
+                    t('command-palette.hints.close'),
+                ]);
+                setStrings({
+                    placeholder: results[0] ?? PALETTE_DEFAULTS.placeholder,
+                    noResults: results[1] ?? PALETTE_DEFAULTS.noResults,
+                    navigate: results[2] ?? PALETTE_DEFAULTS.navigate,
+                    select: results[3] ?? PALETTE_DEFAULTS.select,
+                    close: results[4] ?? PALETTE_DEFAULTS.close,
+                });
+            } catch { /* use defaults */ }
+        };
+        load();
+        app.events.on('i18n:language-changed', load);
+        return () => app.events.off('i18n:language-changed', load);
+    }, [app]);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
 
@@ -124,7 +161,7 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose }) =
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Type a command..."
+                        placeholder={strings.placeholder}
                         onKeyDown={handleKeyDown}
                         data-palette-input="true"
                         autoFocus
@@ -150,7 +187,7 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose }) =
                     {filteredCommands.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 text-[var(--nh-text-muted,rgba(255,255,255,0.4))]">
                             <Icon name="search-x" size={32} />
-                            <span className="mt-2 text-sm">No commands found</span>
+                            <span className="mt-2 text-sm">{strings.noResults}</span>
                         </div>
                     ) : (
                         filteredCommands.map((cmd, index) => (
@@ -170,15 +207,15 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose }) =
                 <div className="flex items-center gap-4 px-4 py-2 text-xs text-[var(--nh-text-muted,rgba(255,255,255,0.4))] border-t border-[var(--nh-border-subtle,rgba(255,255,255,0.08))]">
                     <span className="flex items-center gap-1">
                         <kbd className="px-1.5 py-0.5 rounded bg-[var(--nh-bg-secondary,#1A1A1A)] font-mono">↑↓</kbd>
-                        navigate
+                        {strings.navigate}
                     </span>
                     <span className="flex items-center gap-1">
                         <kbd className="px-1.5 py-0.5 rounded bg-[var(--nh-bg-secondary,#1A1A1A)] font-mono">↵</kbd>
-                        select
+                        {strings.select}
                     </span>
                     <span className="flex items-center gap-1">
                         <kbd className="px-1.5 py-0.5 rounded bg-[var(--nh-bg-secondary,#1A1A1A)] font-mono">esc</kbd>
-                        close
+                        {strings.close}
                     </span>
                 </div>
             </Card>
@@ -214,6 +251,7 @@ export class CommandPalettePlugin extends SystemPlugin {
         dependencies: [
             'nh.system.command-manager',
             'nh.system.logger',
+            'nh.system.i18n',
             'nh.ui.ck-standard',
             'nh.ui.icon-manager',
         ],
@@ -241,6 +279,7 @@ export class CommandPalettePlugin extends SystemPlugin {
                 commands={commands}
                 onExecute={(id) => this.executeAndClose(id)}
                 onClose={() => this.closePalette()}
+                app={this.app}
             />
         );
     };
@@ -272,16 +311,24 @@ export class CommandPalettePlugin extends SystemPlugin {
     protected async onLoad(): Promise<void> {
         this.log('info', 'Loading...');
 
+        // Register i18n namespace
+        this.app.api.invoke('i18n:register-namespace', 'command-palette', {
+            en: en['command-palette'],
+            ru: ru['command-palette'],
+        });
+
         // Create palette container (mounted to body, like dialog-manager)
         this.paletteContainer = document.createElement('div');
         this.paletteContainer.id = 'nh-command-palette';
         document.body.appendChild(this.paletteContainer);
         this.paletteRoot = createRoot(this.paletteContainer);
 
+        const t = (key: string) => this.app.api.invoke<string>('i18n:t', key);
+
         // Register the palette:open command with hotkeys
         this.app.api.invoke('command:register', {
             id: 'palette:open',
-            name: 'Open Command Palette',
+            name: await t('command-palette.commands.open'),
             handler: this.openPalette,
             areas: ['global', 'palette'],
             defaultHotkey: 'Mod+P',
@@ -290,9 +337,9 @@ export class CommandPalettePlugin extends SystemPlugin {
         // Also register F1 as an alternative (hidden from palette display)
         this.app.api.invoke('command:register', {
             id: 'palette:open-f1',
-            name: 'Open Command Palette (F1)',
+            name: await t('command-palette.commands.openF1'),
             handler: this.openPalette,
-            areas: ['global'],  // Hidden from palette itself (doesn't include 'palette')
+            areas: ['global'],
             defaultHotkey: 'F1',
         });
 
