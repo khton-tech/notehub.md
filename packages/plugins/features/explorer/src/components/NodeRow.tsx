@@ -20,6 +20,8 @@ import type { FileNode } from '../types';
 // every visible file in the tree.
 export interface NodeRowProps extends NodeRendererProps<FileNode> {
     singleClickOpen?: boolean;
+    onDragStart?: (id: string) => void;
+    onDragEnd?: () => void;
 }
 
 export const NodeRow: React.FC<NodeRowProps> = ({
@@ -27,6 +29,8 @@ export const NodeRow: React.FC<NodeRowProps> = ({
     style,
     dragHandle,
     singleClickOpen = true,
+    onDragStart,
+    onDragEnd,
 }) => {
     const app = useNotehub();
     const data = node.data;
@@ -51,6 +55,22 @@ export const NodeRow: React.FC<NodeRowProps> = ({
     useEffect(() => {
         if (node.isEditing) wasEditing.current = true;
     }, [node.isEditing]);
+
+    // Auto-expand a closed folder after hovering over it for 600ms during drag.
+    // This matches VS Code / Finder behaviour and lets users drop into nested folders
+    // without having to open them separately first.
+    const autoExpandRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+        if (node.willReceiveDrop && data.isDir && !node.isOpen) {
+            autoExpandRef.current = setTimeout(() => node.open(), 600);
+        }
+        return () => {
+            if (autoExpandRef.current !== null) {
+                clearTimeout(autoExpandRef.current);
+                autoExpandRef.current = null;
+            }
+        };
+    }, [node.willReceiveDrop, node.isOpen, data.isDir]);
 
     // Auto-open files when focused via keyboard navigation (if single click is enabled)
     useEffect(() => {
@@ -108,16 +128,29 @@ export const NodeRow: React.FC<NodeRowProps> = ({
         ? (node.isOpen ? 'folder-open' : 'folder')
         : 'file';
 
+    const isHighlighted = node.isSelected;
+    const isDragging = node.isDragging;
+    const willReceiveDrop = node.willReceiveDrop;
+
     // Build class names for styling
     const baseClasses = [
         'group relative flex items-center h-full cursor-pointer text-[13px] pr-2',
         'transition-colors duration-100',
     ];
 
-    // Highlight based on selection (active file)
-    const isHighlighted = node.isSelected;
+    if (isDragging) {
+        baseClasses.push('opacity-40');
+    }
 
-    if (isHighlighted) {
+    if (willReceiveDrop && data.isDir) {
+        // Folder is the current drop target — show prominent highlight
+        baseClasses.push(
+            'text-[var(--nh-text-primary)]',
+            'mx-1.5 rounded-lg',
+            'bg-[var(--nh-accent-secondary)]',
+            'ring-1 ring-inset ring-[var(--nh-accent-primary)]'
+        );
+    } else if (isHighlighted) {
         baseClasses.push(
             'text-[var(--nh-text-primary)]',
             'mx-1.5 rounded-lg',
@@ -130,10 +163,8 @@ export const NodeRow: React.FC<NodeRowProps> = ({
         );
     }
 
-    // Focused state (keyboard navigation) - removed thick ring in favor of subtle left border
-
     // Icon color classes - monochrome for consistency
-    const iconColorClass = isHighlighted
+    const iconColorClass = (isHighlighted || willReceiveDrop)
         ? 'text-[var(--nh-accent-primary)]'
         : 'text-[var(--nh-text-muted)]';
 
@@ -145,6 +176,8 @@ export const NodeRow: React.FC<NodeRowProps> = ({
             onClick={handleClick}
             onDoubleClick={handleDoubleClick}
             onContextMenu={handleContextMenu}
+            onDragStart={() => onDragStart?.(node.id)}
+            onDragEnd={() => onDragEnd?.()}
             role="treeitem"
             aria-selected={node.isSelected}
         >

@@ -174,11 +174,15 @@ export class ExplorerController {
         this.app.events.on('editor:file-opened', fileOpenedHandler);
         this.app.events.on('editor:open', fileOpenedHandler);
 
-        // When the editor closes (e.g. last tab removed), clear active path so
-        // that re-clicking the same file in the tree triggers a fresh open.
+        // When the editor closes (e.g. last tab removed), keep the visual focus on
+        // the parent folder of whichever file was active — so the tree doesn't go blank.
         const fileClosedHandler = () => {
+            if (this._activeFilePath) {
+                this._selectedPath = getParentPath(this._activeFilePath);
+            } else {
+                this._selectedPath = null;
+            }
             this._activeFilePath = null;
-            this._selectedPath = null;
             this.notify();
         };
         this.app.events.on('editor:file-closed', fileClosedHandler);
@@ -543,7 +547,9 @@ export class ExplorerController {
 
     async onMove(args: { dragIds: string[]; parentId: string | null; index: number }): Promise<void> {
         const { dragIds, parentId } = args;
-        if (!parentId) return;
+        // parentId === null means "drop at the tree root level" — fall back to rootPath
+        const targetParentId = parentId ?? this.rootPath;
+        if (!targetParentId) return;
 
         const processed = new Set<string>();
 
@@ -552,18 +558,18 @@ export class ExplorerController {
             processed.add(dragId);
 
             const fileName = getFileName(dragId);
-            const newPath = joinPath(parentId, fileName);
+            const newPath = joinPath(targetParentId, fileName);
 
             // Checks
             if (dragId === newPath) continue;
-            if (this.isDescendant(dragId, parentId)) {
-                console.warn(`Cannot move "${dragId}" into its own child "${parentId}"`);
+            if (this.isDescendant(dragId, targetParentId)) {
+                console.warn(`Cannot move "${dragId}" into its own child "${targetParentId}"`);
                 continue;
             }
 
             const oldParentPath = getParentPath(dragId);
             const oldParentNode = this.nodes.get(oldParentPath);
-            const newParentNode = this.nodes.get(parentId);
+            const newParentNode = this.nodes.get(targetParentId);
 
             // --- OPTIMISTIC UPDATE ---
             // 1. Remove from old parent
@@ -583,7 +589,7 @@ export class ExplorerController {
                 if (!exists) {
                     newParentNode.children.push(movedNode);
                     this.sortChildren(newParentNode.children);
-                    this.touch(parentId);
+                    this.touch(targetParentId);
                 }
             }
 
@@ -601,9 +607,8 @@ export class ExplorerController {
                 await this.app.api.invoke('dialog:alert', 'Move Failed', error?.message || String(error));
 
                 // Rollback: Force reload both affected directories
-                // We don't try to manually undo the optimistic update because it's complex
                 if (oldParentPath) await this.loadDir(oldParentPath);
-                await this.loadDir(parentId);
+                await this.loadDir(targetParentId);
             } finally {
                 // Cleanup ignores after delay
                 setTimeout(() => {
@@ -918,13 +923,16 @@ export class ExplorerController {
         const node = this.nodes.get(path);
         if (!node || !node.isDir) return;
 
-        if (!this.expandedPaths.has(path)) {
-            this.expandedPaths.add(path);
-            this.saveExpandedPaths();
+        this.expandedPaths.add(path);
+        this.saveExpandedPaths();
+
+        // Only hit the FS on first expand. After that, the watcher keeps data
+        // current — calling loadDir on every expand causes a visible async delay
+        // after DnD drops (react-arborist calls tree.open() → onToggle → here).
+        if (!node.isLoaded) {
+            await this.loadDir(path);
         }
 
-        // Always reload to be fresh when expanding by user action
-        await this.loadDir(path);
         this.notify();
     }
 

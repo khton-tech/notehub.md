@@ -11,6 +11,7 @@
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Tree, TreeApi } from 'react-arborist';
+import type { CursorProps } from 'react-arborist';
 import { ExplorerController } from '../logic/ExplorerController';
 import { NodeRow } from './NodeRow';
 import type { NodeRowProps } from './NodeRow';
@@ -18,6 +19,36 @@ import type { FileNode } from '../types';
 import { Menu, MenuItem, MenuSeparator } from '@notehub/ck-standard';
 import { Icon } from '@notehub/icon-manager';
 import { useNotehub } from '@notehub/core';
+
+// Themed drop-line cursor that uses CSS design tokens instead of the default hardcoded blue
+const ThemedCursor = React.memo(function ThemedCursor({ top, left, indent }: CursorProps) {
+    return (
+        <div style={{
+            position: 'absolute',
+            pointerEvents: 'none',
+            top: top - 2 + 'px',
+            left: left + 'px',
+            right: indent + 'px',
+            display: 'flex',
+            alignItems: 'center',
+            zIndex: 1,
+        }}>
+            <div style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                boxShadow: '0 0 0 2px var(--nh-accent-primary)',
+                flexShrink: 0,
+            }} />
+            <div style={{
+                flex: 1,
+                height: '2px',
+                background: 'var(--nh-accent-primary)',
+                borderRadius: '1px',
+            }} />
+        </div>
+    );
+});
 
 interface FileTreeProps {
     controller: ExplorerController;
@@ -38,6 +69,44 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     const [renamingId, setRenamingId] = useState<string | null>(null);
     const [renamingVersion, setRenamingVersion] = useState(0);
 
+    // Drag state — tracked via native dragstart/dragend on the container
+    const [draggingId, setDraggingId] = useState<string | null>(null);
+    const [isOverRootZone, setIsOverRootZone] = useState(false);
+
+    // Track mouse Y for edge-scroll during drag
+    const mouseYRef = useRef(0);
+    useEffect(() => {
+        const track = (e: DragEvent) => { mouseYRef.current = e.clientY; };
+        document.addEventListener('dragover', track);
+        return () => document.removeEventListener('dragover', track);
+    }, []);
+
+    // Auto-scroll the tree list when dragging near the top/bottom edge
+    useEffect(() => {
+        if (!draggingId) return;
+        let rafId: number;
+        const ZONE = 60;   // px from edge that triggers scroll
+        const MAX_SPEED = 10; // px per frame at the edge
+
+        const scroll = () => {
+            const el = treeRef.current?.listEl?.current;
+            if (el) {
+                const rect = el.getBoundingClientRect();
+                const y = mouseYRef.current;
+                if (y < rect.top + ZONE) {
+                    const t = 1 - (y - rect.top) / ZONE;
+                    el.scrollBy(0, -MAX_SPEED * Math.max(0, Math.min(1, t)));
+                } else if (y > rect.bottom - ZONE) {
+                    const t = 1 - (rect.bottom - y) / ZONE;
+                    el.scrollBy(0, MAX_SPEED * Math.max(0, Math.min(1, t)));
+                }
+            }
+            rafId = requestAnimationFrame(scroll);
+        };
+        rafId = requestAnimationFrame(scroll);
+        return () => cancelAnimationFrame(rafId);
+    }, [draggingId]);
+
     // BUG-04 fix: read singleClickOpen once from the controller (which already loaded
     // it from config) and update it via controller subscription, instead of having
     // every NodeRow instance make its own config:get call and keep its own listener.
@@ -49,8 +118,9 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     // Disable drag on touch so there's no broken grab-but-nothing-moves experience.
     const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
-    // ⚡ selectedId напрямую привязан к activeFilePath — единый источник правды
-    const selectedId = controller.activeFilePath;
+    // selectedId: active file if one is open, otherwise the last selected folder/file.
+    // This ensures the tree always has something highlighted when there is a context.
+    const selectedId = controller.activeFilePath ?? controller.selectedPath;
 
     // Subscribe to controller changes
     useEffect(() => {
@@ -201,31 +271,67 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
         };
     }, [showNewMenu]);
 
-    // Handle node toggle (expand/collapse directories)
+    // Handle node toggle (expand/collapse directories).
+    // IMPORTANT: sync to what react-arborist actually did, not to our own state.
+    // Using controller.isExpanded() was wrong: when react-arborist programmatically
+    // opens a folder (e.g. tree.open() after a DnD drop), onToggle fires with the
+    // folder already OPEN — but if our state also said "open", we'd call collapseDir,
+    // making the folder close right after a successful drop. Using treeRef.isOpen()
+    // reads the tree's real current state and syncs ours to match it.
     const handleToggle = useCallback((id: string) => {
-        if (controller.isExpanded(id)) {
-            controller.collapseDir(id);
-        } else {
+        // react-arborist fires onToggle with its internal ROOT_ID sentinel when
+        // tree.open(null) is called (root-level drop). Ignore it — the root is
+        // always open and has no corresponding node in our controller.
+        if (id === '__REACT_ARBORIST_INTERNAL_ROOT__') return;
+
+        const nowOpen = treeRef.current?.isOpen(id) ?? false;
+        if (nowOpen) {
             controller.expandDir(id);
+        } else {
+            controller.collapseDir(id);
+        }
+    }, [controller]);
+
+    // Helper: force react-arborist to restore the current selection.
+    // react-arborist dispatches selection.clear() on background clicks, which wipes
+    // its internal Redux state. Because our `selection` prop hasn't changed, the tree
+    // won't re-apply it on its own. We must call treeRef.select() explicitly.
+    //
+    // IMPORTANT: tree.select(id) always calls onSelect(this.selectedNodes) synchronously.
+    // If the target node lives inside a collapsed folder, tree.get(id) returns null
+    // (node is not in the visible list), so selectedNodes=[] → handleSelect([]) fires →
+    // restoreSelection() again → infinite recursion / stack overflow.
+    // Guard: only call select() when the node is currently rendered (get(id) !== null).
+    // The `selection` prop + tree.update() covers non-visible nodes on next re-render.
+    const restoreSelection = useCallback(() => {
+        const current = controller.activeFilePath ?? controller.selectedPath;
+        if (!current || !treeRef.current) return;
+        if (treeRef.current.get(current) !== null) {
+            treeRef.current.select(current);
         }
     }, [controller]);
 
     // Handle node select
     const handleSelect = useCallback((nodes: any[]) => {
         if (nodes.length > 0) {
-            const node = nodes[0];
-            controller.selectItem(node.id);
+            controller.selectItem(nodes[0].id);
         } else {
-            // Selection cleared (e.g. background click). 
-            // We IGNORE this to maintain "Concrete Focus".
-            // Since we use the `selection` prop, react-arborist will revert to the prop value on next render.
+            // Background click cleared react-arborist's internal selection state.
+            // Immediately restore it — we never allow an empty selection when there
+            // is a file or folder to highlight.
+            restoreSelection();
         }
-    }, [controller]);
+    }, [controller, restoreSelection]);
 
     // Handle rename
     const handleRename = useCallback(({ id, name }: { id: string; name: string }) => {
         controller.onRename({ id, name });
     }, [controller]);
+
+    // Tracks whether react-arborist already called onMove for the current drag.
+    // Used by the container's native onDrop to avoid double-moving when the drop
+    // lands on a tree row (react-arborist handles it) vs empty space (we handle it).
+    const moveHandledRef = useRef(false);
 
     // Handle move (drag & drop)
     const handleMove = useCallback((args: {
@@ -233,14 +339,21 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
         parentId: string | null;
         index: number;
     }) => {
+        moveHandledRef.current = true;
         controller.onMove(args);
     }, [controller]);
 
     // BUG-04 fix: single memoized renderer that closes over singleClickOpen.
-    // react-arborist re-renders rows (not remounts) when the component reference
-    // changes, so this is safe and far cheaper than 200 individual subscriptions.
+    // Also closes over drag callbacks to track drag state without per-row subscriptions.
     const RowRenderer = useMemo(
-        () => (props: NodeRowProps) => <NodeRow {...props} singleClickOpen={singleClickOpen} />,
+        () => (props: NodeRowProps) => (
+            <NodeRow
+                {...props}
+                singleClickOpen={singleClickOpen}
+                onDragStart={setDraggingId}
+                onDragEnd={() => setDraggingId(null)}
+            />
+        ),
         [singleClickOpen]
     );
 
@@ -331,16 +444,37 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                 }
             `}</style>
             <div className="w-full h-full flex flex-col select-none bg-[var(--nh-bg-secondary)]">
-                {/* Header / Toolbar */}
+                {/* Header / Toolbar — doubles as root drop zone when dragging */}
                 <div
-                    className="flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-subtle)] bg-[var(--nh-bg-secondary)]"
+                    className={[
+                        'flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-subtle)] bg-[var(--nh-bg-secondary)]',
+                        'transition-colors duration-150',
+                        draggingId
+                            ? isOverRootZone
+                                ? 'bg-[var(--nh-accent-secondary)] border-[var(--nh-accent-primary)]'
+                                : 'border-dashed border-[var(--nh-accent-primary)] opacity-80'
+                            : '',
+                    ].join(' ')}
                     onContextMenu={handleRootContextMenu}
+                    onDragOver={draggingId ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setIsOverRootZone(true); } : undefined}
+                    onDragLeave={draggingId ? () => setIsOverRootZone(false) : undefined}
+                    onDrop={draggingId ? (e) => {
+                        e.preventDefault();
+                        setIsOverRootZone(false);
+                        const id = draggingId;
+                        setDraggingId(null);
+                        if (id) controller.onMove({ dragIds: [id], parentId: null, index: 0 });
+                    } : undefined}
                 >
                     <span
-                        className="text-xs font-semibold text-[var(--nh-text-muted)] truncate select-none"
+                        className="text-xs font-semibold truncate select-none transition-colors duration-150"
                         title={rootName}
+                        style={{ color: draggingId && isOverRootZone ? 'var(--nh-accent-primary)' : 'var(--nh-text-muted)' }}
                     >
-                        {rootName || 'Explorer'}
+                        {draggingId
+                            ? (isOverRootZone ? 'Move to root' : rootName || 'Explorer')
+                            : (rootName || 'Explorer')
+                        }
                     </span>
 
                     <div className="relative flex items-center gap-1">
@@ -384,6 +518,14 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                     </div>
                 </div>
 
+                {/* DnD blocked by search — warn the user */}
+                {draggingId && searchTerm && (
+                    <div className="px-3 py-1 text-[11px] text-[var(--nh-text-muted)] bg-[var(--nh-bg-hover)] border-b border-[var(--nh-border-subtle)] flex items-center gap-1.5">
+                        <Icon name="alert-triangle" size={11} className="text-[var(--nh-accent-warning,var(--nh-text-muted))] flex-shrink-0" />
+                        Clear search to enable drag
+                    </div>
+                )}
+
                 {/* Search/Filter Input — visible only when toggled */}
                 {showSearch && (
                     <div className="px-2 py-1.5 border-b border-[var(--nh-border-subtle)]">
@@ -426,10 +568,45 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                 <div
                     ref={containerRef}
                     className="react-arborist-tree flex-1 overflow-hidden outline-none"
-                    onClick={() => setShowNewMenu(false)}
+                    onClick={(e) => {
+                        setShowNewMenu(false);
+                        // If the click landed in empty space (not on a tree row),
+                        // restore the selection as a belt-and-suspenders guard.
+                        // This catches cases where react-arborist clears its internal
+                        // state without going through onSelect([]).
+                        if (!(e.target as HTMLElement).closest('[role="treeitem"]')) {
+                            restoreSelection();
+                        }
+                    }}
                     onContextMenu={handleRootContextMenu}
                     onKeyDown={handleKeyDown}
                     tabIndex={0}
+                    // Native DnD on the container so that drops landing in any empty
+                    // area (between rows, below last item, or in ungrown space) move
+                    // the dragged item to the vault root.
+                    //
+                    // Event ordering:
+                    //   1. capture phase: react-dnd's handleTopDropCapture
+                    //   2. bubble phase: this onDrop handler — queues a microtask
+                    //   3. bubble phase: react-dnd's window-level handleTopDrop
+                    //      → calls handleMove → moveHandledRef = true
+                    //   4. microtask runs — checks the flag
+                    //
+                    // So by the time the microtask fires, react-arborist has either
+                    // set the flag (it handled the drop) or not (we handle it).
+                    onDragOver={draggingId ? (e) => e.preventDefault() : undefined}
+                    onDrop={draggingId ? (e) => {
+                        e.preventDefault();
+                        const id = draggingId;
+                        setDraggingId(null);
+                        setIsOverRootZone(false);
+                        queueMicrotask(() => {
+                            if (!moveHandledRef.current && id) {
+                                controller.onMove({ dragIds: [id], parentId: null, index: 0 });
+                            }
+                            moveHandledRef.current = false;
+                        });
+                    } : undefined}
                 >
                     {isEmpty ? (
                         <div className="flex flex-col items-center justify-center gap-3 px-4 py-10 text-center">
@@ -466,6 +643,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                             disableDrop={isTouchDevice}
                             disableEdit={false}
                             className="outline-none"
+                            renderCursor={ThemedCursor}
                         >
                             {RowRenderer}
                         </Tree>
