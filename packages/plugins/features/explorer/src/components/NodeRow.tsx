@@ -8,16 +8,25 @@
  * - Inline rename support
  */
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import type { NodeRendererProps } from 'react-arborist';
 import { Icon } from '@notehub/icon-manager';
 import { useNotehub } from '@notehub/core';
 import type { FileNode } from '../types';
 
-export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
+// BUG-04 fix: singleClickOpen is now passed as a prop from FileTree instead of
+// being read individually by each NodeRow instance. The old approach caused N
+// concurrent config:get API calls and N persistent config:updated listeners for
+// every visible file in the tree.
+export interface NodeRowProps extends NodeRendererProps<FileNode> {
+    singleClickOpen?: boolean;
+}
+
+export const NodeRow: React.FC<NodeRowProps> = ({
     node,
     style,
     dragHandle,
+    singleClickOpen = true,
 }) => {
     const app = useNotehub();
     const data = node.data;
@@ -42,22 +51,6 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
     useEffect(() => {
         if (node.isEditing) wasEditing.current = true;
     }, [node.isEditing]);
-
-    const [singleClickOpen, setSingleClickOpen] = useState(true);
-
-    useEffect(() => {
-        app.api.invoke('config:get', 'explorer.single-click-open', true).then((val: any) => {
-            setSingleClickOpen(val ?? true);
-        });
-
-        const onConfig = (payload: any) => {
-            if (payload.key === 'explorer.single-click-open') {
-                setSingleClickOpen(payload.value);
-            }
-        };
-        app.events.on('config:updated', onConfig);
-        return () => app.events.off('config:updated', onConfig);
-    }, [app]);
 
     // Auto-open files when focused via keyboard navigation (if single click is enabled)
     useEffect(() => {
@@ -192,7 +185,11 @@ export const NodeRow: React.FC<NodeRendererProps<FileNode>> = ({
                         ref={inputRef}
                         type="text"
                         defaultValue={data.name}
-                        onBlur={() => node.reset()}
+                        onBlur={() => {
+                            node.reset();
+                            // Notify controller that rename was cancelled via blur
+                            app.events.emit('explorer:rename-cancelled' as any);
+                        }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 const value = e.currentTarget.value.trim();

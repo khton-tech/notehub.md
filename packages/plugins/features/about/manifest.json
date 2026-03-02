@@ -6,6 +6,7 @@
     "description": "Displays application information and credits",
     "dependencies": [
         "nh.ui.settings-manager",
-        "nh.ui.icon-manager"
+        "nh.ui.icon-manager",
+        "nh.system.i18n"
     ]
 }

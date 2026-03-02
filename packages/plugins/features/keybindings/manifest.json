@@ -8,6 +8,7 @@
     "dependencies": [
         "nh.ui.settings-manager",
         "nh.system.command-manager",
-        "nh.system.keymap"
+        "nh.system.keymap",
+        "nh.system.i18n"
     ]
 }

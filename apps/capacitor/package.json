@@ -36,6 +36,7 @@
         "@notehub/fs-driver-capacitor": "workspace:*",
         "@notehub/fs-manager": "workspace:*",
         "@notehub/icon-manager": "workspace:*",
+        "@notehub/i18n": "workspace:*",
         "@notehub/keybindings": "workspace:*",
         "@notehub/keymap": "workspace:*",
         "@notehub/layout-manager": "workspace:*",

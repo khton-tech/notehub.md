@@ -79,12 +79,10 @@ export class FsDriverCapacitorPlugin extends SystemPlugin implements IFileSystem
                     directory: parsed.directory
                 };
             }
-            this.log('error', `Failed to parse content URI: ${path}`);
-            return {
-                path: path,
-                // @ts-ignore
-                directory: undefined
-            };
+            // BUG-03 fix: returning directory:undefined (with @ts-ignore) caused
+            // undefined behaviour in Capacitor Filesystem calls. Throw explicitly so
+            // callers get a clear error instead of silent misbehaviour.
+            throw new Error(`resolvePath: unsupported content URI format (cannot resolve provider): ${path}`);
         }
 
         return {
@@ -126,8 +124,13 @@ export class FsDriverCapacitorPlugin extends SystemPlugin implements IFileSystem
                     bytes[i] = binaryString.charCodeAt(i);
                 }
                 return bytes;
+            } else if (result.data instanceof Blob) {
+                // BUG-02 fix: newer Capacitor / Web platform may return a Blob instead
+                // of a base64 string. Silently returning Uint8Array(0) caused data loss.
+                const buffer = await result.data.arrayBuffer();
+                return new Uint8Array(buffer);
             } else {
-                return new Uint8Array(0);
+                throw new Error(`readFile: unexpected data type "${typeof result.data}" returned by Filesystem`);
             }
         } catch (e) {
             try {

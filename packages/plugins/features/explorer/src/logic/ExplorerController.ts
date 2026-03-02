@@ -18,6 +18,7 @@ export class ExplorerController {
     private _activeFilePath: string | null = null;
     private _selectedPath: string | null = null;
     private _renamingPath: string | null = null;
+    private _renamingVersion: number = 0;
 
     // Subscribers
     private listeners: Set<() => void> = new Set();
@@ -43,6 +44,7 @@ export class ExplorerController {
 
     get activeFilePath(): string | null { return this._activeFilePath; }
     get renamingPath(): string | null { return this._renamingPath; }
+    get renamingVersion(): number { return this._renamingVersion; }
     get selectedPath(): string | null { return this._selectedPath; }
     get root(): string | null { return this.rootPath; }
 
@@ -54,13 +56,16 @@ export class ExplorerController {
     private showHidden: boolean = false;
     private confirmDelete: boolean = true;
     private singleClickOpen: boolean = true;
+    // BUG-06: was missing — field added to load and apply the setting
+    private foldersFirst: boolean = true;
 
     // Getters for settings
     getSettings() {
         return {
             showHidden: this.showHidden,
             confirmDelete: this.confirmDelete,
-            singleClickOpen: this.singleClickOpen
+            singleClickOpen: this.singleClickOpen,
+            foldersFirst: this.foldersFirst,
         };
     }
 
@@ -114,6 +119,14 @@ export class ExplorerController {
             );
             this.singleClickOpen = singleClickOpen ?? true;
 
+            // BUG-06 fix: load foldersFirst from config (was never loaded before)
+            const foldersFirst = await this.app.api.invoke<boolean>(
+                'config:get',
+                'explorer.folders-first',
+                true
+            );
+            this.foldersFirst = foldersFirst ?? true;
+
             // Restore expanded paths
             const expanded = await this.app.api.invoke<string[] | undefined>(
                 'config:get',
@@ -128,6 +141,7 @@ export class ExplorerController {
             this.showHidden = false;
             this.confirmDelete = true;
             this.singleClickOpen = true;
+            this.foldersFirst = true;
         }
 
         const configHandler = (payload: any) => {
@@ -140,6 +154,10 @@ export class ExplorerController {
             } else if (key === 'explorer.single-click-open' && typeof value === 'boolean') {
                 this.singleClickOpen = value;
                 this.notify();
+            // BUG-06 fix: handle foldersFirst changes and re-sort the tree
+            } else if (key === 'explorer.folders-first' && typeof value === 'boolean') {
+                this.foldersFirst = value;
+                if (this.rootPath) this.reloadAll();
             }
         };
         this.app.events.on('config:updated', configHandler);
@@ -207,15 +225,21 @@ export class ExplorerController {
             }
         };
 
+        const renameCancelledHandler = () => {
+            this.cancelRename();
+        };
+
         this.app.events.on('fs:written', fsWrittenHandler as any);
         this.app.events.on('fs:dir-created', fsDirCreatedHandler as any);
         this.app.events.on('fs:deleted', fsDeletedHandler as any);
         this.app.events.on('fs:renamed', fsRenamedHandler as any);
+        this.app.events.on('explorer:rename-cancelled' as any, renameCancelledHandler);
         this.eventCleanups.push(() => {
             this.app.events.off('fs:written', fsWrittenHandler as any);
             this.app.events.off('fs:dir-created', fsDirCreatedHandler as any);
             this.app.events.off('fs:deleted', fsDeletedHandler as any);
             this.app.events.off('fs:renamed', fsRenamedHandler as any);
+            this.app.events.off('explorer:rename-cancelled' as any, renameCancelledHandler);
         });
     }
 
@@ -270,19 +294,47 @@ export class ExplorerController {
     }
 
     /**
-     * Debounces watcher events per directory to avoid flooding (e.g. during git operations)
+     * Returns true when an OS watcher event should be suppressed.
+     *
+     * Three cases are handled:
+     *  1. The event path itself is ignored (the exact file/dir being operated on).
+     *  2. The parent directory is ignored (sibling events during create/delete/rename).
+     *  3. The event path is an ANCESTOR of an ignored path — handles coarse-grained
+     *     notifications on macOS (FSEvents fires at a parent-dir level) where deleting
+     *     /vault/subdir/folder can produce an event for /vault/subdir or even /vault.
+     */
+    private isWatcherEventSuppressed(eventPath: string, parentPath: string): boolean {
+        if (this.ignoredPaths.has(eventPath)) return true;
+        if (this.ignoredPaths.has(parentPath)) return true;
+        // Ancestor check: if any ignored path is inside eventPath, suppress the event.
+        for (const ignored of this.ignoredPaths) {
+            if (ignored.startsWith(eventPath + '/') || ignored.startsWith(eventPath + '\\')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Debounces watcher events per directory to avoid flooding (e.g. during git operations).
+     *
+     * FIX: The suppression check is performed BOTH at event arrival AND again when the
+     * 100ms timer fires.  Previously, only the arrival-time check existed — creating a
+     * race where a pending timer scheduled before `withWatcherIgnored` ran could fire
+     * after the optimistic UI update, calling loadDir() while the file still existed on
+     * disk and making the deleted/renamed item reappear briefly.
      */
     private handleFsEventDebounced(event: FsEvent) {
         if (this.isDestroyed) return;
 
-        // 1. Check ignored paths immediately
-        if (this.ignoredPaths.has(event.path)) return;
         const parentPath = getParentPath(event.path);
-        if (this.ignoredPaths.has(parentPath)) return;
 
-        // 2. Schedule update
-        // Use parentPath as key because generally we want to reload the folder containing the change
+        // 1. Fast-path check at event-arrival time
+        if (this.isWatcherEventSuppressed(event.path, parentPath)) return;
+
+        // 2. Schedule debounced reload — capture paths for the deferred re-check
         const key = parentPath;
+        const capturedEventPath = event.path; // must be stable inside the closure
 
         if (this.watcherTimers.has(key)) {
             clearTimeout(this.watcherTimers.get(key));
@@ -290,7 +342,11 @@ export class ExplorerController {
 
         const timer = setTimeout(() => {
             this.watcherTimers.delete(key);
-            this.handleFsEvent(event.path, parentPath);
+            // Re-check at execution time: ignoredPaths may have been updated during
+            // the 100ms debounce window (e.g. a delete/rename operation started and
+            // called withWatcherIgnored AFTER this timer was already scheduled).
+            if (this.isWatcherEventSuppressed(capturedEventPath, parentPath)) return;
+            this.handleFsEvent(capturedEventPath, parentPath);
         }, 100); // 100ms debounce
 
         this.watcherTimers.set(key, timer);
@@ -349,6 +405,23 @@ export class ExplorerController {
 
     private async withWatcherIgnored(path: string, operation: () => Promise<void>) {
         this.ignoredPaths.add(path);
+
+        // Cancel any watcher debounce timer whose key matches `path` or whose key is
+        // the parent of `path`.  These timers were scheduled before the current
+        // operation started and, if allowed to fire, would call loadDir() on a directory
+        // that is mid-operation — causing the optimistic UI update to be reverted.
+        //
+        // Timer key = getParentPath(event.path).  We cancel:
+        //   key === path          → timer for events about children of `path`
+        //   key === parent(path)  → timer for events about `path` itself (or its siblings)
+        const parentOfPath = getParentPath(path);
+        for (const key of [path, parentOfPath]) {
+            if (key && this.watcherTimers.has(key)) {
+                clearTimeout(this.watcherTimers.get(key));
+                this.watcherTimers.delete(key);
+            }
+        }
+
         try {
             await operation();
         } finally {
@@ -558,6 +631,7 @@ export class ExplorerController {
 
     setRenaming(path: string | null): void {
         this._renamingPath = path;
+        this._renamingVersion++;
         this.notify();
     }
 
@@ -823,9 +897,12 @@ export class ExplorerController {
     }
 
     private sortChildren(children: FileNode[]) {
+        // BUG-06 fix: respect the foldersFirst setting instead of always sorting dirs first
         children.sort((a, b) => {
-            if (a.isDir === b.isDir) return a.name.localeCompare(b.name, undefined, { numeric: true });
-            return a.isDir ? -1 : 1;
+            if (this.foldersFirst && a.isDir !== b.isDir) {
+                return a.isDir ? -1 : 1;
+            }
+            return a.name.localeCompare(b.name, undefined, { numeric: true });
         });
     }
 
@@ -956,15 +1033,33 @@ export class ExplorerController {
                 const exists = await this.app.api.invoke<boolean>('fs:exists', parentPath);
                 if (!exists) {
                     this.log('warn', `Parent path does not exist: ${parentPath}`);
-                    // Fall back to root
+                    // Genuinely missing — fall back to root
                     parentPath = this.rootPath;
                     parentNode = parentPath ? this.nodes.get(parentPath) : undefined;
                 } else {
-                    // Path exists on disk but not in cache - use root instead
-                    // (the path might be outside our current vault or in an unloaded area)
-                    this.log('info', `Parent path exists but not loaded, falling back to root`);
-                    parentPath = this.rootPath;
-                    parentNode = parentPath ? this.nodes.get(parentPath) : undefined;
+                    // BUG-07 fix: path exists on disk but isn't in our node cache yet
+                    // (e.g. an unexpanded folder, or a path opened via WikiLink/command
+                    // palette without going through the explorer).
+                    // Register a temporary node and load the directory so we can create
+                    // the file there instead of silently falling back to the vault root.
+                    this.log('info', `Parent path exists but not loaded, loading it: ${parentPath}`);
+                    const tempNode: FileNode = {
+                        id: parentPath,
+                        name: getFileName(parentPath),
+                        isDir: true,
+                        isLoaded: false,
+                        children: [],
+                    };
+                    this.nodes.set(parentPath, tempNode);
+                    await this.loadDir(parentPath);
+                    parentNode = this.nodes.get(parentPath) ?? undefined;
+
+                    // Ensure the directory is marked as expanded so the inline rename
+                    // input becomes visible after creation.
+                    if (!this.expandedPaths.has(parentPath)) {
+                        this.expandedPaths.add(parentPath);
+                        this.saveExpandedPaths();
+                    }
                 }
             } catch (error) {
                 this.log('error', `Failed to check path existence: ${error}`);

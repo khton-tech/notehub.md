@@ -82,11 +82,10 @@ export class FsManagerPlugin extends SystemPlugin {
     }
 
     private async writeFile(path: string, data: Uint8Array): Promise<void> {
+        // BUG-05 fix: isNew must be checked INSIDE the lock, after the previous write
+        // completes, to avoid a race where another concurrent write created the file
+        // between our exists() check and our actual write.
         let isNew = false;
-        try {
-            isNew = !(await this.ensureDriver().exists(path));
-        } catch { /* assume existing */ }
-
         const existingLock = this.writeLocks.get(path);
         const newLock = (async () => {
             if (existingLock) {
@@ -95,6 +94,9 @@ export class FsManagerPlugin extends SystemPlugin {
                     new Promise<void>(resolve => setTimeout(resolve, FsManagerPlugin.WRITE_LOCK_TIMEOUT))
                 ]);
             }
+            try {
+                isNew = !(await this.ensureDriver().exists(path));
+            } catch { /* assume existing */ }
             await this.ensureDriver().writeFile(path, data);
         })();
         this.writeLocks.set(path, newLock);
@@ -109,12 +111,8 @@ export class FsManagerPlugin extends SystemPlugin {
     }
 
     private async writeTextFile(path: string, content: string): Promise<void> {
-        // Check if file exists before write to determine isNew
+        // BUG-05 fix: isNew must be checked INSIDE the lock (see writeFile above).
         let isNew = false;
-        try {
-            isNew = !(await this.ensureDriver().exists(path));
-        } catch { /* assume existing */ }
-
         const existingLock = this.writeLocks.get(path);
         const newLock = (async () => {
             if (existingLock) {
@@ -123,6 +121,9 @@ export class FsManagerPlugin extends SystemPlugin {
                     new Promise<void>(resolve => setTimeout(resolve, FsManagerPlugin.WRITE_LOCK_TIMEOUT))
                 ]);
             }
+            try {
+                isNew = !(await this.ensureDriver().exists(path));
+            } catch { /* assume existing */ }
             await this.ensureDriver().writeTextFile(path, content);
         })();
         this.writeLocks.set(path, newLock);

@@ -9,10 +9,11 @@
  * - Active file sync with editor
  */
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Tree, TreeApi } from 'react-arborist';
 import { ExplorerController } from '../logic/ExplorerController';
 import { NodeRow } from './NodeRow';
+import type { NodeRowProps } from './NodeRow';
 import type { FileNode } from '../types';
 import { Menu, MenuItem, MenuSeparator } from '@notehub/ck-standard';
 import { Icon } from '@notehub/icon-manager';
@@ -35,6 +36,14 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     const [containerHeight, setContainerHeight] = useState(400);
     const [rootName, setRootName] = useState<string>('');
     const [renamingId, setRenamingId] = useState<string | null>(null);
+    const [renamingVersion, setRenamingVersion] = useState(0);
+
+    // BUG-04 fix: read singleClickOpen once from the controller (which already loaded
+    // it from config) and update it via controller subscription, instead of having
+    // every NodeRow instance make its own config:get call and keep its own listener.
+    const [singleClickOpen, setSingleClickOpen] = useState(
+        () => controller.getSettings().singleClickOpen
+    );
 
     // react-arborist uses the HTML5 DnD backend which doesn't fire on touch devices.
     // Disable drag on touch so there's no broken grab-but-nothing-moves experience.
@@ -65,23 +74,29 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                 setRootName('');
             }
 
-            // Sync renaming state only
-            if (controller.renamingPath !== renamingId) {
+            // Sync renaming state using version counter to detect repeated renames of same path
+            if (controller.renamingVersion !== renamingVersion) {
+                setRenamingVersion(controller.renamingVersion);
                 setRenamingId(controller.renamingPath);
             }
+
+            // BUG-04 fix: sync singleClickOpen from controller settings on every
+            // controller notification (covers the case where config:updated fires).
+            setSingleClickOpen(controller.getSettings().singleClickOpen);
+
             // selectedId теперь вычисляемое значение из activeFilePath, не state
         };
         refresh();
         const unsubscribe = controller.subscribe(refresh);
         return () => { unsubscribe(); };
-    }, [controller, renamingId]);
+    }, [controller, renamingVersion]);
 
     // Sync renaming state to Arborist
     useEffect(() => {
         if (renamingId && treeRef.current) {
             treeRef.current.edit(renamingId);
         }
-    }, [renamingId]);
+    }, [renamingId, renamingVersion]);
 
     // ... (existing code)
 
@@ -220,6 +235,14 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
     }) => {
         controller.onMove(args);
     }, [controller]);
+
+    // BUG-04 fix: single memoized renderer that closes over singleClickOpen.
+    // react-arborist re-renders rows (not remounts) when the component reference
+    // changes, so this is safe and far cheaper than 200 individual subscriptions.
+    const RowRenderer = useMemo(
+        () => (props: NodeRowProps) => <NodeRow {...props} singleClickOpen={singleClickOpen} />,
+        [singleClickOpen]
+    );
 
     // Create handlers
     const handleCreateNote = () => {
@@ -444,7 +467,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                             disableEdit={false}
                             className="outline-none"
                         >
-                            {NodeRow}
+                            {RowRenderer}
                         </Tree>
                     )}
                 </div>

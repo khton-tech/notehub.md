@@ -364,11 +364,12 @@ export class FsDriverTauriPlugin extends SystemPlugin implements IFileSystem {
 
     async rename(oldPath: string, newPath: string): Promise<void> {
         if (this.isAndroid) {
+            // BUG-01 fix: pass the full relative destination path, not just the filename.
+            // The previous implementation used only newPath.split('/').pop(), which made
+            // cross-directory moves (DnD) behave as in-place renames on Android SAF.
             const { baseUri, relativePath: oldRelative } = this.resolveSafPath(oldPath);
-            // Rename only changes the name of the file at the location, not moving to a new path
-            // So we need the new NAME, not path.
-            const newName = newPath.split('/').pop() || newPath;
-            await invoke('android_fs_rename', { baseUri, oldPath: oldRelative, newName });
+            const { relativePath: newRelative } = this.resolveSafPath(newPath);
+            await invoke('android_fs_rename', { baseUri, oldPath: oldRelative, newPath: newRelative });
             return;
         }
         await tauriFs.rename(oldPath, newPath);

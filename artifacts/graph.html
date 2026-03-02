@@ -95,8 +95,8 @@
 flowchart LR
     nh_features_about["About"]
     nh_features_alert-button["Alert Button"]
-    nh_features_command-palette["Command Palette"]
     nh_features_backlinks["Backlinks"]
+    nh_features_command-palette["Command Palette"]
     nh_features_editor["Editor"]
     nh_features_explorer["Explorer"]
     nh_features_keybindings["Keybindings"]
@@ -127,15 +127,17 @@ flowchart LR
     nh_system_titlebar["TitleBar"]
     nh_features_about --> nh_ui_settings-manager
     nh_features_about --> nh_ui_icon-manager
-    nh_features_command-palette --> nh_system_command-manager
-    nh_features_command-palette --> nh_system_logger
-    nh_features_command-palette --> nh_ui_controllers-manager
-    nh_features_command-palette --> nh_ui_ck-standard
-    nh_features_command-palette --> nh_ui_icon-manager
+    nh_features_about --> nh_system_i18n
     nh_features_backlinks --> nh_features_editor
     nh_features_backlinks --> nh_system_fs-manager
+    nh_features_command-palette --> nh_system_command-manager
+    nh_features_command-palette --> nh_system_logger
+    nh_features_command-palette --> nh_system_i18n
+    nh_features_command-palette --> nh_ui_ck-standard
+    nh_features_command-palette --> nh_ui_icon-manager
     nh_features_editor --> nh_system_config-manager
     nh_features_editor --> nh_system_command-manager
+    nh_features_editor --> nh_system_i18n
     nh_features_editor --> nh_ui_settings-manager
     nh_features_editor --> nh_system_fs-manager
     nh_features_editor --> nh_system_logger
@@ -144,6 +146,7 @@ flowchart LR
     nh_features_editor --> nh_ui_icon-manager
     nh_features_editor --> nh_ui_theme-manager
     nh_features_explorer --> nh_system_config-manager
+    nh_features_explorer --> nh_system_i18n
     nh_features_explorer --> nh_ui_settings-manager
     nh_features_explorer --> nh_system_fs-manager
     nh_features_explorer --> nh_system_logger
@@ -155,6 +158,7 @@ flowchart LR
     nh_features_keybindings --> nh_ui_settings-manager
     nh_features_keybindings --> nh_system_command-manager
     nh_features_keybindings --> nh_system_keymap
+    nh_features_keybindings --> nh_system_i18n
     nh_features_tabbar --> nh_features_editor
     nh_features_tabbar --> nh_ui_controllers-manager
     nh_features_tabbar --> nh_ui_layout-manager

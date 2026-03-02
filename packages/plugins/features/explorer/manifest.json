@@ -6,6 +6,7 @@
     "description": "File Explorer for Notehub",
     "dependencies": [
         "nh.system.config-manager",
+        "nh.system.i18n",
         "nh.ui.settings-manager",
         "nh.system.fs-manager",
         "nh.system.logger",

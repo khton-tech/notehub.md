@@ -3,8 +3,8 @@
  * DO NOT EDIT MANUALLY
  *
  * Platform: capacitor
- * Generated: 2026-02-28T21:19:20.495Z
- * Plugins: 28
+ * Generated: 2026-03-01T11:59:49.981Z
+ * Plugins: 29
  */
 import type { PluginModule } from '@notehub/app-bootstrap';
 
@@ -27,6 +27,8 @@ export async function importPlugin(packageName: string): Promise<PluginModule> {
             return import('@notehub/fs-driver-capacitor');
         case '@notehub/fs-manager':
             return import('@notehub/fs-manager');
+        case '@notehub/i18n':
+            return import('@notehub/i18n');
         case '@notehub/keymap':
             return import('@notehub/keymap');
         case '@notehub/logger':
@@ -57,10 +59,10 @@ export async function importPlugin(packageName: string): Promise<PluginModule> {
         // Feature plugins
         case '@notehub/about':
             return import('@notehub/about');
-        case '@notehub/command-palette':
-            return import('@notehub/command-palette');
         case '@notehub/backlinks':
             return import('@notehub/backlinks');
+        case '@notehub/command-palette':
+            return import('@notehub/command-palette');
         case '@notehub/editor':
             return import('@notehub/editor');
         case '@notehub/explorer':

@@ -7,7 +7,8 @@
     "description": "Displays application information and credits",
     "dependencies": [
       "nh.ui.settings-manager",
-      "nh.ui.icon-manager"
+      "nh.ui.icon-manager",
+      "nh.system.i18n"
     ]
   },
   {
@@ -27,20 +28,6 @@
     ]
   },
   {
-    "id": "nh.features.command-palette",
-    "name": "Command Palette",
-    "version": "0.1.5",
-    "type": "features",
-    "description": "Spotlight-style command palette for quick actions",
-    "dependencies": [
-      "nh.system.command-manager",
-      "nh.system.logger",
-      "nh.ui.controllers-manager",
-      "nh.ui.ck-standard",
-      "nh.ui.icon-manager"
-    ]
-  },
-  {
     "id": "nh.features.backlinks",
     "name": "Backlinks",
     "version": "0.1.5",
@@ -52,6 +39,20 @@
     ]
   },
   {
+    "id": "nh.features.command-palette",
+    "name": "Command Palette",
+    "version": "0.1.5",
+    "type": "features",
+    "description": "Spotlight-style command palette for quick actions",
+    "dependencies": [
+      "nh.system.command-manager",
+      "nh.system.logger",
+      "nh.system.i18n",
+      "nh.ui.ck-standard",
+      "nh.ui.icon-manager"
+    ]
+  },
+  {
     "id": "nh.features.editor",
     "name": "Editor",
     "version": "0.1.5",
@@ -60,6 +61,7 @@
     "dependencies": [
       "nh.system.config-manager",
       "nh.system.command-manager",
+      "nh.system.i18n",
       "nh.ui.settings-manager",
       "nh.system.fs-manager",
       "nh.system.logger",
@@ -77,6 +79,7 @@
     "description": "File Explorer for Notehub",
     "dependencies": [
       "nh.system.config-manager",
+      "nh.system.i18n",
       "nh.ui.settings-manager",
       "nh.system.fs-manager",
       "nh.system.logger",
@@ -97,7 +100,8 @@
     "dependencies": [
       "nh.ui.settings-manager",
       "nh.system.command-manager",
-      "nh.system.keymap"
+      "nh.system.keymap",
+      "nh.system.i18n"
     ]
   },
   {

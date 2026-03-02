@@ -7,7 +7,7 @@
     "dependencies": [
         "nh.system.command-manager",
         "nh.system.logger",
-        "nh.ui.controllers-manager",
+        "nh.system.i18n",
         "nh.ui.ck-standard",
         "nh.ui.icon-manager"
     ]

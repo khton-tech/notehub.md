@@ -98,6 +98,9 @@ importers:
       '@notehub/fs-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/system/fs-manager
+      '@notehub/i18n':
+        specifier: workspace:*
+        version: link:../../packages/plugins/system/i18n
       '@notehub/icon-manager':
         specifier: workspace:*
         version: link:../../packages/plugins/ui/icon-manager
