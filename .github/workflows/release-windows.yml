@@ -19,15 +19,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -35,18 +36,13 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: './apps/desktop/src-tauri -> target'
+          workspaces: 'apps/desktop/src-tauri'
 
       - name: Install dependencies
         run: pnpm install
 
       - name: Build Workspace Packages
-        run: |
-          pnpm --filter "@notehub.md/api" build
-          pnpm --filter "@notehub.md/cli" build
-          node scripts/ensure-cli.js
-          pnpm predev
-          pnpm build
+        run: pnpm build
 
       - name: Build Tauri App & Publish Release
         uses: tauri-apps/tauri-action@v0
@@ -59,3 +55,4 @@ jobs:
           releaseBody: 'See the assets below to download Notehub.md for Windows.'
           releaseDraft: false
           prerelease: false
+
