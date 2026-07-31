@@ -37,14 +37,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Build Workspace Packages
+        run: pnpm build && pnpm predev
+
       - name: Build Tauri App & Publish Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          projectPath: ./apps/desktop
           tagName: ${{ github.ref_name }}
           releaseName: 'Notehub.md v__VERSION__'
           releaseBody: 'See the assets below to download Notehub.md for Windows.'
           releaseDraft: false
           prerelease: false
-          args: --filter @notehub/desktop
