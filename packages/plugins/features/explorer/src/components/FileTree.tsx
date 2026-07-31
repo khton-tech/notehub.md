@@ -443,12 +443,12 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                     outline: none !important;
                 }
             `}</style>
-            <div className="w-full h-full flex flex-col select-none bg-[var(--nh-bg-secondary)]">
+            <div className="w-full h-full flex flex-col select-none bg-[var(--nh-bg-sidebar)]">
                 {/* Header / Toolbar — doubles as root drop zone when dragging */}
                 <div
                     className={[
-                        'flex items-center justify-between px-3 py-2 border-b border-[var(--nh-border-subtle)] bg-[var(--nh-bg-secondary)]',
-                        'transition-colors duration-150',
+                        'flex items-center justify-between px-3 h-8 shrink-0 border-b border-[var(--nh-border-subtle)] bg-[var(--nh-bg-sidebar)]',
+                        'transition-colors duration-100',
                         draggingId
                             ? isOverRootZone
                                 ? 'bg-[var(--nh-accent-secondary)] border-[var(--nh-accent-primary)]'
@@ -467,7 +467,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                     } : undefined}
                 >
                     <span
-                        className="text-xs font-semibold truncate select-none transition-colors duration-150"
+                        className="text-[10px] font-semibold tracking-wider uppercase truncate select-none transition-colors duration-100"
                         title={rootName}
                         style={{ color: draggingId && isOverRootZone ? 'var(--nh-accent-primary)' : 'var(--nh-text-muted)' }}
                     >
@@ -477,37 +477,37 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                         }
                     </span>
 
-                    <div className="relative flex items-center gap-1">
+                    <div className="relative flex items-center gap-0.5">
                         {/* Search toggle */}
                         <button
-                            className={`p-1 rounded transition-colors ${showSearch ? 'text-[var(--nh-accent-primary)] bg-[var(--nh-accent-secondary)]' : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-hover)]'}`}
+                            className={`p-1 rounded-[4px] transition-colors ${showSearch ? 'text-[var(--nh-accent-primary)] bg-[var(--nh-accent-secondary)]' : 'text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)] hover:bg-[var(--nh-bg-hover)]'}`}
                             onClick={() => {
                                 setShowSearch(s => !s);
                                 if (showSearch) setSearchTerm('');
                             }}
                             title="Search files"
                         >
-                            <Icon name="search" size={15} />
+                            <Icon name="search" size={14} />
                         </button>
 
                         {/* New button */}
                         <button
-                            className="p-1 rounded hover:bg-[var(--nh-bg-hover)] text-[var(--nh-text-secondary)] transition-colors"
+                            className="p-1 rounded-[4px] hover:bg-[var(--nh-bg-hover)] text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)] transition-colors"
                             onClick={() => setShowNewMenu(!showNewMenu)}
                             title="Create New..."
                         >
-                            <Icon name="plus" size={16} />
+                            <Icon name="plus" size={14} />
                         </button>
 
                         {/* Popup Menu */}
                         {showNewMenu && (
                             <div ref={menuRef} className="absolute right-0 top-full mt-1 z-50">
-                                <Menu className="w-40 bg-[var(--nh-bg-surface)] border border-[var(--nh-border-subtle)] shadow-lg rounded">
+                                <Menu className="w-40 bg-[var(--nh-bg-surface)] border border-[var(--nh-border-secondary)] shadow-md rounded-md py-1">
                                     <MenuItem onClick={handleCreateNote} icon={<Icon name="file" size={14} />}>
                                         New Note
                                     </MenuItem>
 
-                                    <MenuSeparator className="bg-[var(--nh-border-subtle)]" />
+                                    <MenuSeparator className="bg-[var(--nh-border-subtle)] my-1" />
 
                                     <MenuItem onClick={handleCreateFolder} icon={<Icon name="folder" size={14} />}>
                                         New Folder
@@ -528,12 +528,12 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
 
                 {/* Search/Filter Input — visible only when toggled */}
                 {showSearch && (
-                    <div className="px-2 py-1.5 border-b border-[var(--nh-border-subtle)]">
-                        <div className="relative">
+                    <div className="p-2 border-b border-[var(--nh-border-subtle)]">
+                        <div className="relative flex items-center">
                             <Icon
                                 name="search"
-                                size={14}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--nh-text-muted)]"
+                                size={13}
+                                className="absolute left-2.5 text-[var(--nh-text-muted)] pointer-events-none"
                             />
                             <input
                                 type="text"
@@ -542,10 +542,10 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                                 autoFocus
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="
-                                    w-full pl-7 pr-2 py-1 text-xs
+                                    w-full pl-7 pr-7 py-1 text-xs
                                     bg-[var(--nh-bg-main)]
                                     border border-[var(--nh-border-subtle)]
-                                    rounded outline-none
+                                    rounded-[4px] outline-none
                                     text-[var(--nh-text-primary)]
                                     placeholder:text-[var(--nh-text-muted)]
                                     focus:border-[var(--nh-accent-primary)]
@@ -555,7 +555,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                             {searchTerm && (
                                 <button
                                     onClick={() => setSearchTerm('')}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)]"
+                                    className="absolute right-2 text-[var(--nh-text-muted)] hover:text-[var(--nh-text-primary)] p-0.5"
                                 >
                                     <Icon name="x" size={12} />
                                 </button>

@@ -134,8 +134,8 @@ export const NodeRow: React.FC<NodeRowProps> = ({
 
     // Build class names for styling
     const baseClasses = [
-        'group relative flex items-center h-full cursor-pointer text-[13px] pr-2 mx-1 rounded-md my-[1px]',
-        'transition-colors duration-150 ease-out select-none',
+        'group relative flex items-center h-full cursor-pointer text-xs pr-2 mx-1 rounded-[4px]',
+        'transition-colors duration-100 ease-out select-none gap-1',
     ];
 
     if (isDragging) {
@@ -181,36 +181,36 @@ export const NodeRow: React.FC<NodeRowProps> = ({
         >
             {/* Selection/Focus indicator */}
             {isHighlighted && (
-                <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[var(--nh-accent-primary)] rounded-full" />
+                <div className="absolute left-0 top-[3px] bottom-[3px] w-[2px] bg-[var(--nh-accent-primary)] rounded-full" />
             )}
 
             {/* Chevron for directories */}
             {data.isDir ? (
                 <span
-                    className="w-4 flex-shrink-0 flex items-center justify-center cursor-pointer hover:text-[var(--nh-text-primary)] transition-colors"
+                    className="w-4 h-4 flex-shrink-0 flex items-center justify-center cursor-pointer hover:text-[var(--nh-text-primary)] transition-colors"
                     onClick={handleChevronClick}
                 >
                     <Icon
                         name={node.isOpen ? 'chevron-down' : 'chevron-right'}
-                        size={14}
+                        size={13}
                         className={isHighlighted ? 'text-[var(--nh-accent-primary)]' : 'text-[var(--nh-text-muted)]'}
                     />
                 </span>
             ) : (
-                <span className="w-4 flex-shrink-0" />
+                <span className="w-4 h-4 flex-shrink-0" />
             )}
 
             {/* File/Folder Icon */}
-            <span className="w-[18px] flex-shrink-0 flex items-center justify-center">
+            <span className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
                 <Icon
                     name={iconName}
-                    size={15}
+                    size={14}
                     className={iconColorClass}
                 />
             </span>
 
             {/* Name or Rename Input */}
-            <div className="flex-1 min-w-0 ml-2">
+            <div className="flex-1 min-w-0 ml-1">
                 {node.isEditing ? (
                     <input
                         ref={inputRef}
