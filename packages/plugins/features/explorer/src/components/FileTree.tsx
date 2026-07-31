@@ -626,8 +626,8 @@ export const FileTree: React.FC<FileTreeProps> = ({ controller }) => {
                             openByDefault={false}
                             width="100%"
                             height={containerHeight}
-                            rowHeight={28}
-                            indent={16}
+                            rowHeight={26}
+                            indent={14}
                             searchTerm={searchTerm}
                             selection={selectedId || ''}
                             searchMatch={(node, term) => {

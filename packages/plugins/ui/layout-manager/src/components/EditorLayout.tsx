@@ -65,8 +65,8 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
 
     const resize = useCallback((e: MouseEvent) => {
         if (isResizing) {
-            const newWidth = e.clientX - 56 - 8; // Subtract ribbon width + gap
-            if (newWidth > 150 && newWidth < 600) {
+            const newWidth = e.clientX - 12; // Subtract left outer padding
+            if (newWidth > 180 && newWidth < 600) {
                 setSidebarWidth(newWidth);
             }
         }
@@ -75,8 +75,8 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
     const resizeTouch = useCallback((e: TouchEvent) => {
         const touch = e.touches[0];
         if (isResizing && touch) {
-            const newWidth = touch.clientX - 56 - 8;
-            if (newWidth > 150 && newWidth < 600) {
+            const newWidth = touch.clientX - 12;
+            if (newWidth > 180 && newWidth < 600) {
                 setSidebarWidth(newWidth);
             }
         }
@@ -143,22 +143,21 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [isMobileMenuOpen]);
 
-    // Gap size for floating panels
-    const gap = 16;
+    // Gap size for desktop floating panels
+    const gap = 12;
 
     return (
         <div
-            className="w-full h-full overflow-hidden flex flex-col relative"
+            className="w-full h-full overflow-hidden flex flex-col relative bg-[var(--nh-bg-main)]"
         >
             {/* Main Content Area */}
             <div
                 className="flex-1 overflow-hidden"
                 style={{
-                    // Safe Area Padding for Mobile Notches (all sides)
-                    paddingTop: `max(8px, env(safe-area-inset-top))`,
-                    paddingRight: `max(8px, env(safe-area-inset-right))`,
-                    paddingBottom: `max(8px, env(safe-area-inset-bottom))`,
-                    paddingLeft: `max(8px, env(safe-area-inset-left))`,
+                    paddingTop: `max(12px, env(safe-area-inset-top))`,
+                    paddingRight: `max(12px, env(safe-area-inset-right))`,
+                    paddingBottom: `max(12px, env(safe-area-inset-bottom))`,
+                    paddingLeft: `max(12px, env(safe-area-inset-left))`,
                 }}
             >
                 {/* Desktop Grid Layout */}
@@ -166,35 +165,34 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     className="hidden md:grid h-full"
                     style={{
                         gridTemplateAreas: `
-                            "ribbon sidebar main"
-                            "ribbon sidebar status"
+                            "sidebar main"
                         `,
-                        gridTemplateColumns: `3.5rem ${sidebarWidth / 16}rem 1fr`,
-                        gridTemplateRows: '1fr auto',
+                        gridTemplateColumns: `${sidebarWidth / 16}rem 1fr`,
+                        gridTemplateRows: '1fr',
                         gap: `${gap}px`,
                     }}
                 >
-                    {/* Ribbon Area - Floating Panel */}
-                    <div
-                        style={{ gridArea: 'ribbon' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] flex flex-col items-center py-3 gap-2 overflow-hidden"
-                    >
-                        <div className="flex-1 w-full">
-                            <Controller type="ribbon-placeholder" app={app} />
-                        </div>
-                        <div className="mt-auto w-full flex flex-col items-center pb-1">
-                            <Controller type="ribbon-bottom" app={app} />
-                        </div>
-                    </div>
-
-                    {/* Sidebar Area - Floating Panel */}
+                    {/* Unified Left Sidebar - Activity Bar + Explorer */}
                     <div
                         style={{ gridArea: 'sidebar' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] relative overflow-hidden"
+                        className="bg-[var(--nh-bg-sidebar)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] border border-[var(--nh-border-secondary)] relative overflow-hidden flex"
                     >
-                        <Controller type="explorer-tree" />
+                        {/* Compact Integrated Activity Bar */}
+                        <div className="w-11 bg-[var(--nh-bg-sidebar)] border-r border-[var(--nh-border-subtle)] flex flex-col items-center py-2.5 gap-2 shrink-0 select-none">
+                            <div className="flex-1 w-full flex flex-col items-center">
+                                <Controller type="ribbon-placeholder" app={app} />
+                            </div>
+                            <div className="mt-auto w-full flex flex-col items-center pb-1">
+                                <Controller type="ribbon-bottom" app={app} />
+                            </div>
+                        </div>
 
-                        {/* Resize Handle — padded for touch, visually thin */}
+                        {/* File Tree / Explorer */}
+                        <div className="flex-1 min-w-0 h-full overflow-hidden bg-[var(--nh-bg-sidebar)]">
+                            <Controller type="explorer-tree" />
+                        </div>
+
+                        {/* Resize Handle — padded for touch/mouse, visually thin line */}
                         <div
                             onMouseDown={startResizing}
                             onTouchStart={startResizing}
@@ -214,8 +212,8 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                         >
                             <div
                                 style={{
-                                    width: 6,
-                                    borderRadius: 3,
+                                    width: 4,
+                                    borderRadius: 2,
                                     backgroundColor: isResizing ? 'var(--nh-accent-primary)' : 'transparent',
                                     opacity: isResizing ? 0.8 : 0,
                                     transition: 'all 0.2s ease',
@@ -225,24 +223,20 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                         </div>
                     </div>
 
-                    {/* Main Editor Area - Floating Panel */}
+                    {/* Main Editor Area - Floating Panel with Integrated Footer */}
                     <div
                         style={{ gridArea: 'main' }}
-                        className="rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] overflow-hidden relative flex flex-col"
+                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] border border-[var(--nh-border-secondary)] overflow-hidden relative flex flex-col"
                     >
-                        <ZoneRenderer name="tabbar" className="shrink-0" />
+                        <ZoneRenderer name="tabbar" className="shrink-0 border-b border-[var(--nh-border-subtle)]" />
                         <div className="flex-1 bg-[var(--nh-bg-surface)] overflow-auto">
                             <Controller type="editor-main" />
                         </div>
-                    </div>
-
-                    {/* Status Bar - Floating Panel */}
-                    <div
-                        style={{ gridArea: 'status' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-sm),var(--nh-panel-glow)] px-3 py-1.5 text-xs overflow-visible border border-[var(--nh-border-accent)]"
-                    >
-                        <ZoneRenderer name="status-bar" />
-                        <Controller type="status-bar" props={{ status: 'ready' }} />
+                        {/* Integrated Status Bar Footer */}
+                        <div className="h-7 bg-[var(--nh-bg-surface)] border-t border-[var(--nh-border-subtle)] px-3 py-1 text-[11px] text-[var(--nh-text-muted)] flex items-center justify-between shrink-0 select-none">
+                            <ZoneRenderer name="status-bar" />
+                            <Controller type="status-bar" props={{ status: 'ready' }} />
+                        </div>
                     </div>
                 </div>
 

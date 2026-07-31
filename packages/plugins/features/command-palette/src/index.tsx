@@ -146,13 +146,13 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose, app
 
     return (
         <div
-            className="fixed inset-0 z-[400] flex items-start justify-center pt-[15vh] bg-black/60 backdrop-blur-sm animate-[paletteIn_0.15s_ease-out]"
+            className="fixed inset-0 z-[400] flex items-start justify-center pt-[10vh] bg-black/60 backdrop-blur-md animate-[paletteIn_0.15s_ease-out]"
             onClick={handleBackdropClick}
         >
             <Card
                 variant="glass"
                 padding="none"
-                className="w-full max-w-lg shadow-2xl overflow-hidden animate-[paletteSlide_0.15s_ease-out]"
+                className="w-full max-w-2xl shadow-2xl rounded-xl border border-[var(--nh-border-secondary,rgba(255,255,255,0.08))] overflow-hidden animate-[paletteSlide_0.15s_ease-out]"
             >
                 {/* Search Input */}
                 <div className="p-2">
@@ -166,10 +166,10 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose, app
                         data-palette-input="true"
                         autoFocus
                         className="
-                            w-full px-4 py-3 text-lg
+                            w-full px-4 py-3 text-base font-medium
                             bg-transparent
-                            border-0 border-b border-[var(--nh-border-subtle,rgba(255,255,255,0.08))]
-                            text-[var(--nh-text-primary,#E0E0E0)]
+                            border-0 border-b border-[var(--nh-border-subtle,rgba(255,255,255,0.06))]
+                            text-[var(--nh-text-primary,#E2E8F0)]
                             placeholder:text-[var(--nh-text-muted,rgba(255,255,255,0.4))]
                             focus:outline-none
                             focus:border-[var(--nh-accent-primary,#7c3aed)]
@@ -182,10 +182,10 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose, app
                 <div
                     ref={listRef}
                     role="listbox"
-                    className="max-h-80 overflow-y-auto border-t border-[var(--nh-border-subtle,rgba(255,255,255,0.08))]"
+                    className="max-h-[420px] overflow-y-auto border-t border-[var(--nh-border-subtle,rgba(255,255,255,0.06))]"
                 >
                     {filteredCommands.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-8 text-[var(--nh-text-muted,rgba(255,255,255,0.4))]">
+                        <div className="flex flex-col items-center justify-center py-10 text-[var(--nh-text-muted,rgba(255,255,255,0.4))]">
                             <Icon name="search-x" size={32} />
                             <span className="mt-2 text-sm">{strings.noResults}</span>
                         </div>
@@ -204,17 +204,17 @@ const PaletteModal: FC<PaletteModalProps> = ({ commands, onExecute, onClose, app
                 </div>
 
                 {/* Footer hint */}
-                <div className="flex items-center gap-4 px-4 py-2 text-xs text-[var(--nh-text-muted,rgba(255,255,255,0.4))] border-t border-[var(--nh-border-subtle,rgba(255,255,255,0.08))]">
-                    <span className="flex items-center gap-1">
-                        <kbd className="px-1.5 py-0.5 rounded bg-[var(--nh-bg-secondary,#1A1A1A)] font-mono">↑↓</kbd>
+                <div className="flex items-center gap-4 px-4 py-2.5 text-xs text-[var(--nh-text-muted,rgba(255,255,255,0.45))] border-t border-[var(--nh-border-subtle,rgba(255,255,255,0.06))] bg-[var(--nh-bg-sidebar)]">
+                    <span className="flex items-center gap-1.5">
+                        <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono text-[var(--nh-text-secondary)] shadow-sm">↑↓</kbd>
                         {strings.navigate}
                     </span>
-                    <span className="flex items-center gap-1">
-                        <kbd className="px-1.5 py-0.5 rounded bg-[var(--nh-bg-secondary,#1A1A1A)] font-mono">↵</kbd>
+                    <span className="flex items-center gap-1.5">
+                        <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono text-[var(--nh-text-secondary)] shadow-sm">↵</kbd>
                         {strings.select}
                     </span>
-                    <span className="flex items-center gap-1">
-                        <kbd className="px-1.5 py-0.5 rounded bg-[var(--nh-bg-secondary,#1A1A1A)] font-mono">esc</kbd>
+                    <span className="flex items-center gap-1.5">
+                        <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono text-[var(--nh-text-secondary)] shadow-sm">esc</kbd>
                         {strings.close}
                     </span>
                 </div>

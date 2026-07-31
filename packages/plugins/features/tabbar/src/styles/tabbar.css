@@ -40,22 +40,25 @@
     height: 32px;
     min-width: 0;
     max-width: 200px;
-    border-radius: 8px;
+    border-radius: 6px 6px 0 0;
     cursor: pointer;
     position: relative;
     font-size: 12px;
-    color: var(--nh-text-muted, #888);
+    font-weight: 450;
+    color: var(--nh-text-secondary, #94a3b8);
     white-space: nowrap;
     background: transparent;
     border: none;
     flex-shrink: 0;
-    transition: background 150ms, color 150ms, box-shadow 150ms;
+    opacity: 0.75;
+    transition: background 150ms, color 150ms, opacity 150ms, box-shadow 150ms;
     outline: none;
 }
 
 .nh-tabbar__tab:hover {
-    background: var(--nh-bg-hover, #1E1E1E);
-    color: var(--nh-text-primary, #e0e0e0);
+    background: var(--nh-bg-hover, #242834);
+    color: var(--nh-text-primary, #e2e8f0);
+    opacity: 1;
 }
 
 .nh-tabbar__tab:focus-visible {
@@ -63,9 +66,11 @@
 }
 
 .nh-tabbar__tab--active {
-    background: var(--nh-bg-secondary, #1A1A1A);
-    color: var(--nh-text-primary, #e0e0e0);
-    box-shadow: var(--nh-panel-glow);
+    background: var(--nh-bg-surface, #15171E);
+    color: var(--nh-text-primary, #e2e8f0);
+    opacity: 1;
+    font-weight: 500;
+    box-shadow: inset 0 2px 0 var(--nh-accent-primary);
 }
 
 .nh-tabbar__tab--drag-over {

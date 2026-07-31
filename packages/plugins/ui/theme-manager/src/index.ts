@@ -67,36 +67,36 @@ export interface ThemePalette {
  * Redesigned for modern "floating" aesthetic with layered depth
  */
 const DEEP_SPACE_THEME: ThemePalette = {
-    // Backgrounds - Rich Black layered system
-    'bg-main': '#0A0A0A',      // Rich Black (primary)
-    'bg-sidebar': '#101010',   // Slightly elevated
-    'bg-surface': '#141414',   // Cards & containers
-    'bg-secondary': '#1A1A1A', // Inputs, dropdowns
-    'bg-hover': '#1E1E1E',     // Hover states
+    // Backgrounds - Linear/Raycast layered depth palette
+    'bg-main': '#08080A',      // Pure Deep Canvas
+    'bg-sidebar': '#0F1014',   // Distinct Sidebar Layer
+    'bg-surface': '#15171E',   // Cards & Main Panels
+    'bg-secondary': '#1C1F28', // Inputs, Secondary Elements
+    'bg-hover': '#242834',     // Rich Hover States
 
     // Glassmorphism tokens
-    'glass-bg': 'rgba(20, 20, 20, 0.7)',
-    'glass-border': 'rgba(255, 255, 255, 0.08)',
+    'glass-bg': 'rgba(21, 23, 30, 0.75)',
+    'glass-border': 'rgba(255, 255, 255, 0.07)',
 
     // Accents - Purple primary, transparent secondary
     'accent-primary': '#7c3aed', // Violet-600
-    'accent-secondary': 'rgba(124, 58, 237, 0.12)', // Transparent violet
+    'accent-secondary': 'rgba(124, 58, 237, 0.14)', // Transparent violet
 
-    // Borders - all semi-transparent for floating effect
+    // Borders - Hairline semi-transparent borders
     'border-accent': '#7c3aed',
-    'border-secondary': 'rgba(255, 255, 255, 0.08)', // Subtle alpha border
-    'border-subtle': 'rgba(255, 255, 255, 0.04)', // Very subtle divider
+    'border-secondary': 'rgba(255, 255, 255, 0.07)', // Hairline border
+    'border-subtle': 'rgba(255, 255, 255, 0.04)', // Divider
 
-    // Shadows for depth and glow
-    'shadow-sm': '0 2px 8px rgba(0, 0, 0, 0.3)',
-    'shadow-md': '0 8px 24px rgba(0, 0, 0, 0.4)',
-    'shadow-lg': '0 16px 48px rgba(0, 0, 0, 0.5)',
+    // Shadows for depth and subtle glow
+    'shadow-sm': '0 2px 8px rgba(0, 0, 0, 0.35)',
+    'shadow-md': '0 8px 24px rgba(0, 0, 0, 0.45)',
+    'shadow-lg': '0 16px 48px rgba(0, 0, 0, 0.55)',
 
     // Text
-    'text-primary': '#E0E0E0', // Slightly warmer white
-    'text-secondary': '#A0A0A0',
-    'text-muted': 'rgba(255, 255, 255, 0.55)',
-    'text-error': '#f87171', // Red-400 (softer)
+    'text-primary': '#E2E8F0', // Slate-200 crisp white
+    'text-secondary': '#94A3B8', // Slate-400
+    'text-muted': 'rgba(255, 255, 255, 0.45)',
+    'text-error': '#f87171', // Red-400
 
     // Button
     'button-text': '#ffffff',
@@ -115,7 +115,7 @@ const DEEP_SPACE_THEME: ThemePalette = {
     'callout-abstract': '#22d3ee',   // Cyan-400
 
     // Panel effects
-    'panel-glow': 'inset 0 0 0 1px rgba(255,255,255,0.05)',
+    'panel-glow': 'inset 0 0 0 1px rgba(255,255,255,0.06)',
 
     // Typography
     'font-family': '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
@@ -266,14 +266,16 @@ export class ThemeManagerPlugin extends SystemPlugin {
         const cssContent = `
             /* Base styles */
             html, body {
-                background-color: var(--nh-bg-main, #0A0A0A);
+                background-color: var(--nh-bg-main, #08080A);
                 height: 100%;
                 margin: 0;
                 padding: 0;
                 overflow: hidden;
                 font-family: var(--nh-font-family, "Inter", system-ui, sans-serif);
-                color: var(--nh-text-primary, #E0E0E0);
+                color: var(--nh-text-primary, #E2E8F0);
                 line-height: 1.5;
+                letter-spacing: -0.011em;
+                font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
             }
