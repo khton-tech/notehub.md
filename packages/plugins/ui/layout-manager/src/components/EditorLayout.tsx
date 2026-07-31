@@ -171,10 +171,10 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     {/* Unified Left Sidebar - Activity Bar + Explorer */}
                     <div
                         style={{ gridArea: 'sidebar' }}
-                        className="bg-[var(--nh-bg-sidebar)] rounded-lg shadow-[var(--nh-shadow-sm)] border border-[var(--nh-border-secondary)] relative overflow-hidden flex"
+                        className="bg-[var(--nh-bg-sidebar)] rounded-xl shadow-[var(--nh-shadow-md)] border border-[var(--nh-border-secondary)] relative overflow-hidden flex"
                     >
                         {/* Compact Integrated Activity Bar */}
-                        <div className="w-10 bg-[var(--nh-bg-sidebar)] border-r border-[var(--nh-border-subtle)] flex flex-col items-center py-2 gap-1.5 shrink-0 select-none">
+                        <div className="w-10 bg-[var(--nh-bg-sidebar)] border-r border-[var(--nh-border-subtle)] flex flex-col items-center py-2.5 gap-2 shrink-0 select-none">
                             <div className="flex-1 w-full flex flex-col items-center">
                                 <Controller type="ribbon-placeholder" app={app} />
                             </div>
@@ -221,14 +221,14 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ app }) => {
                     {/* Main Editor Area - Floating Panel with Integrated Footer */}
                     <div
                         style={{ gridArea: 'main' }}
-                        className="bg-[var(--nh-bg-surface)] rounded-lg shadow-[var(--nh-shadow-sm)] border border-[var(--nh-border-secondary)] overflow-hidden relative flex flex-col"
+                        className="bg-[var(--nh-bg-surface)] rounded-xl shadow-[var(--nh-shadow-md)] border border-[var(--nh-border-secondary)] overflow-hidden relative flex flex-col"
                     >
-                        <ZoneRenderer name="tabbar" className="shrink-0 border-b border-[var(--nh-border-subtle)]" />
-                        <div className="flex-1 bg-[var(--nh-bg-surface)] overflow-auto">
+                        <ZoneRenderer name="tabbar" className="shrink-0" />
+                        <div className="flex-1 bg-[var(--nh-bg-main)] overflow-auto">
                             <Controller type="editor-main" />
                         </div>
                         {/* Integrated Status Bar Footer */}
-                        <div className="h-6 bg-[var(--nh-bg-surface)] border-t border-[var(--nh-border-subtle)] px-3 text-[11px] text-[var(--nh-text-muted)] flex items-center justify-between shrink-0 select-none">
+                        <div className="h-6 bg-[var(--nh-bg-surface)] border-t border-[var(--nh-border-subtle)] px-3 text-[11px] flex items-center justify-between shrink-0 select-none">
                             <ZoneRenderer name="status-bar" />
                             <Controller type="status-bar" props={{ status: 'ready' }} />
                         </div>

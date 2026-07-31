@@ -99,8 +99,8 @@ flowchart LR
     nh_features_command-palette["Command Palette"]
     nh_features_editor["Editor"]
     nh_features_explorer["Explorer"]
-    nh_features_tabbar["Tab Bar"]
     nh_features_keybindings["Keybindings"]
+    nh_features_tabbar["Tab Bar"]
     nh_features_vault-picker["VaultPicker"]
     nh_features_workbench["Workbench"]
     nh_system_bootloader["Bootloader"]
@@ -155,14 +155,14 @@ flowchart LR
     nh_features_explorer --> nh_ui_theme-manager
     nh_features_explorer --> nh_ui_context-menu
     nh_features_explorer --> nh_ui_dialog-manager
-    nh_features_tabbar --> nh_features_editor
-    nh_features_tabbar --> nh_ui_controllers-manager
-    nh_features_tabbar --> nh_ui_layout-manager
-    nh_features_tabbar --> nh_ui_context-menu
     nh_features_keybindings --> nh_ui_settings-manager
     nh_features_keybindings --> nh_system_command-manager
     nh_features_keybindings --> nh_system_keymap
     nh_features_keybindings --> nh_system_i18n
+    nh_features_tabbar --> nh_features_editor
+    nh_features_tabbar --> nh_ui_controllers-manager
+    nh_features_tabbar --> nh_ui_layout-manager
+    nh_features_tabbar --> nh_ui_context-menu
     nh_features_vault-picker --> nh_system_fs-manager
     nh_features_vault-picker --> nh_system_config-manager
     nh_features_vault-picker --> nh_system_state-manager

@@ -91,18 +91,6 @@
     ]
   },
   {
-    "id": "nh.features.tabbar",
-    "name": "Tab Bar",
-    "version": "0.1.0",
-    "type": "features",
-    "dependencies": [
-      "nh.features.editor",
-      "nh.ui.controllers-manager",
-      "nh.ui.layout-manager",
-      "nh.ui.context-menu"
-    ]
-  },
-  {
     "id": "nh.features.keybindings",
     "name": "Keybindings",
     "version": "1.0.0",
@@ -114,6 +102,18 @@
       "nh.system.command-manager",
       "nh.system.keymap",
       "nh.system.i18n"
+    ]
+  },
+  {
+    "id": "nh.features.tabbar",
+    "name": "Tab Bar",
+    "version": "0.1.0",
+    "type": "features",
+    "dependencies": [
+      "nh.features.editor",
+      "nh.ui.controllers-manager",
+      "nh.ui.layout-manager",
+      "nh.ui.context-menu"
     ]
   },
   {

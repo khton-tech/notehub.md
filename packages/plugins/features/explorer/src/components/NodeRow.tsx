@@ -134,8 +134,8 @@ export const NodeRow: React.FC<NodeRowProps> = ({
 
     // Build class names for styling
     const baseClasses = [
-        'group relative flex items-center h-full cursor-pointer text-xs pr-2 mx-1 rounded-[4px]',
-        'transition-colors duration-100 ease-out select-none gap-1',
+        'group relative flex items-center h-full cursor-pointer text-[12px] pr-2.5 ml-1 mr-1 rounded-[5px]',
+        'transition-all duration-120 cubic-bezier(0.16, 1, 0.3, 1) select-none gap-1.5',
     ];
 
     if (isDragging) {
@@ -152,7 +152,7 @@ export const NodeRow: React.FC<NodeRowProps> = ({
     } else if (isHighlighted) {
         baseClasses.push(
             'text-[var(--nh-text-primary)] font-medium',
-            'bg-[var(--nh-accent-secondary)]'
+            'bg-[var(--nh-accent-secondary)] shadow-sm'
         );
     } else {
         baseClasses.push(
@@ -161,10 +161,10 @@ export const NodeRow: React.FC<NodeRowProps> = ({
         );
     }
 
-    // Icon color classes - monochrome for consistency
+    // Icon color classes - tuned for ergonomic hierarchy
     const iconColorClass = (isHighlighted || willReceiveDrop)
-        ? 'text-[var(--nh-accent-primary)]'
-        : 'text-[var(--nh-text-muted)]';
+        ? 'text-[var(--nh-accent-primary)] opacity-100'
+        : 'text-[var(--nh-text-muted)] opacity-70 group-hover:opacity-100 transition-opacity';
 
     return (
         <div
@@ -179,29 +179,31 @@ export const NodeRow: React.FC<NodeRowProps> = ({
             role="treeitem"
             aria-selected={node.isSelected}
         >
-            {/* Selection/Focus indicator */}
+            {/* Selection/Focus left indicator bar */}
             {isHighlighted && (
-                <div className="absolute left-0 top-[3px] bottom-[3px] w-[2px] bg-[var(--nh-accent-primary)] rounded-full" />
+                <div className="absolute -left-1 top-1 bottom-1 w-[3px] bg-[var(--nh-accent-primary)] rounded-r-full shadow-[0_0_8px_var(--nh-accent-primary)]" />
             )}
 
             {/* Chevron for directories */}
             {data.isDir ? (
                 <span
-                    className="w-4 h-4 flex-shrink-0 flex items-center justify-center cursor-pointer hover:text-[var(--nh-text-primary)] transition-colors"
+                    className="w-4 h-4 shrink-0 flex items-center justify-center cursor-pointer hover:text-[var(--nh-text-primary)] transition-colors"
                     onClick={handleChevronClick}
                 >
                     <Icon
                         name={node.isOpen ? 'chevron-down' : 'chevron-right'}
                         size={13}
-                        className={isHighlighted ? 'text-[var(--nh-accent-primary)]' : 'text-[var(--nh-text-muted)]'}
+                        className={isHighlighted ? 'text-[var(--nh-accent-primary)]' : 'text-[var(--nh-text-muted)] opacity-80'}
                     />
                 </span>
             ) : (
-                <span className="w-4 h-4 flex-shrink-0" />
+                <span className="w-4 h-4 shrink-0 flex items-center justify-center">
+                    {/* Tiny spacer dot or subtle offset guide for root alignment */}
+                </span>
             )}
 
             {/* File/Folder Icon */}
-            <span className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
+            <span className="w-4 h-4 shrink-0 flex items-center justify-center">
                 <Icon
                     name={iconName}
                     size={14}
@@ -210,7 +212,7 @@ export const NodeRow: React.FC<NodeRowProps> = ({
             </span>
 
             {/* Name or Rename Input */}
-            <div className="flex-1 min-w-0 ml-1">
+            <div className="flex-1 min-w-0">
                 {node.isEditing ? (
                     <input
                         ref={inputRef}
@@ -236,7 +238,7 @@ export const NodeRow: React.FC<NodeRowProps> = ({
                         }}
                         onClick={(e) => e.stopPropagation()}
                         className="
-                            w-full px-1.5 py-0.5 text-[13px]
+                            w-full px-1.5 py-0.5 text-[12px]
                             bg-[var(--nh-bg-main)] 
                             border border-[var(--nh-accent-primary)]
                             rounded outline-none
@@ -244,7 +246,7 @@ export const NodeRow: React.FC<NodeRowProps> = ({
                         "
                     />
                 ) : (
-                    <span className="truncate leading-none block">
+                    <span className="truncate leading-tight block text-[12px] tracking-tight">
                         {data.name}
                     </span>
                 )}

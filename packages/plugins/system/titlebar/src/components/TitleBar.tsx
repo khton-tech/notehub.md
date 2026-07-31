@@ -221,17 +221,17 @@ const WindowButton: React.FC<WindowButtonProps> = ({ onClick, title, isClose, ch
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '46px',
+                width: '42px',
                 height: '100%',
                 border: 'none',
                 background: isHovered
-                    ? (isClose ? '#e81123' : 'var(--nh-bg-hover)')
+                    ? (isClose ? '#ef4444' : 'var(--nh-bg-hover)')
                     : 'transparent',
-                color: isHovered && isClose
-                    ? '#fff'
-                    : 'var(--nh-text-secondary)',
+                color: isHovered
+                    ? (isClose ? '#ffffff' : 'var(--nh-text-primary)')
+                    : 'var(--nh-text-muted)',
                 cursor: 'pointer',
-                transition: 'background-color 0.15s ease, color 0.15s ease',
+                transition: 'background-color 140ms cubic-bezier(0.16, 1, 0.3, 1), color 140ms cubic-bezier(0.16, 1, 0.3, 1)',
             }}
         >
             {children}

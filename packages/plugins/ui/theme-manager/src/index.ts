@@ -67,35 +67,36 @@ export interface ThemePalette {
  * Redesigned for modern "floating" aesthetic with layered depth
  */
 const DEEP_SPACE_THEME: ThemePalette = {
-    // Backgrounds - Modern desktop layered depth palette (Raycast / Linear style)
-    'bg-main': '#08080A',      // Canvas background
-    'bg-sidebar': '#0D0E12',   // Elevated Sidebar Layer
-    'bg-surface': '#14161D',   // Floating Cards & Main Panels
-    'bg-secondary': '#1B1E27', // Inputs, Popovers, Secondary Elements
-    'bg-hover': 'rgba(255, 255, 255, 0.06)', // Soft translucent hover
+    // Backgrounds - Deep space slate palette engineered for long work sessions (Linear / Raycast aesthetic)
+    'bg-main': '#0B0C10',      // Canvas background (soft deep obsidian, non-glare)
+    'bg-sidebar': '#101218',   // Elevated Sidebar Layer
+    'bg-surface': '#161922',   // Floating Cards & Main Editor Panels
+    'bg-secondary': '#1E2230', // Inputs, Popovers, Sub-panels
+    'bg-hover': 'rgba(255, 255, 255, 0.045)', // Soft translucent micro-hover
 
     // Glassmorphism tokens
-    'glass-bg': 'rgba(20, 22, 29, 0.75)',
-    'glass-border': 'rgba(255, 255, 255, 0.08)',
+    'glass-bg': 'rgba(22, 25, 34, 0.82)',
+    'glass-border': 'rgba(255, 255, 255, 0.06)',
 
-    // Accents - Purple primary, transparent secondary
-    'accent-primary': '#7c3aed', // Violet-600
-    'accent-secondary': 'rgba(124, 58, 237, 0.15)', // Transparent violet
+    // Accents - Ergonomic Violet / Indigo (balanced saturation)
+    'accent-primary': '#8b5cf6', // Violet-500
+    'accent-secondary': 'rgba(139, 92, 246, 0.14)', // Transparent soft violet
+    'accent-hover': '#7c3aed', // Violet-600
 
-    // Borders - Hairline subtle borders
-    'border-accent': '#7c3aed',
-    'border-secondary': 'rgba(255, 255, 255, 0.08)', // Soft panel border
-    'border-subtle': 'rgba(255, 255, 255, 0.04)', // Subdued divider
+    // Borders - Hairline non-distracting borders
+    'border-accent': '#8b5cf6',
+    'border-secondary': 'rgba(255, 255, 255, 0.06)', // Soft panel border
+    'border-subtle': 'rgba(255, 255, 255, 0.035)', // Subdued divider
 
     // Shadows for depth and subtle elevation
-    'shadow-sm': '0 2px 8px rgba(0, 0, 0, 0.35)',
-    'shadow-md': '0 8px 24px rgba(0, 0, 0, 0.45)',
-    'shadow-lg': '0 16px 48px rgba(0, 0, 0, 0.55)',
+    'shadow-sm': '0 2px 8px rgba(0, 0, 0, 0.25)',
+    'shadow-md': '0 8px 24px rgba(0, 0, 0, 0.35)',
+    'shadow-lg': '0 16px 48px rgba(0, 0, 0, 0.45)',
 
-    // Text
-    'text-primary': '#F1F5F9', // Slate-100 crisp white
+    // Text - Carefully tuned ergonomics (Slate hierarchy)
+    'text-primary': '#E2E8F0', // Slate-200 (reduces stark contrast glare)
     'text-secondary': '#94A3B8', // Slate-400
-    'text-muted': 'rgba(255, 255, 255, 0.45)',
+    'text-muted': '#64748B', // Slate-500
     'text-error': '#f87171', // Red-400
 
     // Button
@@ -115,10 +116,10 @@ const DEEP_SPACE_THEME: ThemePalette = {
     'callout-abstract': '#22d3ee',   // Cyan-400
 
     // Panel effects
-    'panel-glow': 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+    'panel-glow': 'inset 0 0 0 1px rgba(255,255,255,0.05)',
 
     // Typography
-    'font-family': '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    'font-family': '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     'font-family-mono': '"JetBrains Mono", "Fira Code", Consolas, monospace',
 };
 

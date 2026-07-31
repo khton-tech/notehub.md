@@ -139,20 +139,21 @@ const notehubTheme = EditorView.theme({
         fontFamily: 'inherit',
     },
 
-    // Content area with centered reading measure for desktop (max-width 820px)
+    // Content area with centered reading measure for desktop (max-width 780px)
     '.cm-content': {
-        caretColor: 'var(--nh-accent-primary, #7c3aed)',
-        color: 'var(--nh-text-primary, #f1f5f9)',
-        padding: '28px 24px',
-        maxWidth: '820px',
+        caretColor: 'var(--nh-accent-primary, #8b5cf6)',
+        color: 'var(--nh-text-primary, #e2e8f0)',
+        padding: '36px 32px 64px',
+        maxWidth: '780px',
         margin: '0 auto',
-        lineHeight: '1.65',
+        lineHeight: '1.7',
         fontSize: '15px',
+        letterSpacing: '-0.005em',
     },
 
     // Cursor styling
     '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: 'var(--nh-accent-primary, #7c3aed)',
+        borderLeftColor: 'var(--nh-accent-primary, #8b5cf6)',
         borderLeftWidth: '2px',
         transition: 'left 0.1s ease-out, top 0.1s ease-out',
     },
@@ -163,30 +164,35 @@ const notehubTheme = EditorView.theme({
 
     // Selection styling
     '.cm-selectionBackground, ::selection': {
-        backgroundColor: 'var(--nh-accent-secondary, rgba(124, 58, 237, 0.25)) !important',
+        backgroundColor: 'var(--nh-accent-secondary, rgba(139, 92, 246, 0.22)) !important',
     },
     '&.cm-focused .cm-selectionBackground': {
-        backgroundColor: 'var(--nh-accent-secondary, rgba(124, 58, 237, 0.25))',
+        backgroundColor: 'var(--nh-accent-secondary, rgba(139, 92, 246, 0.22))',
     },
 
     // Active line highlight
     '.cm-activeLine': {
-        backgroundColor: 'rgba(255, 255, 255, 0.02)',
+        backgroundColor: 'rgba(255, 255, 255, 0.025)',
         borderRadius: '4px',
     },
 
     // Gutter (line numbers) styling
     '.cm-gutters': {
-        backgroundColor: 'var(--nh-bg-main, #08080A)',
-        color: 'var(--nh-text-muted, rgba(255,255,255,0.3))',
-        border: 'none',
-        paddingRight: '8px',
+        backgroundColor: 'transparent',
+        color: 'var(--nh-text-muted, #64748b)',
+        borderRight: '1px solid var(--nh-border-subtle, rgba(255, 255, 255, 0.035))',
+        paddingRight: '4px',
     },
     '.cm-lineNumbers .cm-gutterElement': {
         paddingLeft: '16px',
         paddingRight: '12px',
         minWidth: '3em',
         fontSize: '12px',
+        opacity: '0.6',
+    },
+    '.cm-lineNumbers .cm-activeLineGutter': {
+        color: 'var(--nh-text-secondary, #94a3b8)',
+        opacity: '1',
     },
 
     // Line content padding
@@ -203,23 +209,23 @@ const notehubTheme = EditorView.theme({
 const baseTheme = EditorView.baseTheme({
     // Background color
     '&': {
-        backgroundColor: 'var(--nh-bg-main, #1a1a1a)',
+        backgroundColor: 'var(--nh-bg-main, #0b0c10)',
     },
 
     // Custom scrollbar styling (WebKit browsers)
     '.cm-scroller::-webkit-scrollbar': {
-        width: '8px',
-        height: '8px',
+        width: '6px',
+        height: '6px',
     },
     '.cm-scroller::-webkit-scrollbar-track': {
         background: 'transparent',
     },
     '.cm-scroller::-webkit-scrollbar-thumb': {
-        background: 'var(--nh-border-subtle, #333)',
+        background: 'rgba(255, 255, 255, 0.08)',
         borderRadius: '4px',
     },
     '.cm-scroller::-webkit-scrollbar-thumb:hover': {
-        background: 'var(--nh-border-secondary, #444)',
+        background: 'rgba(255, 255, 255, 0.18)',
     },
 });
 
@@ -228,94 +234,110 @@ const baseTheme = EditorView.baseTheme({
  * @internal
  */
 const inlineStylesTheme = EditorView.baseTheme({
-    '.cm-md-bold': { fontWeight: 'bold', color: 'var(--nh-text-primary)' },
-    '.cm-md-italic': { fontStyle: 'italic' },
+    '.cm-md-bold': { fontWeight: '600', color: 'var(--nh-text-primary, #e2e8f0)' },
+    '.cm-md-italic': { fontStyle: 'italic', color: 'var(--nh-text-secondary, #94a3b8)' },
     '.cm-md-code': {
-        fontFamily: 'monospace',
-        backgroundColor: 'var(--nh-bg-secondary)',
+        fontFamily: 'var(--nh-font-family-mono, monospace)',
+        backgroundColor: 'var(--nh-bg-secondary, #1e2230)',
         borderRadius: '4px',
-        padding: '0.1em 0.3em',
-        color: 'var(--nh-accent-primary)',
+        padding: '0.15em 0.4em',
+        color: 'var(--nh-accent-primary, #8b5cf6)',
+        fontSize: '0.9em',
     },
-    '.cm-md-strikethrough': { textDecoration: 'line-through' },
+    '.cm-md-strikethrough': { textDecoration: 'line-through', color: 'var(--nh-text-muted, #64748b)' },
     '.cm-list-bullet': {
-        fontSize: '1.2em',
+        fontSize: '1.1em',
         lineHeight: '1',
         verticalAlign: 'middle',
+        color: 'var(--nh-accent-primary, #8b5cf6)',
     },
     '.cm-list-mark-ordered': {
-        color: 'var(--nh-text-muted, #666)',
+        color: 'var(--nh-text-muted, #64748b)',
+        fontWeight: '500',
     },
     '.nh-checkbox-widget': {
         cursor: 'pointer',
         marginRight: '0.5em',
         verticalAlign: 'middle',
-        accentColor: 'var(--nh-accent-primary)',
+        accentColor: 'var(--nh-accent-primary, #8b5cf6)',
     },
 
     // Heading Marker (the ### when cursor is inside)
     '.cm-heading-marker': {
-        color: 'var(--nh-text-muted, #666)',
+        color: 'var(--nh-text-muted, #64748b)',
         fontWeight: 'normal',
+        opacity: '0.7',
     },
 
-    // Heading Levels (1-6)
+    // Heading Levels (1-6) - Tuned hierarchy and letter spacing
     '.cm-heading-1': {
-        fontSize: '2em',
-        fontWeight: 'bold',
-        color: 'var(--nh-text-primary)',
+        fontSize: '1.95em',
+        fontWeight: '700',
+        color: 'var(--nh-text-primary, #e2e8f0)',
+        letterSpacing: '-0.025em',
+        lineHeight: '1.3',
     },
     '.cm-heading-2': {
-        fontSize: '1.6em',
-        fontWeight: 'bold',
-        color: 'var(--nh-text-primary)',
+        fontSize: '1.55em',
+        fontWeight: '600',
+        color: 'var(--nh-text-primary, #e2e8f0)',
+        letterSpacing: '-0.02em',
+        lineHeight: '1.35',
     },
     '.cm-heading-3': {
         fontSize: '1.3em',
-        fontWeight: 'bold',
+        fontWeight: '600',
+        color: 'var(--nh-text-primary, #e2e8f0)',
+        letterSpacing: '-0.015em',
+        lineHeight: '1.4',
     },
     '.cm-heading-4': {
         fontSize: '1.15em',
-        fontWeight: 'bold',
+        fontWeight: '600',
+        color: 'var(--nh-text-primary, #e2e8f0)',
+        letterSpacing: '-0.01em',
     },
     '.cm-heading-5': {
         fontSize: '1.05em',
-        fontWeight: 'bold',
+        fontWeight: '600',
+        color: 'var(--nh-text-secondary, #94a3b8)',
     },
     '.cm-heading-6': {
         fontSize: '1em',
-        fontWeight: 'bold',
-        color: 'var(--nh-text-muted, #999)',
+        fontWeight: '600',
+        color: 'var(--nh-text-muted, #64748b)',
     },
 
     // Links
     '.cm-md-link': {
-        color: 'var(--nh-accent-primary, #4a90e2)',
+        color: 'var(--nh-accent-primary, #8b5cf6)',
         textDecoration: 'none',
         cursor: 'pointer',
         borderBottom: '1px solid transparent',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.15s ease',
     },
     '.cm-md-link:hover': {
-        borderBottomColor: 'var(--nh-accent-primary, #4a90e2)',
+        borderBottomColor: 'var(--nh-accent-primary, #8b5cf6)',
     },
     // Specific styling for WikiLinks (internal navigation)
     '.cm-wiki-link': {
-        borderBottom: '1px solid var(--nh-accent-primary)', // Always visible underline
-        backgroundColor: 'rgba(74, 144, 226, 0.1)', // Subtle background
-        padding: '0 2px',
-        borderRadius: '3px',
+        borderBottom: '1px solid var(--nh-accent-primary, #8b5cf6)',
+        backgroundColor: 'var(--nh-accent-secondary, rgba(139, 92, 246, 0.12))',
+        padding: '0.1em 0.35em',
+        borderRadius: '4px',
+        color: 'var(--nh-text-primary, #e2e8f0)',
+        transition: 'all 0.15s ease',
     },
     '.cm-wiki-link:hover': {
-        backgroundColor: 'rgba(74, 144, 226, 0.2)',
+        backgroundColor: 'rgba(139, 92, 246, 0.22)',
     },
     '.cm-wiki-link:active': {
-        backgroundColor: 'var(--nh-accent-primary, #4a90e2)',
-        color: 'var(--nh-bg-main, #1a1a1a)',
+        backgroundColor: 'var(--nh-accent-primary, #8b5cf6)',
+        color: '#ffffff',
         borderBottomColor: 'transparent',
     },
     '.cm-md-link-source': {
-        color: 'var(--nh-text-muted, #666)',
+        color: 'var(--nh-text-muted, #64748b)',
         fontStyle: 'italic',
     },
 

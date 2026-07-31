@@ -7,20 +7,21 @@
 
 .nh-tabbar {
     display: flex;
-    align-items: center;
-    padding: 4px 8px 0;
-    height: 36px;
-    min-height: 36px;
-    max-height: 36px;
+    align-items: flex-end;
+    padding: 4px 6px 0;
+    height: 38px;
+    min-height: 38px;
+    max-height: 38px;
     user-select: none;
     gap: 4px;
     overflow: hidden;
-    background: var(--nh-bg-surface, #14161D);
+    background: var(--nh-bg-surface, #161922);
+    border-bottom: 1px solid var(--nh-border-subtle, rgba(255, 255, 255, 0.04));
 }
 
 .nh-tabbar__scroll {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     overflow-x: auto;
     overflow-y: hidden;
     flex: 1;
@@ -35,56 +36,77 @@
 .nh-tabbar__tab {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 0 10px;
+    gap: 7px;
+    padding: 0 10px 0 12px;
     height: 30px;
-    min-width: 110px;
+    min-width: 120px;
     max-width: 220px;
     border-radius: var(--nh-radius-sm, 6px) var(--nh-radius-sm, 6px) 0 0;
     cursor: pointer;
     position: relative;
     font-size: 12px;
     font-weight: 450;
-    color: var(--nh-text-secondary, #94a3b8);
+    color: var(--nh-text-muted, #64748b);
     white-space: nowrap;
     background: transparent;
     border: 1px solid transparent;
     border-bottom: none;
     flex-shrink: 0;
-    transition: background 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out;
+    transition: background 140ms cubic-bezier(0.16, 1, 0.3, 1),
+                color 140ms cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 140ms cubic-bezier(0.16, 1, 0.3, 1);
     outline: none;
 }
 
 .nh-tabbar__tab:hover {
-    background: var(--nh-bg-hover, rgba(255, 255, 255, 0.05));
-    color: var(--nh-text-primary, #f1f5f9);
+    background: var(--nh-bg-hover, rgba(255, 255, 255, 0.045));
+    color: var(--nh-text-secondary, #94a3b8);
 }
 
 .nh-tabbar__tab:focus-visible {
-    border-color: var(--nh-accent-primary, #7c3aed);
+    border-color: var(--nh-accent-primary, #8b5cf6);
 }
 
 .nh-tabbar__tab--active {
-    background: var(--nh-bg-main, #08080a);
-    color: var(--nh-text-primary, #f1f5f9);
+    background: var(--nh-bg-main, #0b0c10);
+    color: var(--nh-text-primary, #e2e8f0);
     font-weight: 500;
-    border-color: var(--nh-border-subtle, rgba(255, 255, 255, 0.08));
-    border-bottom: 2px solid var(--nh-accent-primary, #7c3aed);
+    border-color: var(--nh-border-secondary, rgba(255, 255, 255, 0.06));
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Active tab top glowing accent indicator pill */
+.nh-tabbar__tab--active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 12px;
+    right: 12px;
+    height: 2px;
+    background: var(--nh-accent-primary, #8b5cf6);
+    border-radius: 0 0 2px 2px;
+    box-shadow: 0 0 8px var(--nh-accent-primary, #8b5cf6);
 }
 
 .nh-tabbar__tab--drag-over {
-    border-left: 2px solid var(--nh-accent-primary, #7c3aed);
+    border-left: 2px solid var(--nh-accent-primary, #8b5cf6);
 }
 
 .nh-tabbar__icon {
     flex-shrink: 0;
-    opacity: 0.6;
-    color: var(--nh-text-muted, #94a3b8);
+    opacity: 0.5;
+    color: var(--nh-text-muted, #64748b);
+    transition: opacity 120ms ease, color 120ms ease;
+}
+
+.nh-tabbar__tab:hover .nh-tabbar__icon {
+    opacity: 0.85;
+    color: var(--nh-text-secondary, #94a3b8);
 }
 
 .nh-tabbar__tab--active .nh-tabbar__icon {
     opacity: 1;
-    color: var(--nh-accent-primary, #7c3aed);
+    color: var(--nh-accent-primary, #8b5cf6);
 }
 
 .nh-tabbar__label {
@@ -93,6 +115,7 @@
     flex: 1;
     min-width: 0;
     line-height: 1;
+    letter-spacing: -0.01em;
 }
 
 .nh-tabbar__close {
@@ -104,40 +127,43 @@
     min-width: 18px;
     border: none;
     background: transparent;
-    color: var(--nh-text-muted, #94a3b8);
+    color: var(--nh-text-muted, #64748b);
     cursor: pointer;
     border-radius: var(--nh-radius-xs, 4px);
     flex-shrink: 0;
     padding: 0;
     margin-left: 2px;
     opacity: 0;
-    transition: opacity 100ms ease-out, background 100ms ease-out, color 100ms ease-out;
+    transition: opacity 120ms cubic-bezier(0.16, 1, 0.3, 1),
+                background 120ms cubic-bezier(0.16, 1, 0.3, 1),
+                color 120ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nh-tabbar__tab:hover .nh-tabbar__close,
 .nh-tabbar__tab--active .nh-tabbar__close {
-    opacity: 0.7;
+    opacity: 0.6;
 }
 
 .nh-tabbar__close:hover {
     opacity: 1 !important;
-    background: var(--nh-bg-hover, rgba(255, 255, 255, 0.1));
-    color: var(--nh-text-primary, #f1f5f9);
+    background: var(--nh-bg-hover, rgba(255, 255, 255, 0.08));
+    color: var(--nh-text-primary, #e2e8f0);
 }
 
 /* Empty state */
 .nh-tabbar--empty {
     display: flex;
     align-items: center;
-    height: 36px;
-    padding: 0 12px;
+    height: 38px;
+    padding: 0 16px;
     pointer-events: none;
 }
 
 .nh-tabbar__empty-hint {
     font-size: 12px;
-    color: var(--nh-text-muted, #94a3b8);
+    color: var(--nh-text-muted, #64748b);
     user-select: none;
+    font-style: italic;
 }
 
 @media (pointer: coarse) {
