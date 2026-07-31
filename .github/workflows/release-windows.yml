@@ -45,8 +45,8 @@ jobs:
           pnpm --filter "@notehub.md/api" build
           pnpm --filter "@notehub.md/cli" build
           node scripts/ensure-cli.js
-          pnpm build
           pnpm predev
+          pnpm build
 
       - name: Build Tauri App & Publish Release
         uses: tauri-apps/tauri-action@v0

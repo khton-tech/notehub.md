@@ -4,7 +4,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "pnpm --filter @notehub.md/api build && pnpm --filter @notehub.md/cli build && node scripts/ensure-cli.js && pnpm -r build",
+        "build": "pnpm --filter @notehub.md/api build && pnpm --filter @notehub.md/cli build && node scripts/ensure-cli.js && pnpm predev && pnpm -r build",
         "dev": "pnpm -r --parallel dev",
         "clean": "pnpm -r clean",
         "gen:plugin": "tsx scripts/create-plugin.ts",
