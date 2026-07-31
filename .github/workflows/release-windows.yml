@@ -44,7 +44,7 @@ jobs:
         run: |
           pnpm --filter "@notehub.md/api" build
           pnpm --filter "@notehub.md/cli" build
-          pnpm rebuild
+          node scripts/ensure-cli.js
           pnpm build
           pnpm predev
 
