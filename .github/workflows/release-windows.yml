@@ -38,7 +38,12 @@ jobs:
         run: pnpm install
 
       - name: Build Workspace Packages
-        run: pnpm build && pnpm predev
+        run: |
+          pnpm --filter @notehub.md/api build
+          pnpm --filter @notehub.md/cli build
+          pnpm rebuild
+          pnpm build
+          pnpm predev
 
       - name: Build Tauri App & Publish Release
         uses: tauri-apps/tauri-action@v0
