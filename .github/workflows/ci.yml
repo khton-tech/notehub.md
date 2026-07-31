@@ -31,3 +31,19 @@ jobs:
 
       - name: Build Workspace
         run: pnpm build
+
+      - name: Send Telegram Notification
+        if: always()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          format: markdown
+          message: |
+            🚀 *Notehub.md CI Build*
+            *Status:* ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }}
+            *Event:* `${{ github.event_name }}`
+            *Branch:* `${{ github.ref_name }}`
+            *Author:* `${{ github.actor }}`
+            *Commit:* [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+
