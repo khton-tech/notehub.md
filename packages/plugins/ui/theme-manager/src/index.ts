@@ -67,33 +67,33 @@ export interface ThemePalette {
  * Redesigned for modern "floating" aesthetic with layered depth
  */
 const DEEP_SPACE_THEME: ThemePalette = {
-    // Backgrounds - Linear/Raycast layered depth palette
-    'bg-main': '#08080A',      // Pure Deep Canvas
-    'bg-sidebar': '#0F1014',   // Distinct Sidebar Layer
-    'bg-surface': '#15171E',   // Cards & Main Panels
-    'bg-secondary': '#1C1F28', // Inputs, Secondary Elements
-    'bg-hover': '#242834',     // Rich Hover States
+    // Backgrounds - Modern desktop layered depth palette (Raycast / Linear style)
+    'bg-main': '#08080A',      // Canvas background
+    'bg-sidebar': '#0D0E12',   // Elevated Sidebar Layer
+    'bg-surface': '#14161D',   // Floating Cards & Main Panels
+    'bg-secondary': '#1B1E27', // Inputs, Popovers, Secondary Elements
+    'bg-hover': 'rgba(255, 255, 255, 0.06)', // Soft translucent hover
 
     // Glassmorphism tokens
-    'glass-bg': 'rgba(21, 23, 30, 0.75)',
-    'glass-border': 'rgba(255, 255, 255, 0.07)',
+    'glass-bg': 'rgba(20, 22, 29, 0.75)',
+    'glass-border': 'rgba(255, 255, 255, 0.08)',
 
     // Accents - Purple primary, transparent secondary
     'accent-primary': '#7c3aed', // Violet-600
-    'accent-secondary': 'rgba(124, 58, 237, 0.14)', // Transparent violet
+    'accent-secondary': 'rgba(124, 58, 237, 0.15)', // Transparent violet
 
-    // Borders - Hairline semi-transparent borders
+    // Borders - Hairline subtle borders
     'border-accent': '#7c3aed',
-    'border-secondary': 'rgba(255, 255, 255, 0.07)', // Hairline border
-    'border-subtle': 'rgba(255, 255, 255, 0.04)', // Divider
+    'border-secondary': 'rgba(255, 255, 255, 0.08)', // Soft panel border
+    'border-subtle': 'rgba(255, 255, 255, 0.04)', // Subdued divider
 
-    // Shadows for depth and subtle glow
+    // Shadows for depth and subtle elevation
     'shadow-sm': '0 2px 8px rgba(0, 0, 0, 0.35)',
     'shadow-md': '0 8px 24px rgba(0, 0, 0, 0.45)',
     'shadow-lg': '0 16px 48px rgba(0, 0, 0, 0.55)',
 
     // Text
-    'text-primary': '#E2E8F0', // Slate-200 crisp white
+    'text-primary': '#F1F5F9', // Slate-100 crisp white
     'text-secondary': '#94A3B8', // Slate-400
     'text-muted': 'rgba(255, 255, 255, 0.45)',
     'text-error': '#f87171', // Red-400

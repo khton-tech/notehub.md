@@ -134,8 +134,8 @@ export const NodeRow: React.FC<NodeRowProps> = ({
 
     // Build class names for styling
     const baseClasses = [
-        'group relative flex items-center h-full cursor-pointer text-[13px] pr-2',
-        'transition-colors duration-100',
+        'group relative flex items-center h-full cursor-pointer text-[13px] pr-2 mx-1 rounded-md my-[1px]',
+        'transition-colors duration-150 ease-out select-none',
     ];
 
     if (isDragging) {
@@ -146,20 +146,18 @@ export const NodeRow: React.FC<NodeRowProps> = ({
         // Folder is the current drop target — show prominent highlight
         baseClasses.push(
             'text-[var(--nh-text-primary)]',
-            'mx-1.5 rounded-lg',
             'bg-[var(--nh-accent-secondary)]',
             'ring-1 ring-inset ring-[var(--nh-accent-primary)]'
         );
     } else if (isHighlighted) {
         baseClasses.push(
-            'text-[var(--nh-text-primary)]',
-            'mx-1.5 rounded-lg',
+            'text-[var(--nh-text-primary)] font-medium',
             'bg-[var(--nh-accent-secondary)]'
         );
     } else {
         baseClasses.push(
             'text-[var(--nh-text-secondary)]',
-            'hover:bg-[var(--nh-bg-hover)]'
+            'hover:bg-[var(--nh-bg-hover)] hover:text-[var(--nh-text-primary)]'
         );
     }
 
@@ -183,7 +181,7 @@ export const NodeRow: React.FC<NodeRowProps> = ({
         >
             {/* Selection/Focus indicator */}
             {isHighlighted && (
-                <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--nh-accent-primary)] rounded-r-sm" />
+                <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[var(--nh-accent-primary)] rounded-full" />
             )}
 
             {/* Chevron for directories */}

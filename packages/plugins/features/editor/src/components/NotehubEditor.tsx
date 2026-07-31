@@ -139,16 +139,20 @@ const notehubTheme = EditorView.theme({
         fontFamily: 'inherit',
     },
 
-    // Content area
+    // Content area with centered reading measure for desktop (max-width 820px)
     '.cm-content': {
-        caretColor: 'var(--nh-text-primary, #e0e0e0)',
-        color: 'var(--nh-text-primary, #e0e0e0)',
-        padding: '16px 0',
+        caretColor: 'var(--nh-accent-primary, #7c3aed)',
+        color: 'var(--nh-text-primary, #f1f5f9)',
+        padding: '28px 24px',
+        maxWidth: '820px',
+        margin: '0 auto',
+        lineHeight: '1.65',
+        fontSize: '15px',
     },
 
     // Cursor styling
     '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: 'var(--nh-accent-primary, #4a90e2)',
+        borderLeftColor: 'var(--nh-accent-primary, #7c3aed)',
         borderLeftWidth: '2px',
         transition: 'left 0.1s ease-out, top 0.1s ease-out',
     },
@@ -159,35 +163,35 @@ const notehubTheme = EditorView.theme({
 
     // Selection styling
     '.cm-selectionBackground, ::selection': {
-        backgroundColor: 'var(--nh-accent-primary, #4a90e2) !important',
-        opacity: '0.3',
+        backgroundColor: 'var(--nh-accent-secondary, rgba(124, 58, 237, 0.25)) !important',
     },
     '&.cm-focused .cm-selectionBackground': {
-        backgroundColor: 'var(--nh-accent-primary, #4a90e2)',
-        opacity: '0.3',
+        backgroundColor: 'var(--nh-accent-secondary, rgba(124, 58, 237, 0.25))',
     },
 
     // Active line highlight
     '.cm-activeLine': {
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: 'rgba(255, 255, 255, 0.02)',
+        borderRadius: '4px',
     },
 
     // Gutter (line numbers) styling
     '.cm-gutters': {
-        backgroundColor: 'var(--nh-bg-main, #1a1a1a)',
-        color: 'var(--nh-text-muted, #666)',
+        backgroundColor: 'var(--nh-bg-main, #08080A)',
+        color: 'var(--nh-text-muted, rgba(255,255,255,0.3))',
         border: 'none',
         paddingRight: '8px',
     },
     '.cm-lineNumbers .cm-gutterElement': {
         paddingLeft: '16px',
-        paddingRight: '8px',
+        paddingRight: '12px',
         minWidth: '3em',
+        fontSize: '12px',
     },
 
     // Line content padding
     '.cm-line': {
-        padding: '0 16px',
+        padding: '0 4px',
     },
 }, { dark: true });
 

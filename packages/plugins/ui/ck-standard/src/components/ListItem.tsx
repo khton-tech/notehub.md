@@ -93,13 +93,13 @@ export const ListItem: FC<ListItemProps> = ({
             onClick={handleClick}
             onKeyDown={handleKeyDown}
             className={`
-                flex items-center gap-3 px-4 py-2.5
+                flex items-center gap-3 px-3 py-2 mx-1 rounded-md
                 cursor-pointer select-none
-                transition-colors duration-150 ease-out
+                transition-all duration-150 ease-out
                 
                 ${active
-                    ? 'bg-[var(--nh-accent-primary,#7c3aed)]/10 text-[var(--nh-text-primary,#E0E0E0)] border border-[var(--nh-accent-primary,#7c3aed)]'
-                    : 'text-[var(--nh-text-primary,#E0E0E0)] hover:bg-[var(--nh-bg-hover,rgba(255,255,255,0.05))] border border-transparent'
+                    ? 'bg-[var(--nh-accent-secondary,rgba(124,58,237,0.15))] text-[var(--nh-text-primary,#F1F5F9)] font-medium'
+                    : 'text-[var(--nh-text-primary,#E2E8F0)] hover:bg-[var(--nh-bg-hover,rgba(255,255,255,0.06))]'
                 }
                 
                 ${disabled
@@ -108,7 +108,7 @@ export const ListItem: FC<ListItemProps> = ({
                 }
                 
                 focus:outline-none
-                focus:bg-[var(--nh-bg-hover,rgba(255,255,255,0.05))]
+                focus:bg-[var(--nh-bg-hover,rgba(255,255,255,0.06))]
                 
                 ${className}
             `}
